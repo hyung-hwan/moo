@@ -12,6 +12,8 @@ class(#pointer,#final,#limited,#uncopyable) Process(Object)
 	method primErrorMessage { ^self.perrmsg }
 	method(#primitive) sp.
 
+	method(#primitive) isInnate.
+	method(#primitive) isNormal.
 	method(#primitive) resume.
 	method(#primitive) yield.
 	method(#primitive) suspend.

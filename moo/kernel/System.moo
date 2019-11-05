@@ -212,8 +212,11 @@ class System(Apex)
 			while (proc notError)
 			{
 				pid := proc id.
-				System logNl: ("Requesting to terminate process of id - " & pid asString).
-				proc terminate.
+				if (proc isNormal)
+				{
+					System logNl: ("Requesting to terminate process of id - " & pid asString).
+					proc terminate.
+				}.
 				proc := System _findNextProcess: pid.
 			}.
 
@@ -236,7 +239,10 @@ class System(Apex)
 	method(#class,#primitive) _halting.
 	method(#class,#primitive) _toggleProcessSwitching: v.
 	method(#class,#primitive,#lenient) _findProcessById: id.
-	method(#class,#primitive,#lenient) _findNextProcess: id.
+	method(#class,#primitive,#lenient) _findFirstProcess.
+	method(#class,#primitive,#lenient) _findLastProcess.
+	method(#class,#primitive,#lenient) _findPreviousProcess: p. // process id or process object
+	method(#class,#primitive,#lenient) _findNextProcess: p. // process id or process object
 
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.

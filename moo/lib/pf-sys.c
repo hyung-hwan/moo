@@ -26,6 +26,217 @@
 
 #include "moo-prv.h"
 
+
+/* ------------------------------------------------------------------------------------- */
+moo_pfrc_t moo_pf_system_toggle_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t v;
+	int oldnps;
+
+	oldnps = moo->no_proc_switch;
+
+	v = MOO_STACK_GETARG(moo, nargs, 0);
+	if (v == moo->_false)
+	{
+		/* disable process switching */
+		moo->no_proc_switch = 1;
+	}
+	else
+	{
+		/* enable process switching */
+		moo->no_proc_switch = 0;
+	}
+
+	MOO_STACK_SETRET (moo, nargs, (oldnps? moo->_false: moo->_true));
+	return MOO_PF_SUCCESS;
+}
+
+moo_pfrc_t moo_pf_system_halting (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_evtcb_t* cb;
+	for (cb = moo->evtcb_list; cb; cb = cb->next)
+	{
+		if (cb->halting) cb->halting (moo);
+	}
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+moo_pfrc_t moo_pf_system_find_process_by_id (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t /*rcv,*/ id;
+
+	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
+	id = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
+
+	if (MOO_OOP_IS_SMOOI(id))
+	{
+		moo_ooi_t index = MOO_OOP_TO_SMOOI(id);
+		if (index >= 0)
+		{
+			if (MOO_CLASSOF(moo, moo->proc_map[index]) == moo->_process)
+			{
+				MOO_STACK_SETRET (moo, nargs, moo->proc_map[index]);
+				return MOO_PF_SUCCESS;
+			}
+
+			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
+		}
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+
+
+static MOO_INLINE moo_oop_t __find_adjacent_process_by_id_noseterr (moo_t* moo, moo_ooi_t index, int find_next)
+{
+	if (find_next)
+	{
+		moo_ooi_t end_index;
+		MOO_ASSERT (moo, moo->proc_map_capa <= MOO_SMOOI_MAX);
+
+		end_index = moo->proc_map_capa - 1;
+		if (index < -1) index = -1;
+
+	/* TOOD: enhance alloc_pid() and free_pid() to maintain the hightest pid number so that this loop can stop before reaching proc_map_capa */
+		while (index < end_index)
+		{
+			/* note the free slot contains a small integer which indicate the next slot index in proc_map.
+			 * if the slot it taken, it should point to a process object. read the comment at end of this loop. */
+			moo_oop_t tmp;
+
+			tmp = moo->proc_map[++index];
+			if (MOO_CLASSOF(moo, tmp) == moo->_process) return tmp;
+
+			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(tmp));
+		}
+	}
+	else
+	{
+		/* find the previous one */
+
+		if (index > moo->proc_map_capa || index <= -1) index = moo->proc_map_capa;
+		while (index > 0)
+		{
+			moo_oop_t tmp;
+
+			tmp = moo->proc_map[--index];
+			if (MOO_CLASSOF(moo, tmp) == moo->_process) return tmp;
+
+			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(tmp));
+		}
+	}
+
+	return MOO_NULL;
+}
+
+moo_pfrc_t moo_pf_system_find_first_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t tmp;
+
+	tmp = __find_adjacent_process_by_id_noseterr(moo, -1, 1);
+	if (tmp)
+	{
+		MOO_STACK_SETRET (moo, nargs, tmp);
+		return MOO_PF_SUCCESS;
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+
+moo_pfrc_t moo_pf_system_find_last_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t tmp;
+
+	tmp = __find_adjacent_process_by_id_noseterr(moo, moo->proc_map_capa, 0);
+	if (tmp)
+	{
+		MOO_STACK_SETRET (moo, nargs, tmp);
+		return MOO_PF_SUCCESS;
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+
+moo_pfrc_t moo_pf_system_find_previous_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t /*rcv,*/ id;
+
+	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
+	id = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
+
+	if (id == moo->_nil)
+	{
+		id = MOO_SMOOI_TO_OOP(-1);
+	}
+	else if (MOO_CLASSOF(moo, id) == moo->_process)
+	{
+		/* the argument is a process object */
+		id = ((moo_oop_process_t)id)->id;
+	}
+
+	if (MOO_OOP_IS_SMOOI(id))
+	{
+		moo_oop_t tmp;
+
+		tmp = __find_adjacent_process_by_id_noseterr(moo, MOO_OOP_TO_SMOOI(id), 0);
+		if (tmp)
+		{
+			MOO_STACK_SETRET (moo, nargs, tmp);
+			return MOO_PF_SUCCESS;
+		}
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+
+moo_pfrc_t moo_pf_system_find_next_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t /*rcv,*/ id;
+
+	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
+	id = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
+
+	if (id == moo->_nil)
+	{
+		id = MOO_SMOOI_TO_OOP(-1);
+	}
+	else if (MOO_CLASSOF(moo, id) == moo->_process)
+	{
+		/* the argument is a process object */
+		id = ((moo_oop_process_t)id)->id;
+	}
+
+	if (MOO_OOP_IS_SMOOI(id))
+	{
+		moo_oop_t tmp;
+
+		tmp = __find_adjacent_process_by_id_noseterr(moo, MOO_OOP_TO_SMOOI(id), 1);
+		if (tmp)
+		{
+			MOO_STACK_SETRET (moo, nargs, tmp);
+			return MOO_PF_SUCCESS;
+		}
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+/* ------------------------------------------------------------------------------------- */
+
 moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_gc (moo);

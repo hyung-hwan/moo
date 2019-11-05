@@ -1645,6 +1645,14 @@ moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 /* ========================================================================= */
 /* pf-sys.c                                                                  */
 /* ========================================================================= */
+moo_pfrc_t moo_pf_system_toggle_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_halting (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_find_process_by_id (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_find_first_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_find_last_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_find_previous_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_find_next_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+
 moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 

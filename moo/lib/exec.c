@@ -1628,7 +1628,7 @@ static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 	MOO_ASSERT (moo, moo->processor->runnable.count == MOO_SMOOI_TO_OOP(0));
 	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 
-	proc = make_process(moo, c, MOO_OBJ_FLAGS_PROC_SYSTEM);
+	proc = make_process(moo, c, MOO_OBJ_FLAGS_PROC_INNATE);
 	if (!proc) return MOO_NULL;
 
 	chain_into_processor (moo, proc, PROC_STATE_RUNNING);
@@ -2737,6 +2737,28 @@ static moo_pfrc_t pf_process_sp (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_process_is_innate (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_process);
+
+	MOO_STACK_SETRET (moo, nargs, (MOO_OBJ_GET_FLAGS_PROC(rcv) == MOO_OBJ_FLAGS_PROC_INNATE? moo->_true: moo->_false));
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_process_is_normal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_process);
+
+	MOO_STACK_SETRET (moo, nargs, (MOO_OBJ_GET_FLAGS_PROC(rcv) == MOO_OBJ_FLAGS_PROC_NORMAL? moo->_true: moo->_false));
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_process_resume (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
@@ -3276,156 +3298,6 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod,
 
 	SWITCH_ACTIVE_CONTEXT (moo, (moo_oop_context_t)ctx);
 	return MOO_PF_SUCCESS;
-}
-
-/* ------------------------------------------------------------------ */
-static moo_pfrc_t pf_system_toggle_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_oop_t v;
-	int oldnps;
-
-	oldnps = moo->no_proc_switch;
-
-	v = MOO_STACK_GETARG(moo, nargs, 0);
-	if (v == moo->_false)
-	{
-		/* disable process switching */
-		moo->no_proc_switch = 1;
-	}
-	else
-	{
-		/* enable process switching */
-		moo->no_proc_switch = 0;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, (oldnps? moo->_false: moo->_true));
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_system_halting (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_evtcb_t* cb;
-	for (cb = moo->evtcb_list; cb; cb = cb->next)
-	{
-		if (cb->halting) cb->halting (moo);
-	}
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_system_find_process_by_id (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_oop_t /*rcv,*/ id;
-
-	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
-	id = MOO_STACK_GETARG(moo, nargs, 0);
-
-	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
-
-	if (MOO_OOP_IS_SMOOI(id))
-	{
-		moo_ooi_t index = MOO_OOP_TO_SMOOI(id);
-		if (index >= 0)
-		{
-			if (MOO_CLASSOF(moo, moo->proc_map[index]) == moo->_process)
-			{
-				MOO_STACK_SETRET (moo, nargs, moo->proc_map[index]);
-				return MOO_PF_SUCCESS;
-			}
-
-			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
-		}
-	}
-
-	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
-	return MOO_PF_FAILURE;
-}
-
-
-static MOO_INLINE moo_oop_t __find_adjacent_process_by_id_noseterr (moo_t* moo, moo_ooi_t index, int find_next, int exclude_system)
-{
-	if (find_next)
-	{
-		if (index < -1) index = -1;
-
-	/* TOOD: enhance alloc_pid() and free_pid() to maintain the hightest pid number so that this loop can stop before reaching proc_map_capa */
-		for (++index; index < moo->proc_map_capa; index++)
-		{
-			/* note the free slot contains a small integer which indicate the next slot index in proc_map.
-			 * if the slot it taken, it should point to a process object. read the comment at end of this loop. */
-			moo_oop_t tmp;
-
-			tmp = moo->proc_map[index];
-			if (MOO_CLASSOF(moo, tmp) == moo->_process)
-			{
-				if (exclude_system && MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_SYSTEM) continue;
-				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_NORMAL);
-				return tmp;
-			}
-
-			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
-		}
-	}
-	else
-	{
-		/* find the previous one */
-
-		if (index > moo->proc_map_capa || index <= -1) index = moo->proc_map_capa;
-		for (--index; index >= 0; index--)
-		{
-			moo_oop_t tmp;
-
-			tmp = moo->proc_map[index];
-			if (MOO_CLASSOF(moo, tmp) == moo->_process)
-			{
-				if (exclude_system && MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_SYSTEM) continue;
-				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_NORMAL);
-				return tmp;
-			}
-
-			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
-		}
-	}
-
-	return MOO_NULL;
-}
-
-static moo_pfrc_t pf_system_find_next_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_oop_t /*rcv,*/ id;
-
-	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
-	id = MOO_STACK_GETARG(moo, nargs, 0);
-
-	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
-
-	if (id == moo->_nil)
-	{
-		id = MOO_SMOOI_TO_OOP(-1);
-	}
-	else if (MOO_CLASSOF(moo, id) == moo->_process)
-	{
-		/* the argument is a process object */
-		id = ((moo_oop_process_t)id)->id;
-	}
-
-	if (MOO_OOP_IS_SMOOI(id))
-	{
-		moo_oop_t tmp;
-
-		tmp = __find_adjacent_process_by_id_noseterr(moo, MOO_OOP_TO_SMOOI(id), 1, 1);
-		if (tmp)
-		{
-			MOO_STACK_SETRET (moo, nargs, tmp);
-			return MOO_PF_SUCCESS;
-		}
-	}
-
-	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
-	return MOO_PF_FAILURE;
 }
 
 /* ------------------------------------------------------------------ */
@@ -4494,6 +4366,8 @@ static pf_t pftab[] =
 	{ "MethodContext_findExceptionHandler:",   { pf_context_find_exception_handler,       1, 1 } },
 	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1 } },
 
+	{ "Process_isInnate",                      { pf_process_is_innate,                    0, 0 } },
+	{ "Process_isNormal",                      { pf_process_is_normal,                    0, 0 } },
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
 	{ "Process_suspend",                       { pf_process_suspend,                      0, 0 } },
@@ -4544,8 +4418,11 @@ static pf_t pftab[] =
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_collectGarbage",                 { moo_pf_system_collect_garbage,           0, 0 } },
-	{ "System_findNextProcess:",               { pf_system_find_next_process,             1, 1 } },
-	{ "System_findProcessById:",               { pf_system_find_process_by_id,            1, 1 } },
+	{ "System_findFirstProcess",               { moo_pf_system_find_first_process,        0, 0 } },
+	{ "System_findLastProcess",                { moo_pf_system_find_last_process,         0, 0 } },
+	{ "System_findNextProcess:",               { moo_pf_system_find_next_process,         1, 1 } },
+	{ "System_findPreviousProcess:",           { moo_pf_system_find_previous_process,     1, 1 } },
+	{ "System_findProcessById:",               { moo_pf_system_find_process_by_id,        1, 1 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
 	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
 	{ "System_gc",                             { moo_pf_system_collect_garbage,           0, 0 } },
@@ -4560,7 +4437,7 @@ static pf_t pftab[] =
 	{ "System_getUint32",                      { moo_pf_system_get_uint32,                2, 2 } },
 	{ "System_getUint64",                      { moo_pf_system_get_uint64,                2, 2 } },
 	{ "System_getUint8",                       { moo_pf_system_get_uint8,                 2, 2 } },
-	{ "System_halting",                        { pf_system_halting,                       0, 0 } },
+	{ "System_halting",                        { moo_pf_system_halting,                   0, 0 } },
 	{ "System_log",                            { pf_system_log,                           2, MA } },
 	{ "System_malloc",                         { moo_pf_system_malloc,                    1, 1 } },
 	{ "System_malloc:",                        { moo_pf_system_malloc,                    1, 1 } },
@@ -4576,7 +4453,7 @@ static pf_t pftab[] =
 	{ "System_putUint8",                       { moo_pf_system_put_uint8,                 3, 3 } },
 	{ "System_return:to:",                     { pf_system_return_value_to_context,       2, 2 } },
 	{ "System_setSig:",                        { moo_pf_system_set_sig,                   1, 1 } },
-	{ "System_toggleProcessSwitching:",        { pf_system_toggle_process_switching,      1, 1 } },
+	{ "System_toggleProcessSwitching:",        { moo_pf_system_toggle_process_switching,  1, 1 } },
 
 	{ "_dump",                                 { pf_dump,                                 0, MA } },
 

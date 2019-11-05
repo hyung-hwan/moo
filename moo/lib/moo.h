@@ -378,7 +378,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 
 #define MOO_OBJ_FLAGS_PROC_NOT    0  /* not process */
 #define MOO_OBJ_FLAGS_PROC_NORMAL 1  /* normal process spawned with a block sent newProcess: */
-#define MOO_OBJ_FLAGS_PROC_SYSTEM 2  /* internal process */
+#define MOO_OBJ_FLAGS_PROC_INNATE 2  /* internally created process */
 
 #define MOO_OBJ_HEADER \
 	moo_oow_t _flags; \
