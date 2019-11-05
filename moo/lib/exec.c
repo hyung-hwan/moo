@@ -1628,7 +1628,7 @@ static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 	MOO_ASSERT (moo, moo->processor->runnable.count == MOO_SMOOI_TO_OOP(0));
 	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 
-	proc = make_process(moo, c, 2);
+	proc = make_process(moo, c, MOO_OBJ_FLAGS_PROC_SYSTEM);
 	if (!proc) return MOO_NULL;
 
 	chain_into_processor (moo, proc, PROC_STATE_RUNNING);
@@ -3342,7 +3342,58 @@ static moo_pfrc_t pf_system_find_process_by_id (moo_t* moo, moo_mod_t* mod, moo_
 	return MOO_PF_FAILURE;
 }
 
-static moo_pfrc_t pf_system_find_process_by_id_gt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+
+static MOO_INLINE moo_oop_t __find_adjacent_process_by_id_noseterr (moo_t* moo, moo_ooi_t index, int find_next, int exclude_system)
+{
+	if (find_next)
+	{
+		if (index < -1) index = -1;
+
+	/* TOOD: enhance alloc_pid() and free_pid() to maintain the hightest pid number so that this loop can stop before reaching proc_map_capa */
+		for (++index; index < moo->proc_map_capa; index++)
+		{
+			/* note the free slot contains a small integer which indicate the next slot index in proc_map.
+			 * if the slot it taken, it should point to a process object. read the comment at end of this loop. */
+			moo_oop_t tmp;
+
+			tmp = moo->proc_map[index];
+			if (MOO_CLASSOF(moo, tmp) == moo->_process)
+			{
+				if (exclude_system && MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_SYSTEM) continue;
+				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_NORMAL);
+				return tmp;
+			}
+
+			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
+		}
+	}
+	else
+	{
+		/* find the previous one */
+
+		if (index > moo->proc_map_capa || index <= -1) index = moo->proc_map_capa;
+		for (--index; index >= 0; index--)
+		{
+			moo_oop_t tmp;
+
+			tmp = moo->proc_map[index];
+			if (MOO_CLASSOF(moo, tmp) == moo->_process)
+			{
+				if (exclude_system && MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_SYSTEM) continue;
+				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_PROC(tmp) == MOO_OBJ_FLAGS_PROC_NORMAL);
+				return tmp;
+			}
+
+			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
+		}
+	}
+
+	return MOO_NULL;
+}
+
+static moo_pfrc_t pf_system_find_next_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t /*rcv,*/ id;
 
@@ -3351,35 +3402,31 @@ static moo_pfrc_t pf_system_find_process_by_id_gt (moo_t* moo, moo_mod_t* mod, m
 
 	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
 
+	if (id == moo->_nil)
+	{
+		id = MOO_SMOOI_TO_OOP(-1);
+	}
+	else if (MOO_CLASSOF(moo, id) == moo->_process)
+	{
+		/* the argument is a process object */
+		id = ((moo_oop_process_t)id)->id;
+	}
+
 	if (MOO_OOP_IS_SMOOI(id))
 	{
-		moo_ooi_t index = MOO_OOP_TO_SMOOI(id);
-		if (index >= -1) /* allow -1 to be able to return pid 0. */
+		moo_oop_t tmp;
+
+		tmp = __find_adjacent_process_by_id_noseterr(moo, MOO_OOP_TO_SMOOI(id), 1, 1);
+		if (tmp)
 		{
-/* TOOD: enhance alloc_pid() and free_pid() to maintain the hightest pid number so that this loop can stop before reaching proc_map_capa */
-			for (++index; index < moo->proc_map_capa; index++)
-			{
-				/* note the free slot contains a small integer which indicate the next slot index in proc_map.
-				 * if the slot it taken, it should point to a process object. read the comment at end of this loop. */
-				moo_oop_t tmp;
-
-				tmp = moo->proc_map[index];
-				if (MOO_CLASSOF(moo, tmp) == moo->_process && MOO_OBJ_GET_FLAGS_PROC(tmp) == 1) /* normal process only. skip a system process	 */
-				{
-					MOO_STACK_SETRET (moo, nargs, tmp);
-					return MOO_PF_SUCCESS;
-				}
-
-				/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
-				MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
-			}
+			MOO_STACK_SETRET (moo, nargs, tmp);
+			return MOO_PF_SUCCESS;
 		}
 	}
 
 	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
 	return MOO_PF_FAILURE;
 }
-
 
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_number_scale (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
@@ -4497,8 +4544,8 @@ static pf_t pftab[] =
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_collectGarbage",                 { moo_pf_system_collect_garbage,           0, 0 } },
+	{ "System_findNextProcess:",               { pf_system_find_next_process,             1, 1 } },
 	{ "System_findProcessById:",               { pf_system_find_process_by_id,            1, 1 } },
-	{ "System_findProcessByIdGreaterThan:",    { pf_system_find_process_by_id_gt,         1, 1 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
 	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
 	{ "System_gc",                             { moo_pf_system_collect_garbage,           0, 0 } },

@@ -207,14 +207,14 @@ class System(Apex)
 			 3 ..  -> other processes started by application.
 			*/
 /* TODO: this loop is error-prone as it can't handle when the processs id wraps back and the id of gcfin_proc and ossig_proc gets bigger than normal child processes */
-			//proc := System _findProcessByIdGreaterThan: self.ossig_pid.
-			proc := System _findProcessByIdGreaterThan: -1.
+			//proc := System _findNextProcess: self.ossig_pid.
+			proc := System _findNextProcess: -1.
 			while (proc notError)
 			{
 				pid := proc id.
 				System logNl: ("Requesting to terminate process of id - " & pid asString).
 				proc terminate.
-				proc := System _findProcessByIdGreaterThan: pid.
+				proc := System _findNextProcess: pid.
 			}.
 
 			System logNl: 'Requesting to terminate the caller process of id ' & (caller id) asString.
@@ -236,7 +236,7 @@ class System(Apex)
 	method(#class,#primitive) _halting.
 	method(#class,#primitive) _toggleProcessSwitching: v.
 	method(#class,#primitive,#lenient) _findProcessById: id.
-	method(#class,#primitive,#lenient) _findProcessByIdGreaterThan: id.
+	method(#class,#primitive,#lenient) _findNextProcess: id.
 
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.
