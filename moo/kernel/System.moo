@@ -117,7 +117,7 @@ class System(Apex)
 					if (tmp respondsTo: #finalize)
 					{ 
 						// finalize is protected with an exception handler.
-						// the exception is ignored except it's logged.
+						// the exception is ignored except it is logged.
 						[ tmp finalize ] on: Exception do: [:ex | System longNl: "Exception in finalize - " & ex messageText ]
 					}.
 				}.
@@ -147,7 +147,7 @@ class System(Apex)
 		] ensure: [
 			self.gcfin_sem signal. // in case the process is stuck in wait.
 			self.gcfin_sem unsignal.
-			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
+			System logNl: "End of GC finalization process " & (thisProcess id) asString.
 		].
 	}
 
@@ -166,7 +166,7 @@ class System(Apex)
 					// TODO: Do i have to protected this in an exception handler???
 					//TODO: Execute Handler for signo.
 
-					System logNl: 'Interrupt dectected - signal no - ' & signo asString.
+					System logNl: "Interrupt dectected - signal no - " & signo asString.
 
 					// user-defined signal handler is not allowed for 16rFF
 					if (signo == 16rFF) { goto done }. 
@@ -201,14 +201,15 @@ class System(Apex)
 			oldps := self _toggleProcessSwitching: false.
 
 			/*
-			 0 -> startup  <--- this should also be stored in the 'caller' variable.
+			 0 -> startup  <--- this should also be stored in the "caller" variable.
 			 1 -> __gc_finalizer
 			 2 -> __os_sig_handler 
 			 3 ..  -> other processes started by application.
+
+			from the second run onwards, the starting pid may not be 0.
 			*/
-/* TODO: this loop is error-prone as it can't handle when the processs id wraps back and the id of gcfin_proc and ossig_proc gets bigger than normal child processes */
 			//proc := System _findNextProcess: self.ossig_pid.
-			proc := System _findNextProcess: -1.
+			proc := System _findFirstProcess.
 			while (proc notError)
 			{
 				pid := proc id.
@@ -220,11 +221,11 @@ class System(Apex)
 				proc := System _findNextProcess: pid.
 			}.
 
-			System logNl: 'Requesting to terminate the caller process of id ' & (caller id) asString.
+			System logNl: "Requesting to terminate the caller process of id " & (caller id) asString.
 			caller terminate.  // terminate the startup process.
 			self _toggleProcessSwitching: oldps.
 
-			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
+			System logNl: ">>>>End of OS signal handler process " & (thisProcess id) asString.
 
 			self.gcfin_should_exit := true.
 			self.gcfin_sem signal. // wake the gcfin process.
