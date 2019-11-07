@@ -2233,7 +2233,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 						break;
 
 					case MOO_OBJ_TYPE_CHAR:
-						hv = moo_hash_oochars (MOO_OBJ_GET_CHAR_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hash_oochars(MOO_OBJ_GET_CHAR_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					case MOO_OBJ_TYPE_HALFWORD:
@@ -2266,6 +2266,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 								moo_seterrbfmt (moo, MOO_EINTERN, "internal error - unknown hash flags %d in %O", (int)MOO_OBJ_GET_FLAGS_HASH(rcv), rcv);
 								return MOO_PF_HARD_FAILURE;
 						}
+						break;
 				}
 			}
 			break;
@@ -6222,12 +6223,63 @@ static int __execute (moo_t* moo)
 			t1 = MOO_STACK_GETTOP(moo);
 			MOO_STACK_POP (moo);
 			t2 = MOO_STACK_GETTOP(moo);
-			if (MOO_OOP_IS_SMOOI(t1)) bv = MOO_OOP_TO_SMOOI(t1);
-			else if (MOO_OOP_IS_CHAR(t1)) bv = MOO_OOP_TO_CHAR(t1);
-			else if (MOO_OOP_IS_ERROR(t1)) bv = MOO_OOP_TO_ERROR(t1);
-			else if (MOO_OOP_IS_SMPTR(t1)) bv = ((moo_oow_t)MOO_OOP_TO_SMPTR(t1) & 0xFF);
-			else bv = 0;
-			MOO_OBJ_GET_BYTE_SLOT(t2)[b1] = bv;
+
+			switch (MOO_OOP_GET_TAG(t1))
+			{
+				case MOO_OOP_TAG_SMOOI:
+					bv = MOO_OOP_TO_SMOOI(t1) & 0xFF;
+					break;
+
+				case MOO_OOP_TAG_SMPTR:
+					bv = ((moo_oow_t)MOO_OOP_TO_SMPTR(t1) & 0xFF);
+					break;
+
+				case MOO_OOP_TAG_CHAR:
+					bv = MOO_OOP_TO_CHAR(t1) & 0xFF;
+					break;
+
+				case MOO_OOP_TAG_ERROR:
+					bv = MOO_OOP_TO_ERROR(t1) & 0xFF;
+					break;
+
+				default:
+					/* well, allowing these into a byte array may look a bit awkward.
+					 * mostly i take the low 1 byte of the first unit of the first element 
+					 * and store it at the given position.
+					 * note that a byte array literal composed by the compiler itself
+					 * treat these differently. */
+					if (t1 == moo->_nil) bv = 0;
+					else if (t1 == moo->_true) bv = 1;
+					else if (t1 == moo->_false) bv = 0;
+					else
+					{
+						MOO_ASSERT (moo, MOO_OOP_IS_POINTER(t1));
+						switch (MOO_OBJ_GET_FLAGS_TYPE(t1))
+						{
+							case MOO_OBJ_TYPE_BYTE:
+								bv = (MOO_OBJ_GET_SIZE(t1) > 0)? (MOO_OBJ_GET_BYTE_VAL(t1, 0) & 0xFF): 0;
+								break;
+
+							case MOO_OBJ_TYPE_CHAR:
+								bv = (MOO_OBJ_GET_SIZE(t1) > 0)? (MOO_OBJ_GET_CHAR_VAL(t1, 0) & 0xFF): 0;
+								break;
+
+							case MOO_OBJ_TYPE_HALFWORD:
+								bv = (MOO_OBJ_GET_SIZE(t1) > 0)? (MOO_OBJ_GET_HALFWORD_VAL(t1, 0) & 0xFF): 0;
+								break;
+
+							case MOO_OBJ_TYPE_WORD:
+								bv = (MOO_OBJ_GET_SIZE(t1) > 0)? (MOO_OBJ_GET_WORD_VAL(t1, 0) & 0xFF): 0;
+								break;
+
+							default:
+								bv = 0;
+								break;
+						}
+					}
+					break;
+			}
+			MOO_OBJ_SET_BYTE_VAL(t2, b1, bv);
 			NEXT_INST();
 		}
 
