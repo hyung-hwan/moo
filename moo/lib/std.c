@@ -956,24 +956,41 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
  *       do classification based on mask. */
 	if (!(mask & (MOO_LOG_STDOUT | MOO_LOG_STDERR)))
 	{
+	#if defined(_WIN32)
+		TIME_ZONE_INFORMATION tzi;
+		SYSTEMTIME now;
+	#else
 		time_t now;
+		struct tm tm, *tmp;
+	#endif
 	#if defined(MOO_OOCH_IS_UCH)
 		char ts[32 * MOO_BCSIZE_MAX];
 	#else
 		char ts[32];
 	#endif
 		moo_oow_t tslen;
-		struct tm tm, *tmp;
 
-		now = time(MOO_NULL);
 	#if defined(_WIN32)
-		tmp = localtime(&now);
-		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
-		if (tslen == 0) 
+		/* %z for strftime() in win32 seems to produce a long non-numeric timezone name.
+		 * i don't use strftime() for time formatting. */
+		GetLocalTime (&now);
+		if (GetTimeZoneInformation(&tzi) != TIME_ZONE_ID_INVALID) 
 		{
-			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+			tzi.Bias = -tzi.Bias;
+			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d %+02.2d%02.2d ", 
+				(int)now.wYear, (int)now.wMonth, (int)now.wDay, 
+				(int)now.wHour, (int)now.wMinute, (int)now.wSecond,
+				(int)(tzi.Bias / 60), (int)(tzi.Bias % 60));
+		}
+		else
+		{
+			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ",
+				(int)now.wYear, (int)now.wMonth, (int)now.wDay, 
+				(int)now.wHour, (int)now.wMinute, (int)now.wSecond);
 		}
 	#elif defined(__OS2__)
+		now = time(MOO_NULL);
+
 		#if defined(__WATCOMC__)
 		tmp = _localtime(&now, &tm);
 		#else
@@ -992,10 +1009,12 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		}
 
 	#elif defined(__DOS__)
+		now = time(MOO_NULL);
 		tmp = localtime(&now);
 		/* since i know that %z/%Z is not available in strftime, i switch to sprintf immediately */
 		tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 	#else
+		now = time(MOO_NULL);
 		#if defined(HAVE_LOCALTIME_R)
 		tmp = localtime_r(&now, &tm);
 		#else

@@ -91,6 +91,7 @@ static moo_pfrc_t pf_open_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		goto oops;
 	}
 
+#if defined(O_NONBLOCK) && defined(O_CLOEXEC)
 	fl = fcntl(fd, F_GETFL, 0);
 	if (fl == -1)
 	{
@@ -102,6 +103,7 @@ static moo_pfrc_t pf_open_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	fl |= O_NONBLOCK | O_CLOEXEC;
 
 	if (fcntl(fd, F_SETFL, fl) == -1) goto fcntl_failure;
+#endif
 
 	io->handle = MOO_SMOOI_TO_OOP(fd);
 	MOO_STACK_SETRETTORCV (moo, nargs);
@@ -146,6 +148,10 @@ oops:
 
 static moo_pfrc_t pf_chmod_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
+#if defined(_WIN32)
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return MOO_PF_FAILURE;
+#else
 	moo_oop_t tmp;
 	int fd;
 	moo_oow_t mode;
@@ -163,11 +169,16 @@ static moo_pfrc_t pf_chmod_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	SETRET_WITH_SYSCALL (moo, nargs, fchmod(fd, mode));
 	return MOO_PF_SUCCESS;
+#endif
 }
 
 
 static moo_pfrc_t pf_chown_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
+#if defined(_WIN32)
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return MOO_PF_FAILURE;
+#else
 	moo_oop_t tmp;
 	int fd;
 	moo_ooi_t uid, gid;
@@ -196,10 +207,15 @@ static moo_pfrc_t pf_chown_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	SETRET_WITH_SYSCALL (moo, nargs, fchown(fd, uid, gid));
 	return MOO_PF_SUCCESS;
+#endif
 }
 
 static moo_pfrc_t pf_lock_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
+#if defined(_WIN32)
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return MOO_PF_FAILURE;
+#else
 	moo_oop_t tmp;
 	int fd;
 
@@ -214,6 +230,7 @@ static moo_pfrc_t pf_lock_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	SETRET_WITH_SYSCALL (moo, nargs, flock(fd, MOO_OOP_TO_SMOOI(tmp)));
 	return MOO_PF_SUCCESS;
+#endif
 }
 
 static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
@@ -293,6 +310,14 @@ static moo_pfinfo_t pfinfos[] =
 	{ I, "truncate:",        { pf_truncate_file, 1, 1  }  }
 };
 
+#if defined(_WIN32)
+#	define LOCK_EX 0
+#	define LOCK_NB 0
+#	define LOCK_SH 0
+#	define LOCK_UN 0
+#	define O_NOFOLLOW 0
+#	define O_NONBLOCK 0
+#endif
 static moo_pvinfo_t pvinfos[] = 
 {
 /*
