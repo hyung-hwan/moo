@@ -6472,19 +6472,12 @@ static int compile_braced_block (moo_t* moo)
 				MOO_ASSERT (moo, md->_label != MOO_NULL);
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)
 				{
-				#if 0
 					/* the last label inside {} must be followed by a valid statement */
 					moo_oocs_t labname;
 					labname.ptr = (moo_ooch_t*)(md->_label + 1);
 					labname.len = moo_count_oocstr(labname.ptr);
 					moo_setsynerrbfmt (moo, MOO_SYNERR_LABELATEND, &md->_label->loc, &labname, "label at end of braced block");
 					return -1;
-				#else
-					/* unlike in [], a label can be placed at the back of the block.
-					 * to keep the last evaluated value, eliminate the pop_stacktop instruction */
-					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
-					break;
-				#endif
 				}
 			}
 			else if (n == 7777)
