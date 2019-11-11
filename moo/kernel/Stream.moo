@@ -1,3 +1,41 @@
+interface StreamInterface
+{
+	method close {}
+	method next {}     // if readable
+	method nextPut: item {} // if writable
+	method atEnd {}
+	method contents {}
+	method isReadable {}
+	method isWritable {}
+}
+
+class FileStream(Object) [StreamInterface]
+{
+	| accessor |
+
+	method(#class) on: path for: flags
+	{
+		| stream |
+		stream := self basicNew.
+		stream accessor: (FileAccessor on: path for: flags).
+		^stream
+	}
+
+	method close
+	{
+		ifnot (self.accessor isNil)
+		{
+			self.accessor close.
+			self.accessor := nil.
+		}.
+	}
+
+	method next
+	{
+		
+	}
+}
+
 class Stream(Object)
 {
 	method(#class) new
@@ -338,3 +376,4 @@ class TextStream(ByteStream)
 		if (self.seq at: 0) bitAnd: 
 	}
 }*/
+
