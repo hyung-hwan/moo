@@ -27,7 +27,7 @@
 #ifndef _MOO_UTL_H_
 #define _MOO_UTL_H_
 
-#include "moo-cmn.h"
+#include <moo-cmn.h>
 #include <stdarg.h>
 
 /* =========================================================================

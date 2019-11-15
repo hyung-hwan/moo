@@ -450,7 +450,6 @@ LIBADD_LIB_COMMON =
 @WIN32_TRUE@	$(am__append_1) $(am__append_2)
 pkginclude_HEADERS = \
 	moo.h \
-	moo-bct.h \
 	moo-cmn.h \
 	moo-opt.h \
 	moo-rbt.h \
@@ -463,8 +462,8 @@ pkglib_LTLIBRARIES = libmoo.la libmoox.la
 # libmoo
 ##################################################
 libmoo_la_SOURCES = \
+	bct-lab.h \
 	moo.h \
-	moo-bct.h \
 	moo-cmn.h \
 	moo-rbt.h \
 	moo-utl.h \

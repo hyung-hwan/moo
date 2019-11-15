@@ -1,7 +1,7 @@
 #ifndef _POLL_MSW_H_
 #define _POLL_MSW_H_
 
-#include "moo.h"
+#include <moo.h>
 
 #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600)
 /* Event types that can be polled for.  These bits may be set in `events'

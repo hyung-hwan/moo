@@ -27,8 +27,8 @@
 #ifndef _MOO_H_
 #define _MOO_H_
 
-#include "moo-cmn.h"
-#include "moo-rbt.h"
+#include <moo-cmn.h>
+#include <moo-rbt.h>
 #include <stdarg.h>
 
 /* TODO: move this macro out to the build files.... */

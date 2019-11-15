@@ -27,7 +27,7 @@
 #ifndef _MOO_OPT_H_
 #define _MOO_OPT_H_
 
-#include "moo-cmn.h"
+#include <moo-cmn.h>
 
 /** \file
  * This file defines functions and data structures to process 

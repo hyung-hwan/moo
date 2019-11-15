@@ -37,7 +37,6 @@ pkgincludedir = $(includedir)
 
 pkginclude_HEADERS = \
 	moo.h \
-	moo-bct.h \
 	moo-cmn.h \
 	moo-opt.h \
 	moo-rbt.h \
@@ -54,8 +53,8 @@ pkglib_LTLIBRARIES = libmoo.la libmoox.la
 # libmoo
 ##################################################
 libmoo_la_SOURCES = \
+	bct-lab.h \
 	moo.h \
-	moo-bct.h \
 	moo-cmn.h \
 	moo-rbt.h \
 	moo-utl.h \

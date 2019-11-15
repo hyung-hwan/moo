@@ -24,8 +24,8 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "moo-opt.h"
-#include "moo-utl.h"
+#include <moo-opt.h>
+#include <moo-utl.h>
 
 #define BADCH   '?'
 #define BADARG  ':'

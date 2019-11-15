@@ -24,7 +24,7 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "moo-rbt.h"
+#include <moo-rbt.h>
 #include "moo-prv.h"
 
 #define copier_t        moo_rbt_copier_t
@@ -990,7 +990,7 @@ int moo_rbt_dflcomp (const moo_rbt_t* rbt, const void* kptr1, moo_oow_t klen1, c
 		nn = (klen1 == klen2)? 0: 1;
 	}
 
-	n = MOO_MEMCMP (kptr1, kptr2, KTOB(rbt,min));
+	n = MOO_MEMCMP(kptr1, kptr2, KTOB(rbt,min));
 	if (n == 0) n = nn;
 	return n;
 }

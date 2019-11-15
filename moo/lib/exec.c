@@ -5471,7 +5471,8 @@ static int __execute (moo_t* moo)
 #if defined(HAVE_LABELS_AS_VALUES)
 	static void* inst_table[256] = 
 	{
-		#include "moo-bct.h"
+		/* import bytecode label addresses */
+		#include "bct-lab.h"
 	};
 
 #	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch: 

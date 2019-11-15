@@ -32,15 +32,15 @@
 /*#define MOO_HAVE_CFG_H*/
 
 #if defined(MOO_HAVE_CFG_H)
-#	include "moo-cfg.h"
+#	include <moo-cfg.h>
 #elif defined(_WIN32)
-#	include "moo-msw.h"
+#	include <moo-msw.h>
 #elif defined(__OS2__)
-#	include "moo-os2.h"
+#	include <moo-os2.h>
 #elif defined(__DOS__)
-#	include "moo-dos.h"
+#	include <moo-dos.h>
 #elif defined(macintosh)
-#	include "moo-mac.h" /* class mac os */
+#	include <moo-mac.h> /* class mac os */
 #else
 #	error UNSUPPORTED SYSTEM
 #endif

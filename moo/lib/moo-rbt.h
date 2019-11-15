@@ -27,7 +27,7 @@
 #ifndef _MOO_RBT_H_
 #define _MOO_RBT_H_
 
-#include "moo-cmn.h"
+#include <moo-cmn.h>
 
 /** \file
  * This file provides a red-black tree encapsulated in the #moo_rbt_t type that
@@ -37,9 +37,7 @@
  * This sample code adds a series of keys and values and print them
  * in descending key order.
  * \code
- * #include <moo/cmn/rbt.h>
- * #include <moo/cmn/mem.h>
- * #include <moo/cmn/sio.h>
+ * #include <moo-rbt.h>
  * 
  * static moo_rbt_walk_t walk (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void* ctx)
  * {
