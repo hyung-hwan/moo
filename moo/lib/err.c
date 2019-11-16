@@ -221,7 +221,7 @@ void moo_seterrnum (moo_t* moo, moo_errnum_t errnum)
 }
 
 
-static int err_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
+static int err_bchars (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
 {
 	moo_t* moo = (moo_t*)fmtout->ctx;
 	moo_oow_t max;
@@ -244,7 +244,7 @@ static int err_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
 	return 1; /* success */
 }
 
-static int err_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
+static int err_uchars (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
 {
 	moo_t* moo = (moo_t*)fmtout->ctx;
 	moo_oow_t max;
@@ -274,8 +274,8 @@ void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
-	fo.putbcs = err_bcs;
-	fo.putucs = err_ucs;
+	fo.putbchars = err_bchars;
+	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;
 	fo.ctx = moo;
 
@@ -295,8 +295,8 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
-	fo.putbcs = err_bcs;
-	fo.putucs = err_ucs;
+	fo.putbchars = err_bchars;
+	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;
 	fo.ctx = moo;
 
@@ -317,8 +317,8 @@ void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
-	fo.putbcs = err_bcs;
-	fo.putucs = err_ucs;
+	fo.putbchars = err_bchars;
+	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;
 	fo.ctx = moo;
 
@@ -335,8 +335,8 @@ void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
-	fo.putbcs = err_bcs;
-	fo.putucs = err_ucs;
+	fo.putbchars = err_bchars;
+	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;
 	fo.ctx = moo;
 

@@ -211,7 +211,7 @@ static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 		for (_yy = 0; _yy < n; _yy++) \
 		{ \
 			int _xx; \
-			if ((_xx = fmtout->putbcs(fmtout, &_cc, 1)) <= -1) goto oops; \
+			if ((_xx = fmtout->putbchars(fmtout, &_cc, 1)) <= -1) goto oops; \
 			if (_xx == 0) goto done; \
 			fmtout->count++; \
 		} \
@@ -221,7 +221,7 @@ static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 #define PUT_BCS(fmtout,ptr,len) do { \
 	if (len > 0) { \
 		int _xx; \
-		if ((_xx = fmtout->putbcs(fmtout, ptr, len)) <= -1) goto oops; \
+		if ((_xx = fmtout->putbchars(fmtout, ptr, len)) <= -1) goto oops; \
 		if (_xx == 0) goto done; \
 		fmtout->count += len; \
 	} \
@@ -234,7 +234,7 @@ static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 		for (_yy = 0; _yy < n; _yy++) \
 		{ \
 			int _xx; \
-			if ((_xx = fmtout->putucs(fmtout, &_cc, 1)) <= -1) goto oops; \
+			if ((_xx = fmtout->putuchars(fmtout, &_cc, 1)) <= -1) goto oops; \
 			if (_xx == 0) goto done; \
 			fmtout->count++; \
 		} \
@@ -244,7 +244,7 @@ static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 #define PUT_UCS(fmtout,ptr,len) do { \
 	if (len > 0) { \
 		int _xx; \
-		if ((_xx = fmtout->putucs(fmtout, ptr, len)) <= -1) goto oops; \
+		if ((_xx = fmtout->putuchars(fmtout, ptr, len)) <= -1) goto oops; \
 		if (_xx == 0) goto done; \
 		fmtout->count += len; \
 	} \
@@ -1896,8 +1896,8 @@ moo_ooi_t moo_logbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, va
 	fo.fmt_str = fmt;
 	fo.ctx = moo;
 	fo.mask = mask;
-	fo.putbcs = log_bcs;
-	fo.putucs = log_ucs;
+	fo.putbchars = log_bcs;
+	fo.putuchars = log_ucs;
 	fo.putobj = moo_fmt_object_;
 
 	x = fmt_outv(&fo, ap);
@@ -1950,8 +1950,8 @@ moo_ooi_t moo_logufmtv (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, va
 	fo.fmt_str = fmt;
 	fo.ctx = moo;
 	fo.mask = mask;
-	fo.putbcs = log_bcs;
-	fo.putucs = log_ucs;
+	fo.putbchars = log_bcs;
+	fo.putuchars = log_ucs;
 	fo.putobj = moo_fmt_object_;
 
 	x = fmt_outv(&fo, ap);
@@ -1980,7 +1980,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
  * STRING FORMATTING
  * -------------------------------------------------------------------------- */
 
-static int sprint_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
+static int sprint_bchars (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
 {
 	moo_t* moo = (moo_t*)fmtout->ctx;
 	moo_oow_t unused, oolen, blen;
@@ -2019,7 +2019,7 @@ static int sprint_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len
 	return 1; /* success */
 }
 
-static int sprint_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
+static int sprint_uchars (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
 {
 	moo_t* moo = (moo_t*)fmtout->ctx;
 	moo_oow_t unused, oolen, ulen;
@@ -2797,8 +2797,8 @@ int moo_strfmtcallstack (moo_t* moo, moo_ooi_t nargs, int rcv_is_fmtstr)
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
 	fo.ctx = moo;
-	fo.putbcs = sprint_bcs;
-	fo.putucs = sprint_ucs;
+	fo.putbchars = sprint_bchars;
+	fo.putuchars = sprint_uchars;
 	fo.putobj = moo_fmt_object_;
 	/* format_stack_args doesn't use fmt_str and fmt_type. 
 	 * it takes the format string from the stack. */

@@ -301,13 +301,13 @@ typedef enum moo_cmgr_id_t moo_cmgr_id_t;
  * ========================================================================= */
 typedef struct moo_fmtout_t moo_fmtout_t;
 
-typedef int (*moo_fmtout_putbcs_t) (
+typedef int (*moo_fmtout_putbchars_t) (
 	moo_fmtout_t*     fmtout,
 	const moo_bch_t*  ptr,
 	moo_oow_t         len
 );
 
-typedef int (*moo_fmtout_putucs_t) (
+typedef int (*moo_fmtout_putuchars_t) (
 	moo_fmtout_t*     fmtout,
 	const moo_uch_t*  ptr,
 	moo_oow_t         len
@@ -328,16 +328,16 @@ typedef enum moo_fmtout_fmt_type_t moo_fmtout_fmt_type_t;
 
 struct moo_fmtout_t
 {
-	moo_oow_t             count; /* out */
+	moo_oow_t              count; /* out */
 
-	moo_fmtout_putbcs_t   putbcs; /* in */
-	moo_fmtout_putucs_t   putucs; /* in */
-	moo_fmtout_putobj_t   putobj; /* in - %O is not handled if it's not set. */
-	moo_bitmask_t         mask;   /* in */
-	void*                 ctx;    /* in */
+	moo_fmtout_putbchars_t putbchars; /* in */
+	moo_fmtout_putuchars_t putuchars; /* in */
+	moo_fmtout_putobj_t    putobj; /* in - %O is not handled if it's not set. */
+	moo_bitmask_t          mask;   /* in */
+	void*                  ctx;    /* in */
 
-	moo_fmtout_fmt_type_t fmt_type;
-	const void*           fmt_str;
+	moo_fmtout_fmt_type_t  fmt_type;
+	const void*            fmt_str;
 };
 
 
