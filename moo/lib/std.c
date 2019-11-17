@@ -413,12 +413,12 @@ static moo_t* g_moo = MOO_NULL;
 
 static void* sys_alloc (moo_mmgr_t* mmgr, moo_oow_t size)
 {
-	return malloc (size);
+	return malloc(size);
 }
 
 static void* sys_realloc (moo_mmgr_t* mmgr, void* ptr, moo_oow_t size)
 {
-	return realloc (ptr, size);
+	return realloc(ptr, size);
 }
 
 static void sys_free (moo_mmgr_t* mmgr, void* ptr)
