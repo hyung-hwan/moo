@@ -136,7 +136,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 
 	if (moo_rbt_init (&moo->modtab, moo, MOO_SIZEOF(moo_ooch_t), 1) <= -1) goto oops;
 	modtab_inited = 1;
-	moo_rbt_setstyle (&moo->modtab, moo_getrbtstyle(MOO_RBT_STYLE_INLINE_COPIERS));
+	moo_rbt_setstyle (&moo->modtab, moo_get_rbt_style(MOO_RBT_STYLE_INLINE_COPIERS));
 
 	fill_bigint_tables (moo);
 

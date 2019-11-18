@@ -186,7 +186,7 @@ static moo_rbt_style_t style[] =
 	}
 };
 
-const moo_rbt_style_t* moo_getrbtstyle (moo_rbt_style_kind_t kind)
+const moo_rbt_style_t* moo_get_rbt_style (moo_rbt_style_kind_t kind)
 {
 	return &style[kind];
 }

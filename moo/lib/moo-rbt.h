@@ -52,7 +52,7 @@
  *   int i;
  * 
  *   s1 = moo_rbt_open (MOO_MMGR_GETDFL(), 0, 1, 1); // error handling skipped
- *   moo_rbt_setstyle (s1, moo_getrbtstyle(MOO_RBT_STYLE_INLINE_COPIERS));
+ *   moo_rbt_setstyle (s1, moo_get_rbt_style(MOO_RBT_STYLE_INLINE_COPIERS));
  * 
  *   for (i = 0; i < 20; i++)
  *   {
@@ -282,10 +282,10 @@ extern "C" {
 #endif
 
 /**
- * The moo_getrbtstyle() functions returns a predefined callback set for
+ * The moo_get_rbt_style() functions returns a predefined callback set for
  * pair manipulation.
  */
-MOO_EXPORT const moo_rbt_style_t* moo_getrbtstyle (
+MOO_EXPORT const moo_rbt_style_t* moo_get_rbt_style (
 	moo_rbt_style_kind_t kind
 );
 
