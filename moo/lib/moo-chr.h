@@ -173,33 +173,33 @@ MOO_EXPORT int moo_is_bch_type (moo_bch_t c, moo_bch_prop_t type);
  * these implemenent latin-1 only */
 
 #if !defined(moo_is_bch_upper) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_upper (moo_bch_t c) { return (moo_bchu_t)c - 'A' < 26; }
+static MOO_INLINE int moo_is_bch_upper (moo_bch_t c) { return (moo_bcu_t)c - 'A' < 26; }
 #elif !defined(moo_is_bch_upper)
-#	define moo_is_bch_upper(c) ((moo_bchu_t)(c) - 'A' < 26)
+#	define moo_is_bch_upper(c) ((moo_bcu_t)(c) - 'A' < 26)
 #endif
 
 #if !defined(moo_is_bch_lower) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_lower (moo_bch_t c) { return (moo_bchu_t)c - 'a' < 26; }
+static MOO_INLINE int moo_is_bch_lower (moo_bch_t c) { return (moo_bcu_t)c - 'a' < 26; }
 #elif !defined(moo_is_bch_lower)
-#	define moo_is_bch_lower(c) ((moo_bchu_t)(c) - 'a' < 26)
+#	define moo_is_bch_lower(c) ((moo_bcu_t)(c) - 'a' < 26)
 #endif
 
 #if !defined(moo_is_bch_alpha) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_alpha (moo_bch_t c) { return ((moo_bchu_t)c | 32) - 'a' < 26; }
+static MOO_INLINE int moo_is_bch_alpha (moo_bch_t c) { return ((moo_bcu_t)c | 32) - 'a' < 26; }
 #elif !defined(moo_is_bch_alpha)
-#	define moo_is_bch_alpha(c) (((moo_bchu_t)(c) | 32) - 'a' < 26)
+#	define moo_is_bch_alpha(c) (((moo_bcu_t)(c) | 32) - 'a' < 26)
 #endif
 
 #if !defined(moo_is_bch_digit) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_digit (moo_bch_t c) { return (moo_bchu_t)c - '0' < 10; }
+static MOO_INLINE int moo_is_bch_digit (moo_bch_t c) { return (moo_bcu_t)c - '0' < 10; }
 #elif !defined(moo_is_bch_digit)
-#	define moo_is_bch_digit(c) ((moo_bchu_t)(c) - '0' < 10)
+#	define moo_is_bch_digit(c) ((moo_bcu_t)(c) - '0' < 10)
 #endif
 
 #if !defined(moo_is_bch_xdigit) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_xdigit (moo_bch_t c) { return moo_is_bch_digit(c) || ((moo_bchu_t)c | 32) - 'a' < 6; }
+static MOO_INLINE int moo_is_bch_xdigit (moo_bch_t c) { return moo_is_bch_digit(c) || ((moo_bcu_t)c | 32) - 'a' < 6; }
 #elif !defined(moo_is_bch_xdigit)
-#	define moo_is_bch_xdigit(c) (moo_is_bch_digit(c) || ((moo_bchu_t)(c) | 32) - 'a' < 6)
+#	define moo_is_bch_xdigit(c) (moo_is_bch_digit(c) || ((moo_bcu_t)(c) | 32) - 'a' < 6)
 #endif
 
 #if !defined(moo_is_bch_alnum) && defined(MOO_HAVE_INLINE)
@@ -209,27 +209,27 @@ static MOO_INLINE int moo_is_bch_alnum (moo_bch_t c) { return moo_is_bch_alpha(c
 #endif
 
 #if !defined(moo_is_bch_space) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_space (moo_bch_t c) { return c == ' ' || (moo_bchu_t)c - '\t' < 5; }
+static MOO_INLINE int moo_is_bch_space (moo_bch_t c) { return c == ' ' || (moo_bcu_t)c - '\t' < 5; }
 #elif !defined(moo_is_bch_space)
-#	define moo_is_bch_space(c) ((c) == ' ' || (moo_bchu_t)(c) - '\t' < 5)
+#	define moo_is_bch_space(c) ((c) == ' ' || (moo_bcu_t)(c) - '\t' < 5)
 #endif
 
 #if !defined(moo_is_bch_print) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_print (moo_bch_t c) { return (moo_bchu_t)c - ' ' < 95; }
+static MOO_INLINE int moo_is_bch_print (moo_bch_t c) { return (moo_bcu_t)c - ' ' < 95; }
 #elif !defined(moo_is_bch_print)
-#	define moo_is_bch_print(c) ((moo_bchu_t)(c) - ' ' < 95)
+#	define moo_is_bch_print(c) ((moo_bcu_t)(c) - ' ' < 95)
 #endif
 
 #if !defined(moo_is_bch_graph) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_graph (moo_bch_t c) { return (moo_bchu_t)c - '!' < 94; }
+static MOO_INLINE int moo_is_bch_graph (moo_bch_t c) { return (moo_bcu_t)c - '!' < 94; }
 #elif !defined(moo_is_bch_graph)
-#	define moo_is_bch_graph(c) ((moo_bchu_t)(c) - '!' < 94)
+#	define moo_is_bch_graph(c) ((moo_bcu_t)(c) - '!' < 94)
 #endif
 
 #if !defined(moo_is_bch_cntrl) && defined(MOO_HAVE_INLINE)
-static MOO_INLINE int moo_is_bch_cntrl (moo_bch_t c) { return (moo_bchu_t)c < ' ' || (moo_bchu_t)c == 127; }
+static MOO_INLINE int moo_is_bch_cntrl (moo_bch_t c) { return (moo_bcu_t)c < ' ' || (moo_bcu_t)c == 127; }
 #elif !defined(moo_is_bch_cntrl)
-#	define moo_is_bch_cntrl(c) ((moo_bchu_t)(c) < ' ' || (moo_bchu_t)(c) == 127)
+#	define moo_is_bch_cntrl(c) ((moo_bcu_t)(c) < ' ' || (moo_bcu_t)(c) == 127)
 #endif
 
 #if !defined(moo_is_bch_punct) && defined(MOO_HAVE_INLINE)

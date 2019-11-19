@@ -350,6 +350,7 @@
 
 typedef char                    moo_bch_t;
 typedef int                     moo_bci_t;
+typedef unsigned int            moo_bcu_t;
 typedef unsigned char           moo_bchu_t; /* unsigned version of moo_bch_t for inner working */
 #define MOO_SIZEOF_BCH_T MOO_SIZEOF_CHAR
 #define MOO_SIZEOF_BCI_T MOO_SIZEOF_INT
@@ -374,6 +375,7 @@ typedef unsigned char           moo_bchu_t; /* unsigned version of moo_bch_t for
 #endif
 
 typedef moo_int32_t             moo_uci_t;
+typedef moo_uint32_t            moo_ucu_t;
 #define MOO_SIZEOF_UCI_T 4
 
 typedef moo_uint8_t             moo_oob_t;
@@ -411,6 +413,7 @@ typedef struct moo_bcs_t moo_bcs_t;
 	typedef moo_uch_t               moo_ooch_t;
 	typedef moo_uchu_t              moo_oochu_t;
 	typedef moo_uci_t               moo_ooci_t;
+	typedef moo_ucu_t               moo_oocu_t;
 	typedef moo_ucs_t               moo_oocs_t;
 #	define MOO_OOCH_IS_UCH
 #	define MOO_SIZEOF_OOCH_T MOO_SIZEOF_UCH_T
@@ -418,6 +421,7 @@ typedef struct moo_bcs_t moo_bcs_t;
 	typedef moo_bch_t               moo_ooch_t;
 	typedef moo_bchu_t              moo_oochu_t;
 	typedef moo_bci_t               moo_ooci_t;
+	typedef moo_bcu_t               moo_oocu_t;
 	typedef moo_bcs_t               moo_oocs_t;
 #	define MOO_OOCH_IS_BCH
 #	define MOO_SIZEOF_OOCH_T MOO_SIZEOF_BCH_T
