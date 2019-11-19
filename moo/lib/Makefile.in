@@ -153,14 +153,14 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
-	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
-	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-fmt.lo \
-	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-mb8.lo \
-	libmoo_la-moo.lo libmoo_la-number.lo libmoo_la-obj.lo \
-	libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo libmoo_la-pf-utf8.lo \
-	libmoo_la-rbt.lo libmoo_la-sym.lo libmoo_la-utf8.lo \
-	libmoo_la-utf16.lo libmoo_la-utl.lo
+am_libmoo_la_OBJECTS = libmoo_la-chr.lo libmoo_la-bigint.lo \
+	libmoo_la-comp.lo libmoo_la-debug.lo libmoo_la-decode.lo \
+	libmoo_la-dic.lo libmoo_la-err.lo libmoo_la-exec.lo \
+	libmoo_la-fmt.lo libmoo_la-gc.lo libmoo_la-heap.lo \
+	libmoo_la-mb8.lo libmoo_la-moo.lo libmoo_la-number.lo \
+	libmoo_la-obj.lo libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo \
+	libmoo_la-pf-utf8.lo libmoo_la-rbt.lo libmoo_la-sym.lo \
+	libmoo_la-utf8.lo libmoo_la-utf16.lo libmoo_la-utl.lo
 libmoo_la_OBJECTS = $(am_libmoo_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -173,8 +173,8 @@ libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 @ENABLE_LIBLTDL_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 @ENABLE_LIBUNWIND_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
 @WIN32_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
-am__libmoox_la_SOURCES_DIST = moo-opt.h moo-std.h opt-impl.h opt.c \
-	std.c poll-msw.c poll-msw.h
+am__libmoox_la_SOURCES_DIST = moo-std.h opt-imp.h opt.c std.c \
+	poll-msw.c poll-msw.h
 @WIN32_TRUE@am__objects_1 = libmoox_la-poll-msw.lo
 am_libmoox_la_OBJECTS = libmoox_la-opt.lo libmoox_la-std.lo \
 	$(am__objects_1)
@@ -198,7 +198,8 @@ DEFAULT_INCLUDES =
 depcomp = $(SHELL) $(top_srcdir)/ac/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/libmoo_la-bigint.Plo \
-	./$(DEPDIR)/libmoo_la-comp.Plo ./$(DEPDIR)/libmoo_la-debug.Plo \
+	./$(DEPDIR)/libmoo_la-chr.Plo ./$(DEPDIR)/libmoo_la-comp.Plo \
+	./$(DEPDIR)/libmoo_la-debug.Plo \
 	./$(DEPDIR)/libmoo_la-decode.Plo ./$(DEPDIR)/libmoo_la-dic.Plo \
 	./$(DEPDIR)/libmoo_la-err.Plo ./$(DEPDIR)/libmoo_la-exec.Plo \
 	./$(DEPDIR)/libmoo_la-fmt.Plo ./$(DEPDIR)/libmoo_la-gc.Plo \
@@ -450,6 +451,7 @@ LIBADD_LIB_COMMON =
 @WIN32_TRUE@	$(am__append_1) $(am__append_2)
 pkginclude_HEADERS = \
 	moo.h \
+	moo-chr.h \
 	moo-cmn.h \
 	moo-opt.h \
 	moo-rbt.h \
@@ -463,6 +465,7 @@ pkglib_LTLIBRARIES = libmoo.la libmoox.la
 ##################################################
 libmoo_la_SOURCES = \
 	bct-lab.h \
+	chr.c \
 	moo.h \
 	moo-cmn.h \
 	moo-rbt.h \
@@ -489,6 +492,8 @@ libmoo_la_SOURCES = \
 	pf-utf8.c \
 	rbt.c \
 	sym.c \
+	uch-case.h \
+	uch-prop.h \
 	utf8.c \
 	utf16.c \
 	utl.c
@@ -505,8 +510,7 @@ libmoo_la_DEPENDENCIES = $(am__append_4) $(am__append_6) \
 ##############################################################
 # libmoox
 ##############################################################
-libmoox_la_SOURCES = moo-opt.h moo-std.h opt-impl.h opt.c std.c \
-	$(am__append_15)
+libmoox_la_SOURCES = moo-std.h opt-imp.h opt.c std.c $(am__append_15)
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo $(LIBM) $(PTHREAD_LIBS) \
@@ -611,6 +615,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-bigint.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-chr.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-comp.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-debug.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-decode.Plo@am__quote@ # am--include-marker
@@ -665,6 +670,13 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+libmoo_la-chr.lo: chr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-chr.lo -MD -MP -MF $(DEPDIR)/libmoo_la-chr.Tpo -c -o libmoo_la-chr.lo `test -f 'chr.c' || echo '$(srcdir)/'`chr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-chr.Tpo $(DEPDIR)/libmoo_la-chr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='chr.c' object='libmoo_la-chr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-chr.lo `test -f 'chr.c' || echo '$(srcdir)/'`chr.c
 
 libmoo_la-bigint.lo: bigint.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-bigint.lo -MD -MP -MF $(DEPDIR)/libmoo_la-bigint.Tpo -c -o libmoo_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
@@ -997,6 +1009,7 @@ clean-am: clean-generic clean-libtool clean-pkglibLTLIBRARIES \
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/libmoo_la-bigint.Plo
+	-rm -f ./$(DEPDIR)/libmoo_la-chr.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-comp.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-debug.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-decode.Plo
@@ -1068,6 +1081,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/libmoo_la-bigint.Plo
+	-rm -f ./$(DEPDIR)/libmoo_la-chr.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-comp.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-debug.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-decode.Plo

@@ -871,6 +871,7 @@ AC_SUBST(MOO_PROJECT_URL, "${PACKAGE_URL}")
 
 AC_CONFIG_FILES([
 	Makefile 
+	tools/Makefile 
 	lib/Makefile 
 	mod/Makefile 
 	bin/Makefile

@@ -22047,7 +22047,7 @@ MOO_PROJECT_AUTHOR="${PACKAGE_BUGREPORT}"
 MOO_PROJECT_URL="${PACKAGE_URL}"
 
 
-ac_config_files="$ac_config_files Makefile lib/Makefile mod/Makefile bin/Makefile t/Makefile wasm/Makefile"
+ac_config_files="$ac_config_files Makefile tools/Makefile lib/Makefile mod/Makefile bin/Makefile t/Makefile wasm/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -23217,6 +23217,7 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "tools/Makefile") CONFIG_FILES="$CONFIG_FILES tools/Makefile" ;;
     "lib/Makefile") CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
     "mod/Makefile") CONFIG_FILES="$CONFIG_FILES mod/Makefile" ;;
     "bin/Makefile") CONFIG_FILES="$CONFIG_FILES bin/Makefile" ;;

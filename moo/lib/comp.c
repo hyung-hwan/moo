@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2018 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2019 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
  */
 
 #include "moo-prv.h"
+#include <moo-chr.h>
 
 #define CLASS_BUFFER_ALIGN       64
 #define LITERAL_BUFFER_ALIGN     64
@@ -287,26 +288,29 @@ static MOO_INLINE int is_spacechar (moo_ooci_t c)
 
 static MOO_INLINE int is_alphachar (moo_ooci_t c)
 {
-/* TODO: support full unicode */
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+	/*return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');*/
+	return moo_is_ooch_alpha(c);
 }
 
 static MOO_INLINE int is_digitchar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
-	return (c >= '0' && c <= '9');
+	/*return (c >= '0' && c <= '9');*/
+	return moo_is_ooch_digit(c);
 }
 
 static MOO_INLINE int is_xdigitchar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
-	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+	/*return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');*/
+	return moo_is_ooch_xdigit(c);
 }
 
 static MOO_INLINE int is_alnumchar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+	/*return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');*/
+	return moo_is_ooch_alnum(c);
 }
 
 static MOO_INLINE int is_binselchar (moo_ooci_t c)

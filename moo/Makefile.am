@@ -5,9 +5,9 @@ EXTRA_DIST =
 SUBDIRS =
 
 if ENABLE_STATIC_MODULE
-SUBDIRS += mod lib bin
+SUBDIRS += tools mod lib bin
 else
-SUBDIRS += lib mod bin
+SUBDIRS += tools lib mod bin
 endif
 
 DIST_SUBDIRS = $(SUBDIRS) t wasm

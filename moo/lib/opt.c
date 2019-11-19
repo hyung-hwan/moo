@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2018 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2019 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -54,7 +54,7 @@ static moo_bch_t EMSG_BCH[] = { '\0' };
 #define xcompcharscstr moo_comp_uchars_ucstr
 #define xfindcharincstr moo_find_uchar_in_ucstr
 #define XCI_EOF MOO_BCI_EOF
-#include "opt-impl.h"
+#include "opt-imp.h"
 
 /* ------------------------------------------------------------ */
 
@@ -77,6 +77,6 @@ static moo_bch_t EMSG_BCH[] = { '\0' };
 #define xcompcharscstr moo_comp_bchars_bcstr
 #define xfindcharincstr moo_find_bchar_in_bcstr
 #define XCI_EOF MOO_UCI_EOF
-#include "opt-impl.h"
+#include "opt-imp.h"
 
 /* ------------------------------------------------------------ */

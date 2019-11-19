@@ -37,6 +37,7 @@ pkgincludedir = $(includedir)
 
 pkginclude_HEADERS = \
 	moo.h \
+	moo-chr.h \
 	moo-cmn.h \
 	moo-opt.h \
 	moo-rbt.h \
@@ -54,6 +55,7 @@ pkglib_LTLIBRARIES = libmoo.la libmoox.la
 ##################################################
 libmoo_la_SOURCES = \
 	bct-lab.h \
+	chr.c \
 	moo.h \
 	moo-cmn.h \
 	moo-rbt.h \
@@ -80,6 +82,8 @@ libmoo_la_SOURCES = \
 	pf-utf8.c \
 	rbt.c \
 	sym.c \
+	uch-case.h \
+	uch-prop.h \
 	utf8.c \
 	utf16.c \
 	utl.c
@@ -121,9 +125,8 @@ endif
 # libmoox
 ##############################################################
 libmoox_la_SOURCES = \
-	moo-opt.h \
 	moo-std.h \
-	opt-impl.h \
+	opt-imp.h \
 	opt.c \
 	std.c
 if WIN32

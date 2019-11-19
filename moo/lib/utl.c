@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2018 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2019 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -1099,6 +1099,39 @@ moo_bch_t* moo_duputobcstrwithheadroom (moo_t* moo, moo_oow_t headroom_bytes, co
 }
 
 /* ----------------------------------------------------------------------- */
+moo_uch_t* moo_dupucstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen)
+{
+	moo_uch_t* ptr;
+	moo_oow_t len;
+
+	len = moo_count_ucstr(ucs);
+
+	ptr = (moo_uch_t*)moo_allocmem(moo, (len + 1) * MOO_SIZEOF(moo_uch_t));
+	if (!ptr) return MOO_NULL;
+
+	moo_copy_uchars (ptr, ucs, len);
+	ptr[len] = '\0';
+
+	if (ucslen) *ucslen = len;
+	return ptr;
+}
+
+moo_bch_t* moo_dupbcstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen)
+{
+	moo_bch_t* ptr;
+	moo_oow_t len;
+
+	len = moo_count_bcstr(bcs);
+
+	ptr = (moo_bch_t*)moo_allocmem(moo, (len + 1) * MOO_SIZEOF(moo_bch_t));
+	if (!ptr) return MOO_NULL;
+
+	moo_copy_bchars (ptr, bcs, len);
+	ptr[len] = '\0';
+
+	if (bcslen) *bcslen = len;
+	return ptr;
+}
 
 moo_uch_t* moo_dupuchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen)
 {

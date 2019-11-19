@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2018 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2019 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -2604,6 +2604,17 @@ static MOO_INLINE moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, 
 #	define moo_dupbtoucstr(moo, bcs, ucslen) moo_dupbtoucstrwithheadroom(moo, 0, bcs, ucslen)
 #endif
 
+MOO_EXPORT moo_uch_t* moo_dupucstr (
+	moo_t*           moo,
+	const moo_uch_t* ucs,
+	moo_oow_t*       ucslen
+);
+
+MOO_EXPORT moo_bch_t* moo_dupbcstr (
+	moo_t*           moo,
+	const moo_bch_t* bcs,
+	moo_oow_t*       bcslen
+);
 
 MOO_EXPORT moo_uch_t* moo_dupuchars (
 	moo_t*           moo,
@@ -2627,6 +2638,8 @@ MOO_EXPORT moo_bch_t* moo_dupbchars (
 #	define moo_dupbtooocstrwithheadroom(moo,hrb,bcs,oocslen) moo_dupbtoucstrwithheadroom(moo,hrb,bcs,oocslen)
 #	define moo_dupootobcstr(moo,oocs,bcslen) moo_duputobcstr(moo,oocs,bcslen)
 #	define moo_dupbtooocstr(moo,bcs,oocslen) moo_dupbtoucstr(moo,bcs,oocslen)
+#	define moo_dupoocstr(moo,oocs,oocslen) moo_dupucstr(moo,oocs,oocslen)
+#	define moo_duputooocstr(moo,ucs,oocslen) moo_dupucstr(moo,ucs,oocslen)
 #	define moo_dupoochars(moo,oocs,oocslen) moo_dupuchars(moo,oocs,oocslen)
 #else
 #	define moo_dupootoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen) moo_dupbtoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen)
@@ -2638,6 +2651,8 @@ MOO_EXPORT moo_bch_t* moo_dupbchars (
 #	define moo_duputooocstrwithheadroom(moo,hrb,ucs,oocslen) moo_duputobcstrwithheadroom(moo,hrb,ucs,oocslen)
 #	define moo_dupootoucstr(moo,oocs,ucslen) moo_dupbtoucstr(moo,oocs,ucslen)
 #	define moo_duputooocstr(moo,ucs,oocslen) moo_duputobcstr(moo,ucs,oocslen)
+#	define moo_dupoocstr(moo,oocs,oocslen) moo_dupbcstr(moo,oocs,oocslen)
+#	define moo_dupbtooocstr(moo,bcs,oocslen) moo_dupucstr(moo,bcs,oocslen)
 #	define moo_dupoochars(moo,oocs,oocslen) moo_dupbchars(moo,oocs,oocslen)
 #endif
 
