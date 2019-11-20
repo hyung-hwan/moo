@@ -609,16 +609,36 @@ MOO_EXPORT moo_oow_t moo_count_bcstrl (
 
 /* ------------------------------------------------------------------------- */
 
-#define MOO_BYTE_TO_BCSTR_RADIXMASK (0xFF)
-#define MOO_BYTE_TO_BCSTR_LOWERCASE (1 << 8)
+#define MOO_BYTE_TO_OOCSTR_RADIXMASK (0xFF)
+#define MOO_BYTE_TO_OOCSTR_LOWERCASE (1 << 8)
+
+#define MOO_BYTE_TO_UCSTR_RADIXMASK MOO_BYTE_TO_OOCSTR_RADIXMASK
+#define MOO_BYTE_TO_UCSTR_LOWERCASE MOO_BYTE_TO_OOCSTR_LOWERCASE
+
+#define MOO_BYTE_TO_BCSTR_RADIXMASK MOO_BYTE_TO_OOCSTR_RADIXMASK
+#define MOO_BYTE_TO_BCSTR_LOWERCASE MOO_BYTE_TO_OOCSTR_LOWERCASE
+
+moo_oow_t moo_byte_to_ucstr (
+	moo_oob_t     byte,  
+	moo_uch_t*    buf,
+	moo_oow_t     size,
+	int           flagged_radix,
+	moo_uch_t     fill
+);
 
 moo_oow_t moo_byte_to_bcstr (
-	moo_uint8_t   byte,  
+	moo_oob_t     byte,  
 	moo_bch_t*    buf,
 	moo_oow_t     size,
 	int           flagged_radix,
 	moo_bch_t     fill
 );
+
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_byte_to_oocstr moo_byte_to_ucstr
+#else
+#	define moo_byte_to_oocstr moo_byte_to_bcstr
+#endif
 
 /* ------------------------------------------------------------------------- */
 
