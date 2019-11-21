@@ -39,6 +39,7 @@ pkginclude_HEADERS = \
 	moo.h \
 	moo-chr.h \
 	moo-cmn.h \
+	moo-fmt.h \
 	moo-opt.h \
 	moo-rbt.h \
 	moo-utl.h \
@@ -57,7 +58,9 @@ libmoo_la_SOURCES = \
 	bct-lab.h \
 	chr.c \
 	moo.h \
+	moo-chr.h \
 	moo-cmn.h \
+	moo-fmt.h \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
@@ -70,6 +73,7 @@ libmoo_la_SOURCES = \
 	dic.c \
 	err.c \
 	exec.c \
+	fmt-imp.h \
 	fmt.c \
 	gc.c \
 	heap.c \
@@ -125,6 +129,7 @@ endif
 # libmoox
 ##############################################################
 libmoox_la_SOURCES = \
+	moo-opt.h \
 	moo-std.h \
 	opt-imp.h \
 	opt.c \

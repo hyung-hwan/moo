@@ -295,52 +295,6 @@ enum moo_cmgr_id_t
 };
 typedef enum moo_cmgr_id_t moo_cmgr_id_t;
 
-
-/* =========================================================================
- * FORMATTED OUTPUT
- * ========================================================================= */
-typedef struct moo_fmtout_t moo_fmtout_t;
-
-typedef int (*moo_fmtout_putbchars_t) (
-	moo_fmtout_t*     fmtout,
-	const moo_bch_t*  ptr,
-	moo_oow_t         len
-);
-
-typedef int (*moo_fmtout_putuchars_t) (
-	moo_fmtout_t*     fmtout,
-	const moo_uch_t*  ptr,
-	moo_oow_t         len
-);
-
-typedef int (*moo_fmtout_putobj_t) (
-	moo_fmtout_t*     fmtout,
-	moo_oop_t         obj
-);
-
-enum moo_fmtout_fmt_type_t 
-{
-	MOO_FMTOUT_FMT_TYPE_BCH = 0,
-	MOO_FMTOUT_FMT_TYPE_UCH
-};
-typedef enum moo_fmtout_fmt_type_t moo_fmtout_fmt_type_t;
-
-
-struct moo_fmtout_t
-{
-	moo_oow_t              count; /* out */
-
-	moo_fmtout_putbchars_t putbchars; /* in */
-	moo_fmtout_putuchars_t putuchars; /* in */
-	moo_fmtout_putobj_t    putobj; /* in - %O is not handled if it's not set. */
-	moo_bitmask_t          mask;   /* in */
-	void*                  ctx;    /* in */
-
-	moo_fmtout_fmt_type_t  fmt_type;
-	const void*            fmt_str;
-};
-
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -896,34 +850,6 @@ MOO_EXPORT moo_oow_t moo_mb8_to_uc (
 	const moo_bch_t* mb8,
 	moo_oow_t        size,
 	moo_uch_t*       uc
-);
-
-/* =========================================================================
- * FORMATTED OUTPUT
- * ========================================================================= */
-MOO_EXPORT int moo_bfmt_outv (
-	moo_fmtout_t*    fmtout,
-	const moo_bch_t* fmt,
-	va_list          ap
-);
-
-MOO_EXPORT int moo_ufmt_outv (
-	moo_fmtout_t*    fmtout,
-	const moo_uch_t* fmt,
-	va_list          ap
-);
-
-
-MOO_EXPORT int moo_bfmt_out (
-	moo_fmtout_t*    fmtout,
-	const moo_bch_t* fmt,
-	...
-);
-
-MOO_EXPORT int moo_ufmt_out (
-	moo_fmtout_t*    fmtout,
-	const moo_uch_t* fmt,
-	...
 );
 
 /* =========================================================================

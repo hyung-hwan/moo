@@ -173,8 +173,8 @@ libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 @ENABLE_LIBLTDL_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 @ENABLE_LIBUNWIND_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
 @WIN32_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
-am__libmoox_la_SOURCES_DIST = moo-std.h opt-imp.h opt.c std.c \
-	poll-msw.c poll-msw.h
+am__libmoox_la_SOURCES_DIST = moo-opt.h moo-std.h opt-imp.h opt.c \
+	std.c poll-msw.c poll-msw.h
 @WIN32_TRUE@am__objects_1 = libmoox_la-poll-msw.lo
 am_libmoox_la_OBJECTS = libmoox_la-opt.lo libmoox_la-std.lo \
 	$(am__objects_1)
@@ -453,6 +453,7 @@ pkginclude_HEADERS = \
 	moo.h \
 	moo-chr.h \
 	moo-cmn.h \
+	moo-fmt.h \
 	moo-opt.h \
 	moo-rbt.h \
 	moo-utl.h \
@@ -467,7 +468,9 @@ libmoo_la_SOURCES = \
 	bct-lab.h \
 	chr.c \
 	moo.h \
+	moo-chr.h \
 	moo-cmn.h \
+	moo-fmt.h \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
@@ -480,6 +483,7 @@ libmoo_la_SOURCES = \
 	dic.c \
 	err.c \
 	exec.c \
+	fmt-imp.h \
 	fmt.c \
 	gc.c \
 	heap.c \
@@ -510,7 +514,8 @@ libmoo_la_DEPENDENCIES = $(am__append_4) $(am__append_6) \
 ##############################################################
 # libmoox
 ##############################################################
-libmoox_la_SOURCES = moo-std.h opt-imp.h opt.c std.c $(am__append_15)
+libmoox_la_SOURCES = moo-opt.h moo-std.h opt-imp.h opt.c std.c \
+	$(am__append_15)
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo $(LIBM) $(PTHREAD_LIBS) \

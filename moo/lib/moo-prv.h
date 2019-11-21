@@ -28,6 +28,7 @@
 #define _MOO_PRV_H_
 
 #include <moo.h>
+#include <moo-fmt.h>
 #include <moo-utl.h>
 
 /* you can define this to either 1 or 2 */

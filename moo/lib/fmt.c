@@ -169,6 +169,135 @@ static const moo_bch_t hex2ascii_upper[] =
 static moo_uch_t uch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 static moo_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 
+/* ------------------------------------------------------------------------- */
+
+/*define static int fmt_uintmax_to_bcstr(...)*/
+#undef char_t
+#undef fmt_uintmax
+#define char_t moo_bch_t
+#define fmt_uintmax fmt_uintmax_to_bcstr
+#include "fmt-imp.h"
+
+/*define static int fmt_uintmax_to_ucstr(...)*/
+#undef char_t
+#undef fmt_uintmax
+#define char_t moo_uch_t
+#define fmt_uintmax fmt_uintmax_to_ucstr
+#include "fmt-imp.h"
+
+int moo_fmt_intmax_to_bcstr (
+	moo_bch_t* buf, int size, 
+	moo_intmax_t value, int base_and_flags, int prec,
+	moo_bch_t fillchar, const moo_bch_t* prefix)
+{
+	moo_bch_t signchar;
+	moo_uintmax_t absvalue;
+
+	if (value < 0)
+	{
+		signchar = '-';
+		absvalue = -value;
+	}
+	else if (base_and_flags & MOO_FMT_INTMAX_TO_BCSTR_PLUSSIGN)
+	{
+		signchar = '+';
+		absvalue = value;
+	}
+	else if (base_and_flags & MOO_FMT_INTMAX_TO_BCSTR_EMPTYSIGN)
+	{
+		signchar = ' ';
+		absvalue = value;
+	}
+	else
+	{
+		signchar = '\0';
+		absvalue = value;
+	}
+
+	return fmt_uintmax_to_bcstr(buf, size, absvalue, base_and_flags, prec, fillchar, signchar, prefix);
+}
+
+int moo_fmt_uintmax_to_bcstr (
+	moo_bch_t* buf, int size, 
+	moo_uintmax_t value, int base_and_flags, int prec,
+	moo_bch_t fillchar, const moo_bch_t* prefix)
+{
+	moo_bch_t signchar;
+
+	/* determine if a sign character is needed */
+	if (base_and_flags & MOO_FMT_INTMAX_TO_BCSTR_PLUSSIGN)
+	{
+		signchar = '+';
+	}
+	else if (base_and_flags & MOO_FMT_INTMAX_TO_BCSTR_EMPTYSIGN)
+	{
+		signchar = ' ';
+	}
+	else
+	{
+		signchar = '\0';
+	}
+
+	return fmt_uintmax_to_bcstr(buf, size, value, base_and_flags, prec, fillchar, signchar, prefix);
+}
+
+/* ==================== wide-char ===================================== */
+
+int moo_fmt_intmax_to_ucstr (
+	moo_uch_t* buf, int size, 
+	moo_intmax_t value, int base_and_flags, int prec,
+	moo_uch_t fillchar, const moo_uch_t* prefix)
+{
+	moo_uch_t signchar;
+	moo_uintmax_t absvalue;
+
+	if (value < 0)
+	{
+		signchar = '-';
+		absvalue = -value;
+	}
+	else if (base_and_flags & MOO_FMT_INTMAX_TO_UCSTR_PLUSSIGN)
+	{
+		signchar = '+';
+		absvalue = value;
+	}
+	else if (base_and_flags & MOO_FMT_INTMAX_TO_UCSTR_EMPTYSIGN)
+	{
+		signchar = ' ';
+		absvalue = value;
+	}
+	else
+	{
+		signchar = '\0';
+		absvalue = value;
+	}
+
+	return fmt_uintmax_to_ucstr(buf, size, absvalue, base_and_flags, prec, fillchar, signchar, prefix);
+}
+
+int moo_fmt_uintmax_to_ucstr (
+	moo_uch_t* buf, int size, 
+	moo_uintmax_t value, int base_and_flags, int prec,
+	moo_uch_t fillchar, const moo_uch_t* prefix)
+{
+	moo_uch_t signchar;
+
+	/* determine if a sign character is needed */
+	if (base_and_flags & MOO_FMT_INTMAX_TO_UCSTR_PLUSSIGN)
+	{
+		signchar = '+';
+	}
+	else if (base_and_flags & MOO_FMT_INTMAX_TO_UCSTR_EMPTYSIGN)
+	{
+		signchar = ' ';
+	}
+	else
+	{
+		signchar = '\0';
+	}
+
+	return fmt_uintmax_to_ucstr(buf, size, value, base_and_flags, prec, fillchar, signchar, prefix);
+}
 
 /* ------------------------------------------------------------------------- */
 /*
@@ -515,7 +644,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 		case 'q': /* long long int */
 		case 'j': /* moo_intmax_t/moo_uintmax_t */
 		case 'z': /* moo_ooi_t/moo_oow_t */
-		case 't': /* ptrdiff_t */
+		case 't': /* ptrdiff_t - usually moo_intptr_t */
 			if (lm_flag & (LF_LD | LF_QD)) goto invalid_format;
 
 			flagc |= FLAGC_LENMOD;
@@ -987,7 +1116,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			if (flagc & FLAGC_STAR1) fltfmt->ptr[fmtlen++] = '*';
 			else if (flagc & FLAGC_WIDTH) 
 			{
-				fmtlen += moo_fmtuintmaxtombs (
+				fmtlen += moo_fmt_uintmax_to_bcs (
 					&fltfmt->ptr[fmtlen], fltfmt->capa - fmtlen, 
 					width, 10, -1, '\0', MOO_NULL);
 			}
@@ -995,7 +1124,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			if (flagc & FLAGC_STAR2) fltfmt->ptr[fmtlen++] = '*';
 			else if (flagc & FLAGC_PRECISION) 
 			{
-				fmtlen += moo_fmtuintmaxtombs (
+				fmtlen += moo_fmt_uintmax_to_bcs (
 					&fltfmt->ptr[fmtlen], fltfmt->capa - fmtlen, 
 					precision, 10, -1, '\0', MOO_NULL);
 			}
@@ -1116,10 +1245,8 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 				num = va_arg (ap, moo_uintmax_t);
 			#endif
 			}
-#if 0
 			else if (lm_flag & LF_T)
-				num = va_arg(ap, moo_ptrdiff_t);
-#endif
+				num = va_arg(ap, moo_intptr_t/*moo_ptrdiff_t*/);
 			else if (lm_flag & LF_Z)
 				num = va_arg(ap, moo_oow_t);
 			#if (MOO_SIZEOF_LONG_LONG > 0)
@@ -1161,10 +1288,8 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			#endif
 			}
 
-#if 0
 			else if (lm_flag & LF_T)
-				num = va_arg(ap, moo_ptrdiff_t);
-#endif
+				num = va_arg(ap, moo_intptr_t/*moo_ptrdiff_t*/);
 			else if (lm_flag & LF_Z)
 				num = va_arg (ap, moo_ooi_t);
 			#if (MOO_SIZEOF_LONG_LONG > 0)
@@ -2806,3 +2931,5 @@ int moo_strfmtcallstack (moo_t* moo, moo_ooi_t nargs, int rcv_is_fmtstr)
 	moo->sprintf.xbuf.len = 0;
 	return format_stack_args(&fo, nargs, rcv_is_fmtstr);
 }
+
+
