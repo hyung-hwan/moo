@@ -831,6 +831,7 @@ enable_experimental
 enable_debug
 enable_unicode
 enable_full_liw
+enable_fltmax
 enable_cxx
 enable_dynamic_module
 enable_static_module
@@ -1492,6 +1493,8 @@ Optional Features:
                           no:4 (default. yes)
   --enable-full-liw       Use a full word as a large integer word (default.
                           no)
+  --enable-awk-fltmax     use hawk_fltmax_t for floating-point numbers
+                          (default. no)
   --enable-cxx            build the library for C++ if a C++ compiler is
                           available (default. yes)
   --enable-dynamic-module enable dynamic module capability(default. yes)
@@ -18505,7 +18508,7 @@ fi
 
 done
 
-for ac_header in ffi.h dyncall.h libunwind.h
+for ac_header in ffi.h dyncall.h libunwind.h quadmath.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -21790,6 +21793,21 @@ if test "${enable_full_liw}" = "yes"
 then
 
 $as_echo "#define MOO_ENABLE_FULL_LIW 1" >>confdefs.h
+
+fi
+
+# Check whether --enable-fltmax was given.
+if test "${enable_fltmax+set}" = set; then :
+  enableval=$enable_fltmax; enable_fltmax_is=$enableval
+else
+  enable_fltmax_is=no
+
+fi
+
+if test "${enable_fltmax_is}" = "yes"
+then
+
+$as_echo "#define MOO_USE_FLTMAX /**/" >>confdefs.h
 
 fi
 

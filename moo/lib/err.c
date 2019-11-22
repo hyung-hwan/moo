@@ -274,6 +274,7 @@ void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.mmgr = moo_getmmgr(moo);
 	fo.putbchars = err_bchars;
 	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;
@@ -295,6 +296,7 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.mmgr = moo_getmmgr(moo);
 	fo.putbchars = err_bchars;
 	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;
@@ -317,6 +319,7 @@ void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.mmgr = moo_getmmgr(moo);
 	fo.putbchars = err_bchars;
 	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;
@@ -335,6 +338,7 @@ void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_
 	moo->errmsg.len = 0;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.mmgr = moo_getmmgr(moo);
 	fo.putbchars = err_bchars;
 	fo.putuchars = err_uchars;
 	fo.putobj = moo_fmt_object_;

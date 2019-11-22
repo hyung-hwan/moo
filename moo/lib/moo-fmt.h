@@ -174,6 +174,7 @@ struct moo_fmtout_t
 {
 	moo_oow_t              count; /* out */
 
+	moo_mmgr_t*            mmgr; /* in */
 	moo_fmtout_putbchars_t putbchars; /* in */
 	moo_fmtout_putuchars_t putuchars; /* in */
 	moo_fmtout_putobj_t    putobj; /* in - %O is not handled if it's not set. */
@@ -182,6 +183,23 @@ struct moo_fmtout_t
 
 	moo_fmtout_fmt_type_t  fmt_type;
 	const void*            fmt_str;
+
+	/* internal use from here below */
+	struct
+	{
+		struct
+		{
+			moo_bch_t  sbuf[32];
+			moo_bch_t* ptr;
+			moo_oow_t  capa;
+		} fmt;
+		struct
+		{
+			moo_bch_t  sbuf[32];
+			moo_bch_t* ptr;
+			moo_oow_t  capa;
+		} out;
+	} fb; /* some buffers for handling moo_flt_t/moo_fltmax_t formatting */
 };
 
 #if defined(__cplusplus)

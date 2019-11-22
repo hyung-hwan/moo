@@ -338,6 +338,50 @@
 #endif
 
 /* =========================================================================
+ * FLOATING-POINT TYPE
+ * ========================================================================= */
+/** \typedef moo_fltbas_t
+ * The moo_fltbas_t type defines the largest floating-pointer number type
+ * naturally supported.
+ */
+#if defined(__FreeBSD__) || defined(__MINGW32__)
+	/* TODO: check if the support for long double is complete.
+	 *       if so, use long double for moo_flt_t */
+	typedef double moo_fltbas_t;
+#	define MOO_SIZEOF_FLTBAS_T MOO_SIZEOF_DOUBLE
+#elif MOO_SIZEOF_LONG_DOUBLE > MOO_SIZEOF_DOUBLE
+	typedef long double moo_fltbas_t;
+#	define MOO_SIZEOF_FLTBAS_T MOO_SIZEOF_LONG_DOUBLE
+#else
+	typedef double moo_fltbas_t;
+#	define MOO_SIZEOF_FLTBAS_T MOO_SIZEOF_DOUBLE
+#endif
+
+/** \typedef moo_fltmax_t
+ * The moo_fltmax_t type defines the largest floating-pointer number type
+ * ever supported.
+ */
+#if MOO_SIZEOF___FLOAT128 >= MOO_SIZEOF_FLT_T
+	/* the size of long double may be equal to the size of __float128
+	 * for alignment on some platforms */
+	typedef __float128 moo_fltmax_t;
+#	define MOO_SIZEOF_FLTMAX_T MOO_SIZEOF___FLOAT128
+#	define MOO_FLTMAX_REQUIRE_QUADMATH 1
+#else
+	typedef moo_flt_t moo_fltmax_t;
+#	define MOO_SIZEOF_FLTMAX_T MOO_SIZEOF_FLT_T
+#	undef MOO_FLTMAX_REQUIRE_QUADMATH
+#endif
+
+#if defined(MOO_USE_FLTMAX)
+typedef moo_fltmax_t moo_flt_t;
+#define MOO_SIZEOF_FLT_T MOO_SIZEOF_FLTMAX_T
+#else
+typedef moo_fltbas_t moo_flt_t;
+#define MOO_SIZEOF_FLT_T MOO_SIZEOF_FLTBAS_T
+#endif
+
+/* =========================================================================
  * BASIC HARD-CODED DEFINES
  * ========================================================================= */
 #define MOO_BITS_PER_BYTE (8)

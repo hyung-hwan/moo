@@ -137,7 +137,7 @@ AC_CHECK_HEADERS([dlfcn.h ltdl.h sys/mman.h])
 AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h sys/event.h])
 AC_CHECK_HEADERS([netinet/in.h sys/un.h netpacket/packet.h net/if_dl.h])
 AC_CHECK_HEADERS([xcb/xcb.h])
-AC_CHECK_HEADERS([ffi.h dyncall.h libunwind.h])
+AC_CHECK_HEADERS([ffi.h dyncall.h libunwind.h quadmath.h])
 
 dnl check data types
 dnl AC_CHECK_TYPE([wchar_t], 
@@ -650,12 +650,14 @@ AC_C_BIGENDIAN(
 	[AC_DEFINE([MOO_ENDIAN_LITTLE],[],[Little Endian])],
 	[AC_DEFINE([MOO_ENDIAN_UNKNOWN],[],[Unknown Endian])])
 
+dnl ===== enable-experimental =====
 AC_ARG_ENABLE([experimental], 
 	[AS_HELP_STRING([--enable-experimental],[enable experimental feature(default. no)])],
 	enable_experimental_is=$enableval,
 	enable_experimental_is=no)
 AM_CONDITIONAL(ENABLE_EXPERIMENTAL, test "${enable_experimental_is}" = "yes" )
 
+dnl ===== enable-debug =====
 AC_ARG_ENABLE([debug], 
 	[AS_HELP_STRING([--enable-debug],[compile the code in the debug mode (default. no)])],
 	enable_debug_is=$enableval,
@@ -673,6 +675,7 @@ else
 	AC_SUBST(BUILD_MODE, "release")
 fi
 
+dnl ===== enable-unicode =====
 AC_ARG_ENABLE([unicode], 
 	[AS_HELP_STRING([--enable-unicode],[Use the unicode character type as the default character type. one of yes, no, yes:2, yes:4, no:2, no:4 (default. yes)])],
 	enable_unicode=$enableval,
@@ -715,6 +718,7 @@ else
 	AC_DEFINE([MOO_UNICODE_SIZE],[1],[Unicode character type size])
 fi
 
+dnl ===== enable-full-liw =====
 AC_ARG_ENABLE([full-liw], 
 	[AS_HELP_STRING([--enable-full-liw],[Use a full word as a large integer word (default. no)])],
 	enable_full_liw=$enableval,
@@ -725,6 +729,18 @@ then
 	AC_DEFINE([MOO_ENABLE_FULL_LIW],[1],[Use a full word as a large integer word])
 fi
 
+dnl ===== enable-fltmax =====
+AC_ARG_ENABLE([fltmax], 
+	[AS_HELP_STRING([--enable-awk-fltmax],[use hawk_fltmax_t for floating-point numbers (default. no)])],
+	enable_fltmax_is=$enableval,
+	enable_fltmax_is=no
+)
+if test "${enable_fltmax_is}" = "yes"
+then
+	AC_DEFINE([MOO_USE_FLTMAX],[],[use hawk_fltmax_t for floating-point numbers])
+fi
+
+dnl ===== enable-cxx =====
 AC_ARG_ENABLE([cxx], 
 	[AS_HELP_STRING([--enable-cxx],[build the library for C++ if a C++ compiler is available (default. yes)])],
 	enable_cxx_is=$enableval,
