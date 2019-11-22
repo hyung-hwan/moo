@@ -153,7 +153,7 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-am_libmoo_la_OBJECTS = libmoo_la-chr.lo libmoo_la-bigint.lo \
+am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-chr.lo \
 	libmoo_la-comp.lo libmoo_la-debug.lo libmoo_la-decode.lo \
 	libmoo_la-dic.lo libmoo_la-err.lo libmoo_la-exec.lo \
 	libmoo_la-fmt.lo libmoo_la-gc.lo libmoo_la-heap.lo \
@@ -466,7 +466,6 @@ pkglib_LTLIBRARIES = libmoo.la libmoox.la
 ##################################################
 libmoo_la_SOURCES = \
 	bct-lab.h \
-	chr.c \
 	moo.h \
 	moo-chr.h \
 	moo-cmn.h \
@@ -477,6 +476,7 @@ libmoo_la_SOURCES = \
 	pack1.h \
 	unpack.h \
 	bigint.c \
+	chr.c \
 	comp.c \
 	debug.c  \
 	decode.c \
@@ -676,19 +676,19 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
-libmoo_la-chr.lo: chr.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-chr.lo -MD -MP -MF $(DEPDIR)/libmoo_la-chr.Tpo -c -o libmoo_la-chr.lo `test -f 'chr.c' || echo '$(srcdir)/'`chr.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-chr.Tpo $(DEPDIR)/libmoo_la-chr.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='chr.c' object='libmoo_la-chr.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-chr.lo `test -f 'chr.c' || echo '$(srcdir)/'`chr.c
-
 libmoo_la-bigint.lo: bigint.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-bigint.lo -MD -MP -MF $(DEPDIR)/libmoo_la-bigint.Tpo -c -o libmoo_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-bigint.Tpo $(DEPDIR)/libmoo_la-bigint.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bigint.c' object='libmoo_la-bigint.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
+
+libmoo_la-chr.lo: chr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-chr.lo -MD -MP -MF $(DEPDIR)/libmoo_la-chr.Tpo -c -o libmoo_la-chr.lo `test -f 'chr.c' || echo '$(srcdir)/'`chr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-chr.Tpo $(DEPDIR)/libmoo_la-chr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='chr.c' object='libmoo_la-chr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-chr.lo `test -f 'chr.c' || echo '$(srcdir)/'`chr.c
 
 libmoo_la-comp.lo: comp.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-comp.lo -MD -MP -MF $(DEPDIR)/libmoo_la-comp.Tpo -c -o libmoo_la-comp.lo `test -f 'comp.c' || echo '$(srcdir)/'`comp.c

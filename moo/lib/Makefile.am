@@ -56,7 +56,6 @@ pkglib_LTLIBRARIES = libmoo.la libmoox.la
 ##################################################
 libmoo_la_SOURCES = \
 	bct-lab.h \
-	chr.c \
 	moo.h \
 	moo-chr.h \
 	moo-cmn.h \
@@ -67,6 +66,7 @@ libmoo_la_SOURCES = \
 	pack1.h \
 	unpack.h \
 	bigint.c \
+	chr.c \
 	comp.c \
 	debug.c  \
 	decode.c \

@@ -1035,7 +1035,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			if (lm_flag & LF_J)
 			{
 			#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF) && (MOO_SIZEOF_FLTMAX_T == MOO_SIZEOF___FLOAT128)
-				v_qd = va_arg (ap, moo_fltmax_t);
+				v_qd = va_arg(ap, moo_fltmax_t);
 				dtype = LF_QD;
 			#elif MOO_SIZEOF_FLTMAX_T == MOO_SIZEOF_DOUBLE
 				v_d = va_arg(ap, moo_fltmax_t);
@@ -1065,7 +1065,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			}
 			else if (lm_flag & (LF_LD | LF_L))
 			{
-				v_ld = va_arg (ap, long double);
+				v_ld = va_arg(ap, long double);
 				dtype = LF_LD;
 			}
 		#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
@@ -1081,7 +1081,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			}
 			else
 			{
-				v_d = va_arg (ap, double);
+				v_d = va_arg(ap, double);
 			}
 
 			fmtlen = fmt - percent;
@@ -1234,15 +1234,15 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 				for (i = 0, num = 0; i < MOO_SIZEOF(moo_uintmax_t) / MOO_SIZEOF(moo_oow_t); i++)
 				{
 				#if defined(MOO_ENDIAN_BIG)
-					num = num << (8 * MOO_SIZEOF(moo_oow_t)) | (va_arg (ap, moo_oow_t));
+					num = num << (8 * MOO_SIZEOF(moo_oow_t)) | (va_arg(ap, moo_oow_t));
 				#else
 					register int shift = i * MOO_SIZEOF(moo_oow_t);
-					moo_oow_t x = va_arg (ap, moo_oow_t);
+					moo_oow_t x = va_arg(ap, moo_oow_t);
 					num |= (moo_uintmax_t)x << (shift * MOO_BITS_PER_BYTE);
 				#endif
 				}
 			#else
-				num = va_arg (ap, moo_uintmax_t);
+				num = va_arg(ap, moo_uintmax_t);
 			#endif
 			}
 			else if (lm_flag & LF_T)
@@ -1276,34 +1276,34 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 				for (i = 0, num = 0; i < MOO_SIZEOF(moo_intmax_t) / MOO_SIZEOF(moo_oow_t); i++)
 				{
 				#if defined(MOO_ENDIAN_BIG)
-					num = num << (8 * MOO_SIZEOF(moo_oow_t)) | (va_arg (ap, moo_oow_t));
+					num = num << (8 * MOO_SIZEOF(moo_oow_t)) | (va_arg(ap, moo_oow_t));
 				#else
 					register int shift = i * MOO_SIZEOF(moo_oow_t);
-					moo_oow_t x = va_arg (ap, moo_oow_t);
+					moo_oow_t x = va_arg(ap, moo_oow_t);
 					num |= (moo_uintmax_t)x << (shift * MOO_BITS_PER_BYTE);
 				#endif
 				}
 			#else
-				num = va_arg (ap, moo_intmax_t);
+				num = va_arg(ap, moo_intmax_t);
 			#endif
 			}
 
 			else if (lm_flag & LF_T)
 				num = va_arg(ap, moo_intptr_t/*moo_ptrdiff_t*/);
 			else if (lm_flag & LF_Z)
-				num = va_arg (ap, moo_ooi_t);
+				num = va_arg(ap, moo_ooi_t);
 			#if (MOO_SIZEOF_LONG_LONG > 0)
 			else if (lm_flag & LF_Q)
-				num = va_arg (ap, long long int);
+				num = va_arg(ap, long long int);
 			#endif
 			else if (lm_flag & (LF_L | LF_LD))
-				num = va_arg (ap, long int);
+				num = va_arg(ap, long int);
 			else if (lm_flag & LF_H)
-				num = (short int)va_arg (ap, int);
+				num = (short int)va_arg(ap, int);
 			else if (lm_flag & LF_C)
-				num = (char)va_arg (ap, int);
+				num = (char)va_arg(ap, int);
 			else
-				num = va_arg (ap, int);
+				num = va_arg(ap, int);
 
 		number:
 			if (sign && (moo_intmax_t)num < 0) 

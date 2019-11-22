@@ -308,16 +308,6 @@ MOO_EXPORT int moo_fmt_intmax_to_ucstr (
 	const moo_uch_t* prefix           /**< prefix */
 );
 
-/** \def moo_fmt_intmax
- * The moo_fmt_intmax() macro maps to moo_fmt_intmax_to_bcstr() if 
- * #MOO_OOCH_IS_BCH, and moo_fmt_intmax_to_ucstr() if #MOO_CHAR_IS_WCHAR.
- */
-#ifdef MOO_OOCH_IS_BCH
-#	define moo_fmt_intmax(b,sz,v,bf,pr,fc,pf) moo_fmt_intmax_to_bcstr(b,sz,v,bf,pr,fc,pf)
-#else
-#	define moo_fmt_intmax(b,sz,v,bf,pr,fc,pf) moo_fmt_intmax_to_ucstr(b,sz,v,bf,pr,fc,pf)
-#endif
-
 /**
  * The moo_fmt_uintmax_to_bcstr() function formats an unsigned integer \a value 
  * to a multibyte string buffer. It behaves the same as moo_fmt_uintmax_to_bcstr() 
@@ -332,6 +322,25 @@ MOO_EXPORT int moo_fmt_uintmax_to_bcstr (
 	moo_bch_t        fillchar,        /**< fill character */
 	const moo_bch_t* prefix           /**< prefix */
 );
+
+MOO_EXPORT int moo_fmt_uintmax_to_ucstr (
+	moo_uch_t*       buf,             /**< buffer pointer */
+	int              bufsize,         /**< buffer size */
+	moo_uintmax_t    value,           /**< integer to format */
+	int              base_and_flags,  /**< base ORed with flags */
+	int              precision,       /**< precision */
+	moo_uch_t        fillchar,        /**< fill character */
+	const moo_uch_t* prefix           /**< prefix */
+);
+
+#if defined(MOO_OOCH_IS_BCH)
+#	define moo_fmt_intmax_to_oocstr moo_fmt_intmax_to_bcstr
+#	define moo_fmt_uintmax_to_oocstr moo_fmt_uintmax_to_bcstr
+#else
+#	define moo_fmt_intmax_to_oocstr moo_fmt_intmax_to_ucstr
+#	define moo_fmt_uintmax_to_oocstr moo_fmt_uintmax_to_ucstr
+#endif
+
 
 /* TODO: moo_fmt_fltmax_to_bcstr()... moo_fmt_fltmax_to_ucstr() */
 
