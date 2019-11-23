@@ -524,8 +524,6 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			case MOO_FMTOUT_FMT_TYPE_UCH:
 				uch = *(const moo_uch_t*)fmtptr;
 				break;
-			default: /* this must not happen */
-				goto oops;
 		}
 		fmtptr += fmtchsz;
 
