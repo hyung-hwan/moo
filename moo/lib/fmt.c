@@ -67,6 +67,8 @@
 
 #include "moo-prv.h"
 
+#if defined(MOO_ENABLE_FLTFMT)
+
 #include <stdio.h> /* for snrintf(). used for floating-point number formatting */
 #if defined(_MSC_VER) || defined(__BORLANDC__) || (defined(__WATCOMC__) && (__WATCOMC__ < 1200))
 #	define snprintf _snprintf 
@@ -77,6 +79,8 @@
 #if defined(HAVE_QUADMATH_H)
 #	include <quadmath.h> /* for quadmath_snprintf() */
 #endif
+
+#endif /* MOO_ENABLE_FLTFMT)
 
 /* Max number conversion buffer length: 
  * moo_intmax_t in base 2, plus NUL byte. */
@@ -413,6 +417,25 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 	moo_bch_t nbuf[MAXNBUF];
 	const moo_bch_t* nbufp;
 	int stop = 0;
+
+#if defined(MOO_ENABLE_FLTFMT)
+	struct
+	{
+		struct
+		{
+			moo_bch_t  sbuf[32];
+			moo_bch_t* ptr;
+			moo_oow_t  capa;
+		} fmt;
+		struct
+		{
+			moo_bch_t  sbuf[64];
+			moo_bch_t* ptr;
+			moo_oow_t  capa;
+		} out;
+	} fb; /* some buffers for handling float-point number formatting */
+#endif
+
 	moo_bch_t* (*sprintn) (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t* lenp);
 
 	fmtptr = (const moo_uint8_t*)fmtout->fmt_str;
@@ -428,11 +451,12 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 
 	/* this is an internal function. it doesn't reset count to 0 */
 	/* fmtout->count = 0; */
-
-	fmtout->fb.fmt.ptr = fmtout->fb.fmt.sbuf;
-	fmtout->fb.fmt.capa = MOO_COUNTOF(fmtout->fb.fmt.sbuf) - 1;
-	fmtout->fb.out.ptr = fmtout->fb.out.sbuf;
-	fmtout->fb.out.capa = MOO_COUNTOF(fmtout->fb.out.sbuf) - 1;
+#if defined(MOO_ENABLE_FLTFMT)
+	fb.fmt.ptr = fb.fmt.sbuf;
+	fb.fmt.capa = MOO_COUNTOF(fb.fmt.sbuf) - 1;
+	fb.out.ptr = fb.out.sbuf;
+	fb.out.capa = MOO_COUNTOF(fb.out.sbuf) - 1;
+#endif
 
 	while (1)
 	{
@@ -500,6 +524,8 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			case MOO_FMTOUT_FMT_TYPE_UCH:
 				uch = *(const moo_uch_t*)fmtptr;
 				break;
+			default: /* this must not happen */
+				goto oops;
 		}
 		fmtptr += fmtchsz;
 
@@ -545,7 +571,6 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 					flagc &= ~FLAGC_ZEROPAD;
 				}
 			}
-			
 			goto reswitch;
 
 		case '*': /* take the length from the parameter */
@@ -996,6 +1021,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			break;
 		}
 
+#if defined(MOO_ENABLE_FLTFMT)
 		case 'e':
 		case 'E':
 		case 'f':
@@ -1075,59 +1101,59 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			}
 
 			fmtlen = fmtptr - percent;
-			if (fmtlen > fmtout->fb.fmt.capa)
+			if (fmtlen > fb.fmt.capa)
 			{
-				if (fmtout->fb.fmt.ptr == fmtout->fb.fmt.sbuf)
+				if (fb.fmt.ptr == fb.fmt.sbuf)
 				{
-					fmtout->fb.fmt.ptr = (moo_bch_t*)MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(*fmtout->fb.fmt.ptr) * (fmtlen + 1));
-					if (!fmtout->fb.fmt.ptr) goto oops;
+					fb.fmt.ptr = (moo_bch_t*)MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(*fb.fmt.ptr) * (fmtlen + 1));
+					if (!fb.fmt.ptr) goto oops;
 				}
 				else
 				{
 					moo_bch_t* tmpptr;
 
-					tmpptr = (moo_bch_t*)MOO_MMGR_REALLOC(fmtout->mmgr, fmtout->fb.fmt.ptr, MOO_SIZEOF(*fmtout->fb.fmt.ptr) * (fmtlen + 1));
+					tmpptr = (moo_bch_t*)MOO_MMGR_REALLOC(fmtout->mmgr, fb.fmt.ptr, MOO_SIZEOF(*fb.fmt.ptr) * (fmtlen + 1));
 					if (!tmpptr) goto oops;
-					fmtout->fb.fmt.ptr = tmpptr;
+					fb.fmt.ptr = tmpptr;
 				}
 
-				fmtout->fb.fmt.capa = fmtlen;
+				fb.fmt.capa = fmtlen;
 			}
 
 			/* compose back the format specifier */
 			fmtlen = 0;
-			fmtout->fb.fmt.ptr[fmtlen++] = '%';
-			if (flagc & FLAGC_SPACE) fmtout->fb.fmt.ptr[fmtlen++] = ' ';
-			if (flagc & FLAGC_SHARP) fmtout->fb.fmt.ptr[fmtlen++] = '#';
-			if (flagc & FLAGC_SIGN) fmtout->fb.fmt.ptr[fmtlen++] = '+';
-			if (flagc & FLAGC_LEFTADJ) fmtout->fb.fmt.ptr[fmtlen++] = '-';
-			if (flagc & FLAGC_ZEROPAD) fmtout->fb.fmt.ptr[fmtlen++] = '0';
+			fb.fmt.ptr[fmtlen++] = '%';
+			if (flagc & FLAGC_SPACE) fb.fmt.ptr[fmtlen++] = ' ';
+			if (flagc & FLAGC_SHARP) fb.fmt.ptr[fmtlen++] = '#';
+			if (flagc & FLAGC_SIGN) fb.fmt.ptr[fmtlen++] = '+';
+			if (flagc & FLAGC_LEFTADJ) fb.fmt.ptr[fmtlen++] = '-';
+			if (flagc & FLAGC_ZEROPAD) fb.fmt.ptr[fmtlen++] = '0';
 
-			if (flagc & FLAGC_STAR1) fmtout->fb.fmt.ptr[fmtlen++] = '*';
+			if (flagc & FLAGC_STAR1) fb.fmt.ptr[fmtlen++] = '*';
 			else if (flagc & FLAGC_WIDTH) 
 			{
 				fmtlen += moo_fmt_uintmax_to_bcstr(
-					&fmtout->fb.fmt.ptr[fmtlen], fmtout->fb.fmt.capa - fmtlen, 
+					&fb.fmt.ptr[fmtlen], fb.fmt.capa - fmtlen, 
 					width, 10, -1, '\0', MOO_NULL);
 			}
-			if (flagc & FLAGC_DOT) fmtout->fb.fmt.ptr[fmtlen++] = '.';
-			if (flagc & FLAGC_STAR2) fmtout->fb.fmt.ptr[fmtlen++] = '*';
+			if (flagc & FLAGC_DOT) fb.fmt.ptr[fmtlen++] = '.';
+			if (flagc & FLAGC_STAR2) fb.fmt.ptr[fmtlen++] = '*';
 			else if (flagc & FLAGC_PRECISION) 
 			{
 				fmtlen += moo_fmt_uintmax_to_bcstr(
-					&fmtout->fb.fmt.ptr[fmtlen], fmtout->fb.fmt.capa - fmtlen, 
+					&fb.fmt.ptr[fmtlen], fb.fmt.capa - fmtlen, 
 					precision, 10, -1, '\0', MOO_NULL);
 			}
 
 			if (dtype == LF_LD)
-				fmtout->fb.fmt.ptr[fmtlen++] = 'L';
+				fb.fmt.ptr[fmtlen++] = 'L';
 		#if (MOO_SIZEOF___FLOAT128 > 0)
 			else if (dtype == LF_QD)
-				fmtout->fb.fmt.ptr[fmtlen++] = 'Q';
+				fb.fmt.ptr[fmtlen++] = 'Q';
 		#endif
 
-			fmtout->fb.fmt.ptr[fmtlen++] = uch;
-			fmtout->fb.fmt.ptr[fmtlen] = '\0';
+			fb.fmt.ptr[fmtlen++] = uch;
+			fb.fmt.ptr[fmtlen] = '\0';
 
 		#if defined(HAVE_SNPRINTF)
 			/* nothing special here */
@@ -1147,88 +1173,65 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 
 			while (1)
 			{
-
 				if (dtype == LF_LD)
 				{
 				#if defined(HAVE_SNPRINTF)
-					q = snprintf((moo_bch_t*)fmtout->fb.out.ptr, fmtout->fb.out.capa + 1, fmtout->fb.fmt.ptr, v.ld);
+					q = snprintf((moo_bch_t*)fb.out.ptr, fb.out.capa + 1, fb.fmt.ptr, v.ld);
 				#else
-					q = sprintf((moo_bch_t*)fmtout->fb.out.ptr, fmtout->fb.fmt.ptr, v.ld);
+					q = sprintf((moo_bch_t*)fb.out.ptr, fb.fmt.ptr, v.ld);
 				#endif
 				}
 			#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
 				else if (dtype == LF_QD)
 				{
-					q = quadmath_snprintf((moo_bch_t*)fmtout->fb.out.ptr, fmtout->fb.out.capa + 1, fmtout->fb.fmt.ptr, v.qd);
+					q = quadmath_snprintf((moo_bch_t*)fb.out.ptr, fb.out.capa + 1, fb.fmt.ptr, v.qd);
 				}
 			#endif
 				else
 				{
 				#if defined(HAVE_SNPRINTF)
-					q = snprintf((moo_bch_t*)fmtout->fb.out.ptr, fmtout->fb.out.capa + 1, fmtout->fb.fmt.ptr, v.d);
+					q = snprintf((moo_bch_t*)fb.out.ptr, fb.out.capa + 1, fb.fmt.ptr, v.d);
 				#else
-					q = sprintf((moo_bch_t*)fmtout->fb.out.ptr, fmtout->fb.fmt.ptr, v.d);
+					q = sprintf((moo_bch_t*)fb.out.ptr, fb.fmt.ptr, v.d);
 				#endif
 				}
 				if (q <= -1) goto oops;
-				if (q <= fmtout->fb.out.capa) break;
+				if (q <= fb.out.capa) break;
 
-				newcapa = fmtout->fb.out.capa * 2;
+				newcapa = fb.out.capa * 2;
 				if (newcapa < q) newcapa = q;
 
-				if (fmtout->fb.out.ptr == fmtout->fb.out.sbuf)
+				if (fb.out.ptr == fb.out.sbuf)
 				{
-					fmtout->fb.out.ptr = (moo_bch_t*)MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(char_t) * (newcapa + 1));
-					if (!fmtout->fb.out.ptr) goto oops;
+					fb.out.ptr = (moo_bch_t*)MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(char_t) * (newcapa + 1));
+					if (!fb.out.ptr) goto oops;
 				}
 				else
 				{
 					moo_bch_t* tmpptr;
-					tmpptr = (moo_bch_t*)MOO_MMGR_REALLOC(fmtout->mmgr, fmtout->fb.out.ptr, MOO_SIZEOF(char_t) * (newcapa + 1));
+					tmpptr = (moo_bch_t*)MOO_MMGR_REALLOC(fmtout->mmgr, fb.out.ptr, MOO_SIZEOF(char_t) * (newcapa + 1));
 					if (!tmpptr) goto oops;
-					fmtout->fb.out.ptr = tmpptr;
+					fb.out.ptr = tmpptr;
 				}
-				fmtout->fb.out.capa = newcapa;
+				fb.out.capa = newcapa;
 			}
 
 			if (MOO_SIZEOF(char_t) != MOO_SIZEOF(moo_bch_t))
 			{
-				fmtout->fb.out.ptr[q] = '\0';
+				fb.out.ptr[q] = '\0';
 				while (q > 0)
 				{
 					q--;
-					fmtout->fb.out.ptr[q] = ((moo_bch_t*)fmtout->fb.out.ptr)[q];
+					fb.out.ptr[q] = ((moo_bch_t*)fb.out.ptr)[q];
 				}
 			}
 
-#if 0
-			bsp = fmtout->fb.out.ptr;
-			flagc &= ~FLAGC_DOT;
-			width = 0;
-			precision = 0;
-			goto lowercase_s;
-
-#else
-			bsp = fmtout->fb.out.ptr;
-			n = 0;
-/*
-			if (flagc & FLAGC_DOT)
-			{
-				while (n < precision && bsp[n]) n++;
-			}
-			else
-			{*/
-				while (bsp[n]) n++;
-			/*}*/
-
-			width -= n;
-
-			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_BCH (fmtout, padc, width);
+			bsp = fb.out.ptr;
+			n = 0; while (bsp[n] != '\0') n++;
 			PUT_BCS (fmtout, bsp, n);
-			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_BCH (fmtout, padc, width);
 			break;
-#endif
 		}
+#endif
 
 		handle_nosign:
 			sign = 0;
@@ -1422,9 +1425,17 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 	}
 
 done:
+#if defined(MOO_ENABLE_FLTFMT)
+	if (fb.fmt.ptr != fb.fmt.sbuf) MOO_MMGR_FREE (fmtout->mmgr, fb.fmt.ptr);
+	if (fb.out.ptr != fb.out.sbuf) MOO_MMGR_FREE (fmtout->mmgr, fb.out.ptr);
+#endif
 	return 0;
 
 oops:
+#if defined(MOO_ENABLE_FLTFMT)
+	if (fb.fmt.ptr != fb.fmt.sbuf) MOO_MMGR_FREE (fmtout->mmgr, fb.fmt.ptr);
+	if (fb.out.ptr != fb.out.sbuf) MOO_MMGR_FREE (fmtout->mmgr, fb.out.ptr);
+#endif
 	return -1;
 }
 
@@ -2944,5 +2955,3 @@ int moo_strfmtcallstack (moo_t* moo, moo_ooi_t nargs, int rcv_is_fmtstr)
 	moo->sprintf.xbuf.len = 0;
 	return format_stack_args(&fo, nargs, rcv_is_fmtstr);
 }
-
-

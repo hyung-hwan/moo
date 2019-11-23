@@ -181,25 +181,10 @@ struct moo_fmtout_t
 	moo_bitmask_t          mask;   /* in */
 	void*                  ctx;    /* in */
 
+
+	/* internally set as input */
 	moo_fmtout_fmt_type_t  fmt_type;
 	const void*            fmt_str;
-
-	/* internal use from here below */
-	struct
-	{
-		struct
-		{
-			moo_bch_t  sbuf[32];
-			moo_bch_t* ptr;
-			moo_oow_t  capa;
-		} fmt;
-		struct
-		{
-			moo_bch_t  sbuf[32];
-			moo_bch_t* ptr;
-			moo_oow_t  capa;
-		} out;
-	} fb; /* some buffers for handling moo_flt_t/moo_fltmax_t formatting */
 };
 
 #if defined(__cplusplus)
@@ -258,10 +243,10 @@ extern "C" {
  */
 MOO_EXPORT int moo_fmt_intmax_to_bcstr (
 	moo_bch_t*       buf,             /**< buffer pointer */
-	int                bufsize,         /**< buffer size */
-	moo_intmax_t       value,           /**< integer to format */
-	int                base_and_flags,  /**< base ORed with flags */
-	int                precision,       /**< precision */
+	int              bufsize,         /**< buffer size */
+	moo_intmax_t     value,           /**< integer to format */
+	int              base_and_flags,  /**< base ORed with flags */
+	int              precision,       /**< precision */
 	moo_bch_t        fillchar,        /**< fill character */
 	const moo_bch_t* prefix           /**< prefix */
 );
@@ -318,10 +303,10 @@ MOO_EXPORT int moo_fmt_intmax_to_bcstr (
  */
 MOO_EXPORT int moo_fmt_intmax_to_ucstr (
 	moo_uch_t*       buf,             /**< buffer pointer */
-	int                bufsize,         /**< buffer size */
-	moo_intmax_t       value,           /**< integer to format */
-	int                base_and_flags,  /**< base ORed with flags */
-	int                precision,       /**< precision */
+	int              bufsize,         /**< buffer size */
+	moo_intmax_t     value,           /**< integer to format */
+	int              base_and_flags,  /**< base ORed with flags */
+	int              precision,       /**< precision */
 	moo_uch_t        fillchar,        /**< fill character */
 	const moo_uch_t* prefix           /**< prefix */
 );

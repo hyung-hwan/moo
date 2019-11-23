@@ -50,14 +50,8 @@
 #define MOO_KARATSUBA_CUTOFF 32
 #define MOO_KARATSUBA_CUTOFF_DEBUG 3
 
-#if defined(MOO_BUILD_DEBUG)
-/*#define MOO_DEBUG_LEXER 1*/
-#define MOO_DEBUG_COMPILER 1
-#define MOO_DEBUG_VM_PROCESSOR 1
-/*#define MOO_DEBUG_VM_EXEC 1*/
-#define MOO_PROFILE_VM 1
-#endif
-
+/* enable floating-pointer number support in the basic formatting functions */
+#define MOO_ENABLE_FLTFMT
 
 /* allow the caller to drive process switching by calling
  * moo_switchprocess(). */
@@ -69,6 +63,15 @@
  *      in the moo_oow_t type.
  */
 #define MOO_LIMIT_OBJ_SIZE
+
+
+#if defined(MOO_BUILD_DEBUG)
+/*#define MOO_DEBUG_LEXER 1*/
+#define MOO_DEBUG_COMPILER 1
+#define MOO_DEBUG_VM_PROCESSOR 1
+/*#define MOO_DEBUG_VM_EXEC 1*/
+#define MOO_PROFILE_VM 1
+#endif /* MOO_BUILD_DEBUG */
 
 
 #if defined(__has_builtin)
