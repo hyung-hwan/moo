@@ -511,7 +511,7 @@ MOO_EXPORT moo_oow_t moo_count_ucstr (
 	const moo_uch_t* str
 );
 
-MOO_EXPORT moo_oow_t moo_count_ucstrl (
+MOO_EXPORT moo_oow_t moo_count_ucstr_with_limit (
 	const moo_uch_t* str,
 	moo_oow_t        maxlen
 );
@@ -520,7 +520,7 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 	const moo_bch_t* str
 );
 
-MOO_EXPORT moo_oow_t moo_count_bcstrl (
+MOO_EXPORT moo_oow_t moo_count_bcstr_with_limit (
 	const moo_bch_t* str,
 	moo_oow_t        maxlen
 );
