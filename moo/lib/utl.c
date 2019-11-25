@@ -315,7 +315,7 @@ moo_oow_t moo_count_ucstr (const moo_uch_t* str)
 	return ptr - str;
 }
 
-moo_oow_t moo_count_ucstr_with_limit (const moo_uch_t* str, moo_oow_t maxlen)
+moo_oow_t moo_count_ucstr_limited (const moo_uch_t* str, moo_oow_t maxlen)
 {
 	moo_oow_t i;
 	for (i = 0; i < maxlen; i++)
@@ -332,7 +332,7 @@ moo_oow_t moo_count_bcstr (const moo_bch_t* str)
 	return ptr - str;
 }
 
-moo_oow_t moo_count_bcstr_with_limit (const moo_bch_t* str, moo_oow_t maxlen)
+moo_oow_t moo_count_bcstr_limited (const moo_bch_t* str, moo_oow_t maxlen)
 {
 	moo_oow_t i;
 	for (i = 0; i < maxlen; i++)
