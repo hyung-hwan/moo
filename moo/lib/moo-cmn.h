@@ -361,15 +361,15 @@
  * The moo_fltmax_t type defines the largest floating-pointer number type
  * ever supported.
  */
-#if MOO_SIZEOF___FLOAT128 >= MOO_SIZEOF_FLT_T
+#if MOO_SIZEOF___FLOAT128 >= MOO_SIZEOF_FLTBAS_T
 	/* the size of long double may be equal to the size of __float128
 	 * for alignment on some platforms */
 	typedef __float128 moo_fltmax_t;
 #	define MOO_SIZEOF_FLTMAX_T MOO_SIZEOF___FLOAT128
 #	define MOO_FLTMAX_REQUIRE_QUADMATH 1
 #else
-	typedef moo_flt_t moo_fltmax_t;
-#	define MOO_SIZEOF_FLTMAX_T MOO_SIZEOF_FLT_T
+	typedef moo_fltbas_t moo_fltmax_t;
+#	define MOO_SIZEOF_FLTMAX_T MOO_SIZEOF_FLTBAS_T
 #	undef MOO_FLTMAX_REQUIRE_QUADMATH
 #endif
 
