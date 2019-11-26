@@ -704,7 +704,7 @@ int moo_inttointmax (moo_t* moo, moo_oop_t x, moo_intmax_t* i)
 static MOO_INLINE moo_oop_t make_bigint_with_oow (moo_t* moo, moo_oow_t w)
 {
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
-	MOO_STATIC_ASSERT (moo, MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
+	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
 	return moo_instantiate(moo, moo->_large_positive_integer, &w, 1);
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
 	moo_liw_t hw[2];
@@ -764,7 +764,7 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 	moo_oop_t z;
 
 	MOO_ASSERT (moo, extra <= MOO_OBJ_SIZE_MAX - 1); 
-	MOO_STATIC_ASSERT (moo, MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
+	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
 		w = i;

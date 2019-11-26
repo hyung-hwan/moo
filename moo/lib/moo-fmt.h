@@ -313,7 +313,7 @@ MOO_EXPORT int moo_fmt_intmax_to_ucstr (
 
 /**
  * The moo_fmt_uintmax_to_bcstr() function formats an unsigned integer \a value 
- * to a multibyte string buffer. It behaves the same as moo_fmt_uintmax_to_bcstr() 
+ * to a multibyte string buffer. It behaves the same as moo_fmt_intmax_to_bcstr() 
  * except that it handles an unsigned integer.
  */
 MOO_EXPORT int moo_fmt_uintmax_to_bcstr (
@@ -326,6 +326,11 @@ MOO_EXPORT int moo_fmt_uintmax_to_bcstr (
 	const moo_bch_t* prefix           /**< prefix */
 );
 
+/**
+ * The moo_fmt_uintmax_to_ucstr() function formats an unsigned integer \a value 
+ * to a multibyte string buffer. It behaves the same as moo_fmt_intmax_to_ucstr() 
+ * except that it handles an unsigned integer.
+ */
 MOO_EXPORT int moo_fmt_uintmax_to_ucstr (
 	moo_uch_t*       buf,             /**< buffer pointer */
 	int              bufsize,         /**< buffer size */

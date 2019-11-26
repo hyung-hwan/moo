@@ -80,7 +80,7 @@
 #	include <quadmath.h> /* for quadmath_snprintf() */
 #endif
 
-#endif /* MOO_ENABLE_FLTFMT)
+#endif /* MOO_ENABLE_FLTFMT */
 
 /* Max number conversion buffer length: 
  * moo_intmax_t in base 2, plus NUL byte. */
@@ -1013,11 +1013,9 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 		}
 
 		case 'O': /* object - ignore precision, width, adjustment */
-		{
 			if (!fmtout->putobj) goto invalid_format;
 			if (fmtout->putobj(fmtout, va_arg(ap, moo_oop_t)) <= -1) goto oops;
 			break;
-		}
 
 #if defined(MOO_ENABLE_FLTFMT)
 		case 'e':

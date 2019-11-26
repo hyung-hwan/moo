@@ -753,19 +753,6 @@ MOO_EXPORT int moo_conv_utf8_to_ucstr (
 	moo_oow_t*         ucslen
 );
 
-
-MOO_EXPORT moo_oow_t moo_uc_to_utf8 (
-	moo_uch_t    uc,
-	moo_bch_t*   utf8,
-	moo_oow_t    size
-);
-
-MOO_EXPORT moo_oow_t moo_utf8_to_uc (
-	const moo_bch_t* utf8,
-	moo_oow_t        size,
-	moo_uch_t*       uc
-);
-
 /* ------------------------------------------------------------------------- */
 
 MOO_EXPORT int moo_conv_uchars_to_utf16 (
@@ -797,18 +784,6 @@ MOO_EXPORT int moo_conv_utf16_to_ucstr (
 	moo_oow_t*         ucslen
 );
 
-MOO_EXPORT moo_oow_t moo_uc_to_utf16 (
-	moo_uch_t    uc,
-	moo_bch_t*   utf16,
-	moo_oow_t    size
-);
-
-MOO_EXPORT moo_oow_t moo_utf16_to_uc (
-	const moo_bch_t* utf16,
-	moo_oow_t        size,
-	moo_uch_t*       uc
-);
-
 /* ------------------------------------------------------------------------- */
 
 MOO_EXPORT int moo_conv_uchars_to_mb8 (
@@ -838,18 +813,6 @@ MOO_EXPORT int moo_conv_mb8_to_ucstr (
 	moo_oow_t*         bcslen,
 	moo_uch_t*         ucs,
 	moo_oow_t*         ucslen
-);
-
-MOO_EXPORT moo_oow_t moo_uc_to_mb8 (
-	moo_uch_t    uc,
-	moo_bch_t*   mb8,
-	moo_oow_t    size
-);
-
-MOO_EXPORT moo_oow_t moo_mb8_to_uc (
-	const moo_bch_t* mb8,
-	moo_oow_t        size,
-	moo_uch_t*       uc
 );
 
 /* =========================================================================
