@@ -692,7 +692,7 @@ MOO_INLINE int moo_conv_bcstr_to_ucstr_with_cmgr (
 	for (bp = bcs; *bp != '\0'; bp++) /* nothing */ ;
 
 	mlen = bp - bcs; wlen = *ucslen;
-	n = moo_conv_bchars_to_uchars_with_cmgr (bcs, &mlen, ucs, &wlen, cmgr, all);
+	n = moo_conv_bchars_to_uchars_with_cmgr(bcs, &mlen, ucs, &wlen, cmgr, all);
 	if (ucs)
 	{
 		/* null-terminate the target buffer if it has room for it. */
@@ -726,7 +726,7 @@ MOO_INLINE int moo_conv_uchars_to_bchars_with_cmgr (
 				break;
 			}
 
-			n = cmgr->uctobc (*p, bcs, rem);
+			n = cmgr->uctobc(*p, bcs, rem);
 			if (n == 0) 
 			{
 				ret = -1;
@@ -751,7 +751,7 @@ MOO_INLINE int moo_conv_uchars_to_bchars_with_cmgr (
 		{
 			moo_oow_t n;
 
-			n = cmgr->uctobc (*p, bcsbuf, MOO_COUNTOF(bcsbuf));
+			n = cmgr->uctobc(*p, bcsbuf, MOO_COUNTOF(bcsbuf));
 			if (n == 0) 
 			{
 				ret = -1;

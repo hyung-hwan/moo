@@ -243,11 +243,6 @@ void moo_rbt_fini (moo_rbt_t* rbt)
 	moo_rbt_clear (rbt);
 }
 
-void* moo_rbt_getxtn (moo_rbt_t* rbt)
-{
-	return (void*)(rbt + 1);
-}
-
 const moo_rbt_style_t* moo_rbt_getstyle (const moo_rbt_t* rbt)
 {
 	return rbt->style;

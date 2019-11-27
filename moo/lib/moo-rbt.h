@@ -324,9 +324,11 @@ MOO_EXPORT void moo_rbt_fini (
 	moo_rbt_t* rbt  /**< red-black tree */
 );
 
-MOO_EXPORT void* moo_rbt_getxtn (
-	moo_rbt_t* rbt
-);
+#if defined(MOO_HAVE_INLINE)
+static MOO_INLINE void* moo_rbt_getxtn (moo_rbt_t* rbt) { return (void*)(rbt + 1); }
+#else
+#define moo_rbt_getxtn(awk) ((void*)((moo_rbt_t*)(rbt) + 1))
+#endif
 
 /**
  * The moo_rbt_getstyle() function gets manipulation callback function set.
