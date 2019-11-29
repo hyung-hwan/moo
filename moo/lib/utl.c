@@ -259,9 +259,53 @@ void moo_copy_bchars (moo_bch_t* dst, const moo_bch_t* src, moo_oow_t len)
 void moo_copy_bchars_to_uchars (moo_uch_t* dst, const moo_bch_t* src, moo_oow_t len)
 {
 	/* copy without conversions.
-	 * use moo_bctouchars() for conversion encoding */
+	 * use moo_convbtouchars() for conversion encoding */
 	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
+}
+
+void moo_copy_uchars_to_bchars (moo_bch_t* dst, const moo_uch_t* src, moo_oow_t len)
+{
+	/* copy without conversions.
+	 * use moo_convutobchars() for conversion encoding */
+	moo_oow_t i;
+	for (i = 0; i < len; i++) dst[i] = src[i];
+}
+
+moo_oow_t moo_copy_uchars_to_ucstr (moo_uch_t* dst, moo_uch_t dlen, const moo_uch_t* src, moo_oow_t slen)
+{
+	moo_oow_t i;
+	if (dlen <= 0) return 0;
+	if (dlen <= slen) slen = dlen - 1;
+	for (i = 0; i < slen; i++) dst[i] = src[i];
+	dst[i] = '\0';
+	return i;
+}
+
+moo_oow_t moo_copy_bchars_to_bcstr (moo_bch_t* dst, moo_bch_t dlen, const moo_bch_t* src, moo_oow_t slen)
+{
+	moo_oow_t i;
+	if (dlen <= 0) return 0;
+	if (dlen <= slen) slen = dlen - 1;
+	for (i = 0; i < slen; i++) dst[i] = src[i];
+	dst[i] = '\0';
+	return i;
+}
+
+moo_oow_t moo_copy_uchars_to_ucstr_unlimited (moo_uch_t* dst, const moo_uch_t* src, moo_oow_t len)
+{
+	moo_oow_t i;
+	for (i = 0; i < len; i++) dst[i] = src[i];
+	dst[i] = '\0';
+	return i;
+}
+
+moo_oow_t moo_copy_bchars_to_bcstr_unlimited (moo_bch_t* dst, const moo_bch_t* src, moo_oow_t len)
+{
+	moo_oow_t i;
+	for (i = 0; i < len; i++) dst[i] = src[i];
+	dst[i] = '\0';
+	return i;
 }
 
 moo_oow_t moo_copy_ucstr (moo_uch_t* dst, moo_oow_t len, const moo_uch_t* src)
@@ -294,6 +338,21 @@ moo_oow_t moo_copy_bcstr (moo_bch_t* dst, moo_oow_t len, const moo_bch_t* src)
 
 	if (len > 0) *p = '\0';
 	return p - dst;
+}
+
+
+moo_oow_t moo_copy_ucstr_unlimited (moo_uch_t* dst, const moo_uch_t* src)
+{
+	moo_uch_t* org = dst;
+	while ((*dst++ = *src++) != '\0');
+	return dst - org - 1;
+}
+
+moo_oow_t moo_copy_bcstr_unlimited (moo_bch_t* dst, const moo_bch_t* src)
+{
+	moo_bch_t* org = dst;
+	while ((*dst++ = *src++) != '\0');
+	return dst - org - 1;
 }
 
 void moo_fill_uchars (moo_uch_t* dst, moo_uch_t ch, moo_oow_t len)

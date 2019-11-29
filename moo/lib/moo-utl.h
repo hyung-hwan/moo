@@ -433,6 +433,23 @@ MOO_EXPORT void moo_copy_bchars_to_uchars (
 	const moo_bch_t* src,
 	moo_oow_t        len
 );
+MOO_EXPORT void moo_copy_uchars_to_bchars (
+	moo_bch_t*       dst,
+	const moo_uch_t* src,
+	moo_oow_t        len
+);
+
+MOO_EXPORT moo_oow_t moo_copy_uchars_to_ucstr_unlimited (
+	moo_uch_t*       dst,
+	const moo_uch_t* src,
+	moo_oow_t        len
+);
+
+MOO_EXPORT moo_oow_t moo_copy_bchars_to_bcstr_unlimited (
+	moo_bch_t*       dst,
+	const moo_bch_t* src,
+	moo_oow_t        len
+);
 
 MOO_EXPORT moo_oow_t moo_copy_ucstr (
 	moo_uch_t*       dst,
@@ -443,6 +460,30 @@ MOO_EXPORT moo_oow_t moo_copy_ucstr (
 MOO_EXPORT moo_oow_t moo_copy_bcstr (
 	moo_bch_t*       dst,
 	moo_oow_t        len,
+	const moo_bch_t* src
+);
+
+MOO_EXPORT moo_oow_t moo_copy_uchars_to_ucstr (
+	moo_uch_t*       dst,
+	moo_uch_t        dlen,
+	const moo_uch_t* src,
+	moo_oow_t        slen
+);
+
+MOO_EXPORT moo_oow_t moo_copy_bchars_to_bcstr (
+	moo_bch_t*       dst,
+	moo_bch_t        dlen,
+	const moo_bch_t* src,
+	moo_oow_t        slen
+);
+
+MOO_EXPORT moo_oow_t moo_copy_ucstr_unlimited (
+	moo_uch_t*       dst,
+	const moo_uch_t* src
+);
+
+MOO_EXPORT moo_oow_t moo_copy_bcstr_unlimited (
+	moo_bch_t*       dst,
 	const moo_bch_t* src
 );
 
@@ -533,9 +574,18 @@ MOO_EXPORT moo_oow_t moo_count_bcstr_limited (
 #	define moo_comp_oochars_ucstr(str1,len1,str2) moo_comp_uchars_ucstr(str1,len1,str2)
 #	define moo_comp_oochars_oocstr(str1,len1,str2) moo_comp_uchars_ucstr(str1,len1,str2)
 #	define moo_comp_oocstr(str1,str2) moo_comp_ucstr(str1,str2)
+
 #	define moo_copy_oochars(dst,src,len) moo_copy_uchars(dst,src,len)
 #	define moo_copy_bchars_to_oochars(dst,src,len) moo_copy_bchars_to_uchars(dst,src,len)
+#	define moo_copy_oochars_to_bchars(dst,src,len) moo_copy_uchars_to_bchars(dst,src,len)
+#	define moo_copy_uchars_to_oochars(dst,src,len) moo_copy_uchars(dst,src,len)
+#	define moo_copy_oochars_to_uchars(dst,src,len) moo_copy_uchars(dst,src,len)
+
+#	define moo_copy_oochars_to_oocstr(dst,dlen,src,slen) moo_copy_uchars_to_ucstr(dst,dlen,src,slen)
+#	define moo_copy_oochars_to_oocstr_unlimited(dst,src,len) moo_copy_uchars_to_ucstr_unlimited(dst,src,len)
 #	define moo_copy_oocstr(dst,len,src) moo_copy_ucstr(dst,len,src)
+#	define moo_copy_oocstr_unlimited(dst,src) moo_copy_ucstr_unlimited(dst,src)
+
 #	define moo_fill_oochars(dst,ch,len) moo_fill_uchars(dst,ch,len)
 #	define moo_find_oochar(ptr,len,c) moo_find_uchar(ptr,len,c)
 #	define moo_rfind_oochar(ptr,len,c) moo_rfind_uchar(ptr,len,c)
@@ -550,9 +600,19 @@ MOO_EXPORT moo_oow_t moo_count_bcstr_limited (
 #	define moo_comp_oochars_ucstr(str1,len1,str2) moo_comp_bchars_ucstr(str1,len1,str2)
 #	define moo_comp_oochars_oocstr(str1,len1,str2) moo_comp_bchars_bcstr(str1,len1,str2)
 #	define moo_comp_oocstr(str1,str2) moo_comp_bcstr(str1,str2)
+
 #	define moo_copy_oochars(dst,src,len) moo_copy_bchars(dst,src,len)
 #	define moo_copy_bchars_to_oochars(dst,src,len) moo_copy_bchars(dst,src,len)
+#	define moo_copy_oochars_to_bchars(dst,src,len) moo_copy_bchars(dst,src,len)
+#	define moo_copy_uchars_to_oochars(dst,src,len) moo_copy_uchars_to_bchars(dst,src,len)
+#	define moo_copy_oochars_to_uchars(dst,src,len) moo_copy_bchars_to_uchars(dst,src,len)
+
+#	define moo_copy_oochars_to_oocstr(dst,dlen,src,slen) moo_copy_bchars_to_bcstr(dst,dlen,src,slen)
+#	define moo_copy_oochars_to_oocstr_unlimited(dst,src,len) moo_copy_bchars_to_bcstr_unlimited(dst,src,len)
 #	define moo_copy_oocstr(dst,len,src) moo_copy_bcstr(dst,len,src)
+#	define moo_copy_oocstr_unlimited(dst,src) moo_copy_bcstr_unlimited(dst,src)
+
+
 #	define moo_fill_oochars(dst,ch,len) moo_fill_bchars(dst,ch,len)
 #	define moo_find_oochar(ptr,len,c) moo_find_bchar(ptr,len,c)
 #	define moo_rfind_oochar(ptr,len,c) moo_rfind_bchar(ptr,len,c)
