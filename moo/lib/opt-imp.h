@@ -27,10 +27,6 @@
 
 /* this file is supposed to be included by opt.c multiple times */
 
-
-#include <moo-opt.h>
-#include <moo-utl.h>
-
 /* 
  * moo_getopt is based on BSD getopt.
  * --------------------------------------------------------------------------

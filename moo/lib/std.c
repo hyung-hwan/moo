@@ -4229,10 +4229,12 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* er
 
 #if defined(EMSCRIPTEN)
 {
+/* TODO: this is experimental. make it proper */
 moo_bitmask_t m = ~(moo_bitmask_t)0;
 moo_setoption (moo, MOO_OPTION_LOG_MASK, &m);
 }
 #endif
+
 	{
 		moo_bitmask_t bm = 0;
 
