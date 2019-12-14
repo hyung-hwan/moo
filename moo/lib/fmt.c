@@ -1907,7 +1907,7 @@ redo:
 			len = max;
 		}
 
-		newcapa = MOO_ALIGN_POW2(moo->log.len + len, 512); /* TODO: adjust this capacity */
+		newcapa = MOO_ALIGN_POW2(moo->log.len + len, MOO_LOG_CAPA_ALIGN);
 		if (newcapa > moo->option.log_maxcapa)
 		{
 			/* [NOTE]
