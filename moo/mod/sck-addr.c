@@ -545,7 +545,7 @@ sck_len_t moo_sck_addr_len (sck_addr_t* addr)
 {
 	switch (addr->family)
 	{
-	#if defined(AF_INET) && (MOO__SIZEOF_STRUCT_SOCKADDR_IN > 0)
+	#if defined(AF_INET) && (MOO_SIZEOF_STRUCT_SOCKADDR_IN > 0)
 		case AF_INET:
 			return MOO_SIZEOF(struct sockaddr_in);
 	#endif
