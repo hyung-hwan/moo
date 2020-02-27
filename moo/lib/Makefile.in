@@ -429,7 +429,6 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = nostdinc
-AM_CFLAGS = $(PTHREAD_CFLAGS)
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
@@ -437,7 +436,7 @@ CPPFLAGS_ALL_COMMON = \
 
 @ENABLE_STATIC_MODULE_FALSE@LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_ALL_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) 
+CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(PTHREAD_CFLAGS)
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
 LIBADD_LIB_COMMON = 
 @WIN32_FALSE@CPPFLAGS_PFMOD =  \
@@ -518,7 +517,7 @@ libmoox_la_SOURCES = moo-opt.h moo-std.h opt-imp.h opt.c std.c \
 	$(am__append_15)
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo $(LIBM) $(PTHREAD_LIBS) \
+libmoox_la_LIBADD = -lmoo $(LIBADD_LIB_COMMON) $(LIBM) $(PTHREAD_LIBS) \
 	$(am__append_16) $(am__append_17) $(am__append_18) \
 	$(am__append_19)
 libmoox_la_DEPENDENCIES = libmoo.la

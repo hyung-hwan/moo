@@ -1,7 +1,5 @@
 AUTOMAKE_OPTIONS = nostdinc
 
-AM_CFLAGS = $(PTHREAD_CFLAGS)
-
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
@@ -13,7 +11,7 @@ else
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
 endif
 
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) 
+CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(PTHREAD_CFLAGS)
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
 LIBADD_LIB_COMMON =
 
@@ -139,7 +137,7 @@ libmoox_la_SOURCES += poll-msw.c poll-msw.h
 endif
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo $(LIBM) $(PTHREAD_LIBS)
+libmoox_la_LIBADD = -lmoo $(LIBADD_LIB_COMMON) $(LIBM) $(PTHREAD_LIBS)
 
 if ENABLE_LIBLTDL
 libmoox_la_LIBADD += $(LTDL_LIBS)

@@ -10,7 +10,7 @@ CPPFLAGS_ALL_COMMON = \
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(abs_builddir)/../lib -L$(libdir)
 
 CPPFLAGS_BIN_COMMON = $(CPPFLAGS_ALL_COMMON)
-LDFLAGS_BIN_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
+LDFLAGS_BIN_COMMON = $(LDFLAGS_ALL_COMMON) -no-undefined
 LIBADD_BIN_COMMON = $(LIBM) 
 
 bin_PROGRAMS = moo
