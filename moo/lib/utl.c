@@ -272,7 +272,7 @@ void moo_copy_uchars_to_bchars (moo_bch_t* dst, const moo_uch_t* src, moo_oow_t 
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-moo_oow_t moo_copy_uchars_to_ucstr (moo_uch_t* dst, moo_uch_t dlen, const moo_uch_t* src, moo_oow_t slen)
+moo_oow_t moo_copy_uchars_to_ucstr (moo_uch_t* dst, moo_oow_t dlen, const moo_uch_t* src, moo_oow_t slen)
 {
 	moo_oow_t i;
 	if (dlen <= 0) return 0;
@@ -282,7 +282,7 @@ moo_oow_t moo_copy_uchars_to_ucstr (moo_uch_t* dst, moo_uch_t dlen, const moo_uc
 	return i;
 }
 
-moo_oow_t moo_copy_bchars_to_bcstr (moo_bch_t* dst, moo_bch_t dlen, const moo_bch_t* src, moo_oow_t slen)
+moo_oow_t moo_copy_bchars_to_bcstr (moo_bch_t* dst, moo_oow_t dlen, const moo_bch_t* src, moo_oow_t slen)
 {
 	moo_oow_t i;
 	if (dlen <= 0) return 0;

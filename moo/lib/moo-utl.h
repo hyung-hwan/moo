@@ -465,14 +465,14 @@ MOO_EXPORT moo_oow_t moo_copy_bcstr (
 
 MOO_EXPORT moo_oow_t moo_copy_uchars_to_ucstr (
 	moo_uch_t*       dst,
-	moo_uch_t        dlen,
+	moo_oow_t        dlen,
 	const moo_uch_t* src,
 	moo_oow_t        slen
 );
 
 MOO_EXPORT moo_oow_t moo_copy_bchars_to_bcstr (
 	moo_bch_t*       dst,
-	moo_bch_t        dlen,
+	moo_oow_t        dlen,
 	const moo_bch_t* src,
 	moo_oow_t        slen
 );
