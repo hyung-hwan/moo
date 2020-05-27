@@ -626,10 +626,10 @@ static int add_oop_to_oopbuf_nodup (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oop_t 
 	return 1; /* added a new item */
 }
 
-#define CHAR_TO_NUM(c,base) \
-	((c >= '0' && c <= '9')? ((c - '0' < base)? (c - '0'): base): \
-	 (c >= 'A' && c <= 'Z')? ((c - 'A' + 10 < base)? (c - 'A' + 10): base): \
-	 (c >= 'a' && c <= 'z')? ((c - 'a' + 10 < base)? (c - 'a' + 10): base): base)
+#define ZDIGIT_TO_NUM(c,base) \
+	((c >= '0' && c <= '9')? (c - '0'): \
+	 (c >= 'A' && c <= 'Z')? (c - 'A' + 10): \
+	 (c >= 'a' && c <= 'z')? (c - 'a' + 10): base)
 
 static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t* num)
 {
@@ -657,10 +657,11 @@ static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t*
 	{
 		MOO_ASSERT (moo, ptr < end);
 
+		/* the caller must ensure that the radix part is composed of decimal digits only */
 		base = 0;
 		do
 		{
-			base = base * 10 + CHAR_TO_NUM(*ptr, 10);
+			base = base * 10 + ZDIGIT_TO_NUM(*ptr, 10);
 			ptr++;
 		}
 		while (*ptr != 'r');
@@ -672,7 +673,7 @@ static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t*
 	MOO_ASSERT (moo, ptr < end);
 
 	value = old_value = 0;
-	while (ptr < end && (v = CHAR_TO_NUM(*ptr, base)) < base)
+	while (ptr < end && (v = ZDIGIT_TO_NUM(*ptr, base)) < base)
 	{
 		value = value * base + v;
 		if (value < old_value) 
@@ -726,10 +727,11 @@ static moo_oop_t string_to_int (moo_t* moo, moo_oocs_t* str, int radixed)
 	{
 		MOO_ASSERT (moo, ptr < end);
 
+		/* the caller must ensure that the radix part is composed of decimal digits only */
 		base = 0;
 		do
 		{
-			base = base * 10 + CHAR_TO_NUM(*ptr, 10);
+			base = base * 10 + ZDIGIT_TO_NUM(*ptr, 10);
 			ptr++;
 		}
 		while (*ptr != 'r');
@@ -777,7 +779,7 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 	{
 		do
 		{
-			xscale = xscale * 10 + CHAR_TO_NUM(str->ptr[pos], 10);
+			xscale = xscale * 10 + ZDIGIT_TO_NUM(str->ptr[pos], 10);
 			pos++;
 			len--;
 		}
@@ -1468,7 +1470,7 @@ static int get_numlit (moo_t* moo, int negated)
 			int r;
 			moo_oow_t rv;
 
-			r = CHAR_TO_NUM(c, 10);
+			r = ZDIGIT_TO_NUM(c, 10);
 			MOO_ASSERT (moo, r < 10);
 			rv = radix * 10 + r;
 			if (rv < radix) radix_overflowed = 1;
@@ -1525,7 +1527,7 @@ static int get_numlit (moo_t* moo, int negated)
 		ADD_TOKEN_CHAR (moo, c);
 		GET_CHAR_TO (moo, c);
 
-		if (CHAR_TO_NUM(c, radix) >= radix)
+		if (ZDIGIT_TO_NUM(c, radix) >= radix)
 		{
 			/* no digit after the radix specifier */
 			moo_setsynerr (moo, (xscale > 0? MOO_SYNERR_FPDECLITINVAL: MOO_SYNERR_RADINTLITINVAL), TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -1543,7 +1545,7 @@ static int get_numlit (moo_t* moo, int negated)
 				moo_iolxc_t underscore;
 				underscore = moo->c->lxc;
 				GET_CHAR_TO(moo, c);
-				if (CHAR_TO_NUM(c, radix) >= radix)
+				if (ZDIGIT_TO_NUM(c, radix) >= radix)
 				{
 					unget_char (moo, &moo->c->lxc);
 					unget_char (moo, &underscore);
@@ -1552,7 +1554,7 @@ static int get_numlit (moo_t* moo, int negated)
 				else continue;
 			}
 		}
-		while (CHAR_TO_NUM(c, radix) < radix);
+		while (ZDIGIT_TO_NUM(c, radix) < radix);
 
 		SET_TOKEN_TYPE (moo, (xscale > 0? MOO_IOTOK_SCALEDFPDECLIT: MOO_IOTOK_RADINTLIT));
 		unget_char (moo, &moo->c->lxc);
