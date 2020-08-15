@@ -1,7 +1,5 @@
 AUTOMAKE_OPTIONS = nostdinc
 
-##AM_CFLAGS = $(PTHREAD_CFLAGS)
-
 CPPFLAGS_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_builddir)/../lib \

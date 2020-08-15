@@ -1,7 +1,5 @@
 AUTOMAKE_OPTIONS = nostdinc
 
-AM_CFLAGS = $(PTHREAD_CFLAGS)
-
 AM_CPPFLAGS = \
 	-I$(abs_builddir) \
 	-I$(abs_builddir)/../lib \
@@ -10,7 +8,7 @@ AM_CPPFLAGS = \
 	-I$(includedir)
 
 AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
-LDADD = $(PTHREAD_LIBS)
+LDADD =
 
 bin_PROGRAMS = t-001 t-002 t-003 t-004
 

@@ -45,9 +45,6 @@
 /* Define to 1 if you have the `cosq' function. */
 #undef HAVE_COSQ
 
-/* Define if c++ supports namespace std. */
-#undef HAVE_CXX_NAMESPACE_STD
-
 /* Define to 1 if you have the <dirent.h> header file. */
 #undef HAVE_DIRENT_H
 
@@ -170,6 +167,12 @@
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
+
+/* pthreads has pthread_mutex_timedlock() */
+#undef HAVE_PTHREAD_MUTEX_TIMEDLOCK
+
+/* pthreads has pthread_mutex_trylock() */
+#undef HAVE_PTHREAD_MUTEX_TRYLOCK
 
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
