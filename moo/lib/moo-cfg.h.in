@@ -366,8 +366,8 @@
 /* link modules statically into the main library */
 #undef MOO_ENABLE_STATIC_MODULE
 
-/* Use the unicode character type as the default character type */
-#undef MOO_ENABLE_UNICODE
+/* Use the wide-character type as the default character type */
+#undef MOO_ENABLE_WIDE_CHAR
 
 /* Big Endian */
 #undef MOO_ENDIAN_BIG
@@ -501,11 +501,11 @@
 /* Define if socklen_t is signed */
 #undef MOO_SOCKLEN_T_IS_SIGNED
 
-/* Unicode character type size */
-#undef MOO_UNICODE_SIZE
-
 /* use hawk_fltmax_t for floating-point numbers */
 #undef MOO_USE_FLTMAX
+
+/* Wide-character type size */
+#undef MOO_WIDE_CHAR_SIZE
 
 /* The size of `MB_LEN_MAX', as computed by valueof. */
 #undef NUMVALOF_MB_LEN_MAX

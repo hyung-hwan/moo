@@ -783,7 +783,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -820,7 +819,7 @@ enable_libtool_lock
 enable_largefile
 enable_experimental
 enable_debug
-enable_unicode
+enable_wide_char
 enable_full_liw
 enable_fltmax
 enable_dynamic_module
@@ -881,7 +880,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1134,15 +1132,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1280,7 +1269,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1433,7 +1422,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1486,9 +1474,9 @@ Optional Features:
   --disable-largefile     omit support for large files
   --enable-experimental   enable experimental feature(default. no)
   --enable-debug          compile the code in the debug mode (default. no)
-  --enable-unicode        Use the unicode character type as the default
-                          character type. one of yes, no, yes:2, yes:4, no:2,
-                          no:4 (default. yes)
+  --enable-wide-char      Use the wide-character type as the default character
+                          type. one of yes, no, yes:2, yes:4, no:2, no:4
+                          (default. yes)
   --enable-full-liw       Use a full word as a large integer word (default.
                           no)
   --enable-awk-fltmax     use hawk_fltmax_t for floating-point numbers
@@ -13273,7 +13261,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -13319,7 +13307,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -13343,7 +13331,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -13388,7 +13376,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -13412,7 +13400,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -17898,63 +17886,63 @@ $as_echo "#define MOO_BUILD_RELEASE 1" >>confdefs.h
 
 fi
 
-# Check whether --enable-unicode was given.
-if test "${enable_unicode+set}" = set; then :
-  enableval=$enable_unicode; enable_unicode=$enableval
+# Check whether --enable-wide-char was given.
+if test "${enable_wide_char+set}" = set; then :
+  enableval=$enable_wide_char; enable_wide_char=$enableval
 else
-  enable_unicode=yes
+  enable_wide_char=yes
 
 fi
 
-if test "${enable_unicode}" = "yes:4"
+if test "${enable_wide_char}" = "yes:4"
 then
 
-$as_echo "#define MOO_UNICODE_SIZE 4" >>confdefs.h
+$as_echo "#define MOO_WIDE_CHAR_SIZE 4" >>confdefs.h
 
 
-$as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
+$as_echo "#define MOO_ENABLE_WIDE_CHAR 1" >>confdefs.h
 
 	if test "${platform_win32}" = "yes"
 	then
 		CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"
 	fi
-elif test "${enable_unicode}" = "yes:2"
+elif test "${enable_wide_char}" = "yes:2"
 then
 
-$as_echo "#define MOO_UNICODE_SIZE 2" >>confdefs.h
+$as_echo "#define MOO_WIDE_CHAR_SIZE 2" >>confdefs.h
 
 
-$as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
+$as_echo "#define MOO_ENABLE_WIDE_CHAR 1" >>confdefs.h
 
 	if test "${platform_win32}" = "yes"
 	then
 		CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"
 	fi
-elif test "${enable_unicode}" = "yes"
+elif test "${enable_wide_char}" = "yes"
 then
 
-$as_echo "#define MOO_UNICODE_SIZE 1" >>confdefs.h
+$as_echo "#define MOO_WIDE_CHAR_SIZE 1" >>confdefs.h
 
 
-$as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
+$as_echo "#define MOO_ENABLE_WIDE_CHAR 1" >>confdefs.h
 
 	if test "${platform_win32}" = "yes"
 	then
 		CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"
 	fi
-elif test "${enable_unicode}" = "no:4"
+elif test "${enable_wide_char}" = "no:4"
 then
 
-$as_echo "#define MOO_UNICODE_SIZE 4" >>confdefs.h
+$as_echo "#define MOO_WIDE_CHAR_SIZE 4" >>confdefs.h
 
-elif test "${enable_unicode}" = "no:2"
+elif test "${enable_wide_char}" = "no:2"
 then
 
-$as_echo "#define MOO_UNICODE_SIZE 2" >>confdefs.h
+$as_echo "#define MOO_WIDE_CHAR_SIZE 2" >>confdefs.h
 
 else
 
-$as_echo "#define MOO_UNICODE_SIZE 1" >>confdefs.h
+$as_echo "#define MOO_WIDE_CHAR_SIZE 1" >>confdefs.h
 
 fi
 

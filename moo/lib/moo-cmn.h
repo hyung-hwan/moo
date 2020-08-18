@@ -399,7 +399,7 @@ typedef unsigned char           moo_bchu_t; /* unsigned version of moo_bch_t for
 #define MOO_SIZEOF_BCH_T MOO_SIZEOF_CHAR
 #define MOO_SIZEOF_BCI_T MOO_SIZEOF_INT
 
-#if defined(MOO_UNICODE_SIZE) && (MOO_UNICODE_SIZE >= 4)
+#if defined(MOO_WIDE_CHAR_SIZE) && (MOO_WIDE_CHAR_SIZE >= 4)
 #	if defined(__GNUC__) && defined(__CHAR32_TYPE__)
 	typedef __CHAR32_TYPE__    moo_uch_t;
 #	else
@@ -453,7 +453,7 @@ struct moo_bcs_t
 };
 typedef struct moo_bcs_t moo_bcs_t;
 
-#if defined(MOO_ENABLE_UNICODE)
+#if defined(MOO_ENABLE_WIDE_CHAR)
 	typedef moo_uch_t               moo_ooch_t;
 	typedef moo_uchu_t              moo_oochu_t;
 	typedef moo_uci_t               moo_ooci_t;
