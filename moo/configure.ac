@@ -849,19 +849,7 @@ then
 	[LIBS="$LIBS $PTHREAD_LIBS"]
 fi
 
-AC_SUBST(MOO_SIZEOF_WCHAR_T, $ac_cv_sizeof_wchar_t)
-AC_SUBST(MOO_SIZEOF_LONG_LONG, $ac_cv_sizeof_long_long)
-AC_SUBST(MOO_SIZEOF_LONG, $ac_cv_sizeof_long)
-AC_SUBST(MOO_SIZEOF_INT, $ac_cv_sizeof_int)
-AC_SUBST(MOO_SIZEOF_SHORT, $ac_cv_sizeof_short)
-AC_SUBST(MOO_SIZEOF_CHAR, $ac_cv_sizeof_char)
-AC_SUBST(MOO_SIZEOF_VOID_P, $ac_cv_sizeof_void_p)
-AC_SUBST(MOO_SIZEOF_FLOAT, $ac_cv_sizeof_float)
-AC_SUBST(MOO_SIZEOF_DOUBLE, $ac_cv_sizeof_double)
-AC_SUBST(MOO_SIZEOF_LONG_DOUBLE, $ac_cv_sizeof_long_double)
-AC_SUBST(MOO_SIZEOF_OFF_T, $ac_cv_sizeof_off_t)
-AC_SUBST(MOO_SIZEOF_OFF64_T, $ac_cv_sizeof_off64_t)
-
+dnl ====  subsititution of some key items ====
 AC_SUBST(MOO_PROJECT_AUTHOR, "${PACKAGE_BUGREPORT}")
 AC_SUBST(MOO_PROJECT_URL, "${PACKAGE_URL}")
 
