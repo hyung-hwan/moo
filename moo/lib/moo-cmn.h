@@ -614,11 +614,18 @@ typedef struct moo_obj_t*          moo_oop_t;
 #define MOO_SEC_TO_USEC(sec) ((sec) * MOO_USECS_PER_SEC)
 #define MOO_USEC_TO_SEC(usec) ((usec) / MOO_USECS_PER_SEC)
 
+#if defined(MOO_SIZEOF_INT64_T) && (MOO_SIZEOF_INT64_T > 0)
+typedef moo_int64_t moo_ntime_sec_t;
+#else
+typedef moo_int32_t moo_ntime_sec_t;
+#endif
+typedef moo_int32_t moo_ntime_nsec_t;
+
 typedef struct moo_ntime_t moo_ntime_t;
 struct moo_ntime_t
 {
-	moo_intptr_t  sec;
-	moo_int32_t   nsec; /* nanoseconds */
+	moo_ntime_sec_t  sec;
+	moo_ntime_nsec_t   nsec; /* nanoseconds */
 };
 
 #define MOO_INIT_NTIME(c,s,ns) (((c)->sec = (s)), ((c)->nsec = (ns)))

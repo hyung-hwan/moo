@@ -876,6 +876,34 @@ MOO_EXPORT int moo_conv_mb8_to_ucstr (
 );
 
 /* =========================================================================
+ * TIME CALCULATION WITH OVERFLOW/UNDERFLOW DETECTION
+ * ========================================================================= */
+
+/** 
+ * The moo_add_ntime() function adds two time structures pointed to by \a x and \a y
+ * and stores the result in the structure pointed to by \a z. If it detects overflow/
+ * underflow, it stores the largest/least possible value respectively.
+ * You may use the MOO_ADD_NTIME() macro if overflow/underflow check isn't needed.
+ */
+MOO_EXPORT void moo_add_ntime (
+	moo_ntime_t*       z, 
+	const moo_ntime_t* x,
+	const moo_ntime_t* y
+);
+
+/** 
+ * The moo_sub_ntime() function subtracts the time value \a y from the time value \a x
+ * and stores the result in the structure pointed to by \a z. If it detects overflow/
+ * underflow, it stores the largest/least possible value respectively.
+ * You may use the MOO_SUB_NTIME() macro if overflow/underflow check isn't needed.
+ */
+MOO_EXPORT void moo_sub_ntime (
+	moo_ntime_t*       z,
+	const moo_ntime_t* x,
+	const moo_ntime_t* y
+);
+
+/* =========================================================================
  * BIT SWAP
  * ========================================================================= */
 #if defined(MOO_HAVE_INLINE)

@@ -1314,3 +1314,115 @@ int moo_copyoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo
 	moo->sbuf[id].len = 0;
 	return moo_concatoocharstosbuf(moo, ptr, len, id);
 }
+
+
+/* ----------------------------------------------------------------------- */
+
+void moo_add_ntime (moo_ntime_t* z, const moo_ntime_t* x, const moo_ntime_t* y)
+{
+	moo_ntime_sec_t xs, ys;
+	moo_ntime_nsec_t ns;
+
+	/*MOO_ASSERT (x->nsec >= 0 && x->nsec < MOO_NSECS_PER_SEC);
+	MOO_ASSERT (y->nsec >= 0 && y->nsec < MOO_NSECS_PER_SEC);*/
+
+	ns = x->nsec + y->nsec;
+	if (ns >= MOO_NSECS_PER_SEC)
+	{
+		ns = ns - MOO_NSECS_PER_SEC;
+		if (x->sec == MOO_TYPE_MAX(moo_ntime_sec_t))
+		{
+			if (y->sec >= 0) goto overflow;
+			xs = x->sec;
+			ys = y->sec + 1; /* this won't overflow */
+		}
+		else
+		{
+			xs = x->sec + 1; /* this won't overflow */
+			ys = y->sec;
+		}
+	}
+	else
+	{
+		xs = x->sec;
+		ys = y->sec;
+	}
+
+	if ((ys >= 1 && xs > MOO_TYPE_MAX(moo_ntime_sec_t) - ys) ||
+	    (ys <= -1 && xs < MOO_TYPE_MIN(moo_ntime_sec_t) - ys))
+	{
+		if (xs >= 0)
+		{
+		overflow:
+			xs = MOO_TYPE_MAX(moo_ntime_sec_t);
+			ns = MOO_NSECS_PER_SEC - 1;
+		}
+		else
+		{
+			xs = MOO_TYPE_MIN(moo_ntime_sec_t);
+			ns = 0;
+		}
+	}
+	else
+	{
+		xs = xs + ys;
+	}
+
+	z->sec = xs;
+	z->nsec = ns;
+}
+
+void moo_sub_ntime (moo_ntime_t* z, const moo_ntime_t* x, const moo_ntime_t* y)
+{
+	moo_ntime_sec_t xs, ys;
+	moo_ntime_nsec_t ns;
+
+	/*MOO_ASSERT (x->nsec >= 0 && x->nsec < MOO_NSECS_PER_SEC);
+	MOO_ASSERT (y->nsec >= 0 && y->nsec < MOO_NSECS_PER_SEC);*/
+
+	ns = x->nsec - y->nsec;
+	if (ns < 0)
+	{
+		ns = ns + MOO_NSECS_PER_SEC;
+		if (x->sec == MOO_TYPE_MIN(moo_ntime_sec_t))
+		{
+			if (y->sec <= 0) goto underflow;
+			xs = x->sec;
+			ys = y->sec - 1; /* this won't underflow */
+		}
+		else
+		{
+			xs = x->sec - 1; /* this won't underflow */
+			ys = y->sec;
+		}
+	}
+	else
+	{
+		xs = x->sec;
+		ys = y->sec;
+	}
+
+	if ((ys >= 1 && xs < MOO_TYPE_MIN(moo_ntime_sec_t) + ys) ||
+	    (ys <= -1 && xs > MOO_TYPE_MAX(moo_ntime_sec_t) + ys))
+	{
+		if (xs >= 0)
+		{
+			xs = MOO_TYPE_MAX(moo_ntime_sec_t);
+			ns = MOO_NSECS_PER_SEC - 1;
+		}
+		else
+		{
+		underflow:
+			xs = MOO_TYPE_MIN(moo_ntime_sec_t);
+			ns = 0;
+		}
+	} 
+	else
+	{
+		xs = xs - ys;
+	}
+
+	z->sec = xs;
+	z->nsec = ns;
+}
+
