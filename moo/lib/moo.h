@@ -735,7 +735,7 @@ struct moo_context_t
 	 * a base block context(created but not yet activated) has nil in this 
 	 * field. if a block context is activated by 'value', it points 
 	 * to the block context object used as a base for shallow-copy. */
-	moo_oop_t          receiver_or_source;
+	moo_oop_t          receiver_or_base;
 
 	/* it is set to nil for a method context.
 	 * for a block context, it points to the active context at the 
@@ -744,12 +744,19 @@ struct moo_context_t
 	 * an activated block context copies this field from the source. */
 	moo_oop_t          home;
 
-	/* when a method context is created, it is set to itself. no change is
-	 * made when the method context is activated. when a block context is 
+	/* it points to the method context created of the method defining the code
+	 * of this context. a method context points to itself. a block context
+	 * points to the method context where it is created. another block context
+	 * created within the block context also points to the same method context.
+	 *   ctx->origin: method context
+	 *   ctx->origin->method_or_nargs: actual method containing byte codes pertaining to ctx.
+	 * 
+	 * when a method context is created, it is set to itself. no change is
+	 * made when the method context is activated. when a base block context is 
 	 * created (when MAKE_BLOCK or BLOCK_COPY is executed), it is set to the
-	 * origin of the active context. when the block context is shallow-copied
+	 * origin of the active context. when the base block context is shallow-copied
 	 * for activation (when it is sent 'value'), it is set to the origin of
-	 * the source block context. */
+	 * the base block context. */
 	moo_oop_context_t  origin; 
 
 	/* variable indexed part - actual arguments and temporaries are placed here */

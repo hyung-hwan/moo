@@ -1747,7 +1747,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 		}
 	}
 	/* copy receiver */
-	MOO_STORE_OOP (moo, &ctx->receiver_or_source, MOO_STACK_GETTOP(moo));
+	MOO_STORE_OOP (moo, &ctx->receiver_or_base, MOO_STACK_GETTOP(moo));
 	MOO_STACK_POP (moo);
 
 	MOO_ASSERT (moo, moo->sp >= -1);
@@ -2067,6 +2067,7 @@ TODO: overcome this problem - accept parameters....
 
 	ctx->ip = MOO_SMOOI_TO_OOP(0); /* point to the beginning */
 	ctx->sp = MOO_SMOOI_TO_OOP(-1); /* pointer to -1 below the bottom */
+	/* ctx->home = moo->_nil; */
 	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->origin, (moo_oop_t)ctx); /* point to self */
 	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->method_or_nargs, (moo_oop_t)mth); /* fake. help SWITCH_ACTIVE_CONTEXT() not fail. TODO: create a static fake method and use it... instead of 'mth' */
 
@@ -2109,9 +2110,9 @@ TODO: overcome this problem - accept parameters....
 
 	/* emulate the message sending */
 #if defined(INVOKE_DIRECTLY)
-	return activate_new_method (moo, mth, 0);
+	return activate_new_method(moo, mth, 0);
 #else
-	return activate_new_method (moo, mth, 2);
+	return activate_new_method(moo, mth, 2);
 #endif
 
 oops:
@@ -2555,7 +2556,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 
 	/* the receiver must be a block context */
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, rcv_blkctx) == moo->_block_context);
-	if (rcv_blkctx->receiver_or_source != moo->_nil)
+	if (rcv_blkctx->receiver_or_base != moo->_nil)
 	{
 		/* the 'source' field is not nil.
 		 * this block context has already been activated once.
@@ -2598,7 +2599,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	blkctx->ip = rcv_blkctx->ip; /* no MOO_STORE_OOP() as it's a small integer */
 	blkctx->ntmprs = rcv_blkctx->ntmprs; /* no MOO_STORE_OOP() as it's a small integer */
 	MOO_STORE_OOP (moo, &blkctx->method_or_nargs, rcv_blkctx->method_or_nargs);
-	MOO_STORE_OOP (moo, &blkctx->receiver_or_source, (moo_oop_t)rcv_blkctx);
+	MOO_STORE_OOP (moo, &blkctx->receiver_or_base, (moo_oop_t)rcv_blkctx);
 	MOO_STORE_OOP (moo, &blkctx->home, rcv_blkctx->home);
 	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)rcv_blkctx->origin);
 #endif
@@ -5354,7 +5355,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 				 * this context can't get executed further. */
 				MOO_ASSERT (moo, (moo_oop_t)moo->active_context->sender == moo->_nil);
 				MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_method_context);
-				MOO_ASSERT (moo, moo->active_context->receiver_or_source == moo->_nil);
+				MOO_ASSERT (moo, moo->active_context->receiver_or_base == moo->_nil);
 				MOO_ASSERT (moo, moo->active_context == moo->processor->active->initial_context);
 				MOO_ASSERT (moo, moo->active_context->origin == moo->processor->active->initial_context->origin);
 				MOO_ASSERT (moo, moo->active_context->origin == moo->active_context);
@@ -5453,7 +5454,7 @@ static MOO_INLINE int make_block (moo_t* moo)
 	/* set the home context where it's defined */
 	MOO_STORE_OOP (moo, &blkctx->home, (moo_oop_t)moo->active_context); 
 	/* no source for a base block context. */
-	blkctx->receiver_or_source = moo->_nil; 
+	blkctx->receiver_or_base = moo->_nil; 
 
 	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)moo->active_context->origin);
 
@@ -5541,8 +5542,8 @@ static int __execute (moo_t* moo)
 			b1 = bcode & 0x7; /* low 3 bits */
 		push_instvar:
 			LOG_INST1 (moo, "push_instvar %zu", b1);
-			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->origin->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			MOO_STACK_PUSH (moo, MOO_OBJ_GET_OOP_VAL(moo->active_context->origin->receiver_or_source, b1));
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->origin->receiver_or_base) == MOO_OBJ_TYPE_OOP);
+			MOO_STACK_PUSH (moo, MOO_OBJ_GET_OOP_VAL(moo->active_context->origin->receiver_or_base, b1));
 			NEXT_INST();
 
 		/* ------------------------------------------------- */
@@ -5561,8 +5562,8 @@ static int __execute (moo_t* moo)
 			b1 = bcode & 0x7; /* low 3 bits */
 		store_instvar:
 			LOG_INST1 (moo, "store_into_instvar %zu", b1);
-			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(moo->active_context->origin->receiver_or_source, b1), MOO_STACK_GETTOP(moo));
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_base) == MOO_OBJ_TYPE_OOP);
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(moo->active_context->origin->receiver_or_base, b1), MOO_STACK_GETTOP(moo));
 			NEXT_INST();
 
 		/* ------------------------------------------------- */
@@ -5580,8 +5581,8 @@ static int __execute (moo_t* moo)
 			b1 = bcode & 0x7; /* low 3 bits */
 		pop_into_instvar:
 			LOG_INST1 (moo, "pop_into_instvar %zu", b1);
-			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(moo->active_context->origin->receiver_or_source, b1), MOO_STACK_GETTOP(moo));
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_base) == MOO_OBJ_TYPE_OOP);
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(moo->active_context->origin->receiver_or_base, b1), MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 			NEXT_INST();
 
@@ -6060,7 +6061,7 @@ static int __execute (moo_t* moo)
 
 		ON_INST(BCODE_PUSH_RECEIVER)
 			LOG_INST0 (moo, "push_receiver");
-			MOO_STACK_PUSH (moo, moo->active_context->origin->receiver_or_source);
+			MOO_STACK_PUSH (moo, moo->active_context->origin->receiver_or_base);
 			NEXT_INST();
 
 		ON_INST(BCODE_PUSH_NIL)
@@ -6092,8 +6093,8 @@ static int __execute (moo_t* moo)
 		{
 			register moo_oop_t c;
 			LOG_INST0 (moo, "push_receiver_ns");
-			c = (moo_oop_t)MOO_CLASSOF(moo, moo->active_context->origin->receiver_or_source);
-			if (c == (moo_oop_t)moo->_class) c = moo->active_context->origin->receiver_or_source;
+			c = (moo_oop_t)MOO_CLASSOF(moo, moo->active_context->origin->receiver_or_base);
+			if (c == (moo_oop_t)moo->_class) c = moo->active_context->origin->receiver_or_base;
 			MOO_STACK_PUSH (moo, (moo_oop_t)((moo_oop_class_t)c)->nsup);
 			NEXT_INST();
 		}
@@ -6308,7 +6309,7 @@ static int __execute (moo_t* moo)
 
 		ON_INST(BCODE_RETURN_RECEIVER)
 			LOG_INST0 (moo, "return_receiver");
-			return_value = moo->active_context->origin->receiver_or_source;
+			return_value = moo->active_context->origin->receiver_or_base;
 		handle_return:
 			{
 				int n;
@@ -6397,7 +6398,7 @@ static int __execute (moo_t* moo)
 			blkctx->ntmprs = MOO_SMOOI_TO_OOP(ntmprs);
 
 			MOO_STORE_OOP (moo, &blkctx->home, (moo_oop_t)rctx);
-			blkctx->receiver_or_source = moo->_nil;
+			blkctx->receiver_or_base = moo->_nil;
 
 			/* [NOTE]
 			 * the origin of a method context is set to itself
