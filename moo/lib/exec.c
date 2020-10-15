@@ -2531,7 +2531,7 @@ static moo_pfrc_t pf_method_get_source_text (moo_t* moo, moo_mod_t* mod, moo_ooi
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_ooi_t nargs, moo_ooi_t num_first_arg_elems, moo_oop_context_t* pblkctx)
+static moo_pfrc_t __block_value (moo_t* moo, moo_oop_block_t rcv_block, moo_ooi_t nargs, moo_ooi_t num_first_arg_elems, moo_oop_context_t* pblkctx)
 {
 	/* prepare a new block context for activation.
 	 * the receiver must be a block context which becomes the base
@@ -2555,54 +2555,48 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	 */
 
 	/* the receiver must be a block context */
-	MOO_ASSERT (moo, MOO_CLASSOF(moo, rcv_blkctx) == moo->_block_context);
-	if (rcv_blkctx->receiver_or_base != moo->_nil)
+	MOO_ASSERT (moo, MOO_CLASSOF(moo, rcv_block) == moo->_block);
+#if 0
+	if (rcv_block->receiver_or_base != moo->_nil)
 	{
 		/* the 'source' field is not nil.
 		 * this block context has already been activated once.
 		 * you can't send 'value' again to reactivate it.
 		 * For example, [thisContext value] value. */
-		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_blkctx) > MOO_CONTEXT_NAMED_INSTVARS);
-		moo_seterrbfmt (moo, MOO_EPERM, "re-valuing of a block context - %O", rcv_blkctx);
+		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_block) > MOO_CONTEXT_NAMED_INSTVARS);
+		moo_seterrbfmt (moo, MOO_EPERM, "re-valuing of a block context - %O", rcv_block);
 		return MOO_PF_FAILURE;
 	}
-	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_blkctx) == MOO_CONTEXT_NAMED_INSTVARS);
+#endif
+	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_block) == MOO_BLOCK_NAMED_INSTVARS);
 
-	if (MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
+	if (MOO_OOP_TO_SMOOI(rcv_block->nargs) != actual_arg_count /* nargs */)
 	{
 		moo_seterrbfmt (moo, MOO_ENUMARGS,
 			"wrong number of arguments to a block context %O - %zd expected, %zd given",
-			rcv_blkctx, MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
+			rcv_block, MOO_OOP_TO_SMOOI(rcv_block->nargs), actual_arg_count);
 		return MOO_PF_FAILURE;
 	}
 
 	/* the number of temporaries stored in the block context
 	 * accumulates the number of temporaries starting from the origin.
 	 * simple calculation is needed to find the number of local temporaries */
-	local_ntmprs = MOO_OOP_TO_SMOOI(rcv_blkctx->ntmprs) -
-	               MOO_OOP_TO_SMOOI(((moo_oop_context_t)rcv_blkctx->home)->ntmprs);
+	local_ntmprs = MOO_OOP_TO_SMOOI(rcv_block->ntmprs) -
+	               MOO_OOP_TO_SMOOI(((moo_oop_context_t)rcv_block->home)->ntmprs);
 	MOO_ASSERT (moo, local_ntmprs >= actual_arg_count);
 
-	/* create a new block context to clone rcv_blkctx */
-	moo_pushvolat (moo, (moo_oop_t*)&rcv_blkctx);
-	blkctx = (moo_oop_context_t) moo_instantiate(moo, moo->_block_context, MOO_NULL, local_ntmprs); 
+	/* create a new block context based on the receiver block(rcv_block) */
+	moo_pushvolat (moo, (moo_oop_t*)&rcv_block);
+	blkctx = (moo_oop_context_t)moo_instantiate(moo, moo->_block_context, MOO_NULL, local_ntmprs); 
 	moo_popvolat (moo);
-	if (!blkctx) return MOO_PF_FAILURE;
+	if (MOO_UNLIKELY(!blkctx)) return MOO_PF_FAILURE;
 
-#if 0
-	/* shallow-copy the named part including home, origin, etc. */
-	for (i = 0; i < MOO_CONTEXT_NAMED_INSTVARS; i++)
-	{
-		MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(blkctx, i), MOO_OBJ_GET_OOP_VAL(rcv_blkctx, i));
-	}
-#else
-	blkctx->ip = rcv_blkctx->ip; /* no MOO_STORE_OOP() as it's a small integer */
-	blkctx->ntmprs = rcv_blkctx->ntmprs; /* no MOO_STORE_OOP() as it's a small integer */
-	MOO_STORE_OOP (moo, &blkctx->method_or_nargs, rcv_blkctx->method_or_nargs);
-	MOO_STORE_OOP (moo, &blkctx->receiver_or_base, (moo_oop_t)rcv_blkctx);
-	MOO_STORE_OOP (moo, &blkctx->home, rcv_blkctx->home);
-	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)rcv_blkctx->origin);
-#endif
+	blkctx->ip = rcv_block->ip; /* no MOO_STORE_OOP() as it's a small integer */
+	blkctx->ntmprs = rcv_block->ntmprs; /* no MOO_STORE_OOP() as it's a small integer */
+	MOO_STORE_OOP (moo, &blkctx->method_or_nargs, rcv_block->nargs);
+	MOO_STORE_OOP (moo, &blkctx->receiver_or_base, (moo_oop_t)rcv_block);
+	MOO_STORE_OOP (moo, &blkctx->home, (moo_oop_t)rcv_block->home);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)rcv_block->home->origin);
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
 	if (num_first_arg_elems > 0)
@@ -2641,15 +2635,16 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 static moo_pfrc_t pf_block_value (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_pfrc_t x;
-	moo_oop_context_t rcv_blkctx, blkctx;
+	moo_oop_block_t rcv_block;
+	moo_oop_context_t blkctx;
 
-	rcv_blkctx = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv_blkctx) == moo->_block_context);
+	rcv_block = (moo_oop_block_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv_block) == moo->_block);
 
-	x = __block_value(moo, rcv_blkctx, nargs, 0, &blkctx);
+	x = __block_value(moo, rcv_block, nargs, 0, &blkctx);
 	if (x <= MOO_PF_FAILURE) return x; /* hard failure and soft failure */
 
-	SWITCH_ACTIVE_CONTEXT (moo, (moo_oop_context_t)blkctx);
+	SWITCH_ACTIVE_CONTEXT (moo, blkctx);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2662,7 +2657,8 @@ static MOO_INLINE moo_pfrc_t __block_new_process (moo_t* moo, moo_mod_t* mod, mo
 	 */
 
 	int x;
-	moo_oop_context_t rcv_blkctx, blkctx;
+	moo_oop_block_t rcv_block;
+	moo_oop_context_t blkctx;
 	moo_oop_process_t proc;
 #if 0
 	moo_ooi_t num_first_arg_elems = 0;
@@ -2686,15 +2682,15 @@ static MOO_INLINE moo_pfrc_t __block_new_process (moo_t* moo, moo_mod_t* mod, mo
 	}
 #endif
 
-	rcv_blkctx = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv_blkctx) == moo->_block_context);
+	rcv_block = (moo_oop_block_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv_block) == moo->_block);
 
 	/* this primitive creates a new process with a block as if the block
 	 * is sent the value message */
 #if 0
-	x = __block_value(moo, rcv_blkctx, nargs, num_first_arg_elems, &blkctx);
+	x = __block_value(moo, rcv_block, nargs, num_first_arg_elems, &blkctx);
 #else
-	x = __block_value(moo, rcv_blkctx, nargs, 0, &blkctx);
+	x = __block_value(moo, rcv_block, nargs, 0, &blkctx);
 #endif
 	if (x <= 0) return x; /* both hard failure and soft failure */
 
@@ -2705,7 +2701,7 @@ static MOO_INLINE moo_pfrc_t __block_new_process (moo_t* moo, moo_mod_t* mod, mo
 	blkctx->sender = (moo_oop_context_t)moo->_nil;
 
 	proc = make_process(moo, blkctx, proc_flags);
-	if (!proc) return MOO_PF_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
+	if (MOO_UNLIKELY(!proc)) return MOO_PF_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
 
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
@@ -4320,10 +4316,6 @@ static pf_t pftab[] =
 	{ "Apex_~=",                               { moo_pf_not_equal,                        1, 1 } },
 	{ "Apex_~~",                               { moo_pf_not_identical,                    1, 1 } },
 
-	{ "BlockContext_newProcess",               { pf_block_new_process,                    0, MA } },
-	{ "BlockContext_newSystemProcess",         { pf_block_new_system_process,             0, MA } },
-	{ "BlockContext_value",                    { pf_block_value,                          0, MA } },
-
 	{ "Character_<",                           { pf_character_lt,                         1, 1 } },
 	{ "Character_<=",                          { pf_character_le,                         1, 1 } },
 	{ "Character_>",                           { pf_character_gt,                         1, 1 } },
@@ -4331,6 +4323,9 @@ static pf_t pftab[] =
 	{ "Character_asError",                     { pf_character_as_error,                   0, 0 } },
 	{ "Character_asInteger",                   { pf_character_as_smooi,                   0, 0 } },
 
+	{ "CompiledBlock_newProcess",              { pf_block_new_process,                    0, MA } },
+	{ "CompiledBlock_newSystemProcess",        { pf_block_new_system_process,             0, MA } },
+	{ "CompiledBlock_value",                   { pf_block_value,                          0, MA } },
 	{ "CompiledMethod_ipSourceLine:",          { pf_method_get_ip_source_line,            1, 1 } },
 	{ "CompiledMethod_sourceFile",             { pf_method_get_source_file,               0, 0 } },
 	{ "CompiledMethod_sourceLine",             { pf_method_get_source_line,               0, 0 } },
@@ -5416,6 +5411,7 @@ static MOO_INLINE void do_return_from_block (moo_t* moo)
 
 static MOO_INLINE int make_block (moo_t* moo)
 {
+#if 0
 	moo_oop_context_t blkctx;
 	moo_oob_t b1, b2;
 
@@ -5461,6 +5457,46 @@ static MOO_INLINE int make_block (moo_t* moo)
 	/* push the new block context to the stack of the active context */
 	MOO_STACK_PUSH (moo, (moo_oop_t)blkctx);
 	return 0;
+#else
+	moo_oop_block_t block;
+	moo_oob_t b1, b2;
+
+	/* b1 - number of block arguments
+	 * b2 - number of block temporaries */
+	FETCH_PARAM_CODE_TO (moo, b1);
+	FETCH_PARAM_CODE_TO (moo, b2);
+
+	LOG_INST2 (moo, "make_block %zu %zu", b1, b2);
+
+	MOO_ASSERT (moo, b1 >= 0);
+	MOO_ASSERT (moo, b2 >= b1);
+
+	/* the block context object created here is used as a base
+	 * object for block context activation. pf_block_value()
+	 * clones a block context and activates the cloned context.
+	 * this base block context is created with no stack for 
+	 * this reason */
+	block = (moo_oop_block_t)moo_instantiate(moo, moo->_block, MOO_NULL, 0); 
+	if (MOO_UNLIKELY(!block)) return -1;
+
+	/* the long forward jump instruction has the format of 
+	 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
+	 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
+	 * the instruction after the jump. */
+	block->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
+	/* the number of arguments for a block context is local to the block */
+	block->nargs = MOO_SMOOI_TO_OOP(b1);
+	/* the number of temporaries here is an accumulated count including
+	 * the number of temporaries of a home context */
+	block->ntmprs = MOO_SMOOI_TO_OOP(b2);
+
+	/* set the home context where it's defined */
+	MOO_STORE_OOP (moo, (moo_oop_t*)&block->home, (moo_oop_t)moo->active_context); 
+
+	/* push the new block context to the stack of the active context */
+	MOO_STACK_PUSH (moo, (moo_oop_t)block);
+	return 0;
+#endif
 }
 
 static int __execute (moo_t* moo)
@@ -6059,7 +6095,7 @@ static int __execute (moo_t* moo)
 
 		/* -------------------------------------------------------- */
 
-		ON_INST(BCODE_PUSH_RECEIVER)
+		ON_INST(BCODE_PUSH_RECEIVER) /* push self or super */
 			LOG_INST0 (moo, "push_receiver");
 			MOO_STACK_PUSH (moo, moo->active_context->origin->receiver_or_base);
 			NEXT_INST();
@@ -6332,94 +6368,6 @@ static int __execute (moo_t* moo)
 		ON_INST(BCODE_MAKE_BLOCK)
 			if (make_block(moo) <= -1) return -1;
 			NEXT_INST();
-
-		ON_INST(BCODE_SEND_BLOCK_COPY)
-		{
-			moo_ooi_t nargs, ntmprs;
-			moo_oop_context_t rctx;
-			moo_oop_context_t blkctx;
-
-			LOG_INST0 (moo, "send_block_copy");
-
-			/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
-			MOO_ASSERT (moo, moo->sp >= 2);
-
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(MOO_STACK_GETTOP(moo)));
-			ntmprs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
-			MOO_STACK_POP (moo);
-
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(MOO_STACK_GETTOP(moo)));
-			nargs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
-			MOO_STACK_POP (moo);
-
-			MOO_ASSERT (moo, nargs >= 0);
-			MOO_ASSERT (moo, ntmprs >= nargs);
-
-			/* the block context object created here is used
-			 * as a base object for block context activation.
-			 * pf_block_value() clones a block 
-			 * context and activates the cloned context.
-			 * this base block context is created with no 
-			 * stack for this reason. */
-			blkctx = (moo_oop_context_t)moo_instantiate(moo, moo->_block_context, MOO_NULL, 0); 
-			if (!blkctx) return -1;
-
-			/* get the receiver to the block copy message after block context instantiation
-			 * not to get affected by potential GC */
-			rctx = (moo_oop_context_t)MOO_STACK_GETTOP(moo);
-			MOO_ASSERT (moo, rctx == moo->active_context);
-
-			/* [NOTE]
-			 *  blkctx->sender is left to nil. it is set to the 
-			 *  active context before it gets activated. see
-			 *  pf_block_value().
-			 *
-			 *  blkctx->home is set here to the active context.
-			 *  it's redundant to have them pushed to the stack
-			 *  though it is to emulate the message sending of
-			 *  blockCopy:withNtmprs:. BCODE_MAKE_BLOCK has been
-			 *  added to replace BCODE_SEND_BLOCK_COPY and pusing
-			 *  arguments to the stack.
-			 *
-			 *  blkctx->origin is set here by copying the origin
-			 *  of the active context.
-			 */
-
-			/* the extended jump instruction has the format of 
-			 *   0000XXXX KKKKKKKK or 0000XXXX KKKKKKKK KKKKKKKK 
-			 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
-			 * the instruction after the jump. */
-			blkctx->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
-			blkctx->sp = MOO_SMOOI_TO_OOP(-1);
-			/* the number of arguments for a block context is local to the block */
-			blkctx->method_or_nargs = MOO_SMOOI_TO_OOP(nargs);
-			/* the number of temporaries here is an accumulated count including
-			 * the number of temporaries of a home context */
-			blkctx->ntmprs = MOO_SMOOI_TO_OOP(ntmprs);
-
-			MOO_STORE_OOP (moo, &blkctx->home, (moo_oop_t)rctx);
-			blkctx->receiver_or_base = moo->_nil;
-
-			/* [NOTE]
-			 * the origin of a method context is set to itself
-			 * when it's created. so it's safe to simply copy
-			 * the origin field this way. 
-			 *
-			 * if the context that receives the blockCopy message 
-			 * is a method context, the following conditions are all true.
-			 *   rctx->home == moo->_nil
-			 *   MOO_CLASSOF(moo, rctx) == moo->_method_context
-			 *   rctx == (moo_oop_t)moo->active_context
-			 *   rctx == rctx->origin
-			 *
-			 * if it is a block context, the following condition is true.
-			 *   MOO_CLASSOF(moo, rctx) == moo->_block_context
-			 */
-			MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)rctx->origin);
-
-			MOO_STACK_SETTOP (moo, (moo_oop_t)blkctx);
-			NEXT_INST();
-		}
 
 		ON_INST(BCODE_NOOP)
 			/* do nothing */

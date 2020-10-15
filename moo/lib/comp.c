@@ -5110,14 +5110,7 @@ static int compile_block_expression (moo_t* moo)
 	 * updating the temporaries count for the current block. */
 	if (store_tmpr_count_for_block(moo, md->tmpr_count) <= -1) return -1;
 
-#if defined(MOO_USE_MAKE_BLOCK)
 	if (emit_double_param_instruction(moo, BCODE_MAKE_BLOCK, block_arg_count, md->tmpr_count/*block_tmpr_count*/, &block_loc) <= -1) return -1;
-#else
-	if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT, &block_loc) <= -1 ||
-	    emit_push_smooi_literal(moo, block_arg_count, &block_loc) <= -1 ||
-	    emit_push_smooi_literal(moo, md->tmpr_count/*block_tmpr_count*/, &block_loc) <= -1 ||
-	    emit_byte_instruction(moo, BCODE_SEND_BLOCK_COPY, &block_loc) <= -1) return -1;
-#endif
 
 	/* insert dummy instructions before replacing them with a jump instruction */
 	jump_inst_pos = md->code.len;

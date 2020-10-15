@@ -254,6 +254,14 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _methsig) },
 
+	{ 13,
+	  { 'C','o','m','p','i','l','e','d','B','l','o','c','k' },
+	  0,
+	  0,
+	  MOO_BLOCK_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _block) },
 
 	{ 13,
 	  { 'M','e','t','h','o','d','C','o','n','t','e','x','t' },

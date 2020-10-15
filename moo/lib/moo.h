@@ -695,6 +695,8 @@ struct moo_method_t
 #define MOO_METHOD_PREAMBLE_FLAG_DUAL     (1 << 2)
 #define MOO_METHOD_PREAMBLE_FLAG_LENIENT  (1 << 3)  /* lenient primitive method - no exception upon failure. return an error instead */
 
+
+
 /* [NOTE] if you change the number of instance variables for moo_context_t,
  *        you need to change the defintion of BlockContext and MethodContext.
  *        plus, you need to update various exception handling code in MethodContext */
@@ -741,7 +743,7 @@ struct moo_context_t
 	 * for a block context, it points to the active context at the 
 	 * moment the block context was created. that is, it points to 
 	 * a method context where the base block has been defined. 
-	 * an activated block context copies this field from the source. */
+	 * an activated block context copies this field from the base block context. */
 	moo_oop_t          home;
 
 	/* it points to the method context created of the method defining the code
@@ -753,7 +755,7 @@ struct moo_context_t
 	 * 
 	 * when a method context is created, it is set to itself. no change is
 	 * made when the method context is activated. when a base block context is 
-	 * created (when MAKE_BLOCK or BLOCK_COPY is executed), it is set to the
+	 * created (when MAKE_BLOCK is executed), it is set to the
 	 * origin of the active context. when the base block context is shallow-copied
 	 * for activation (when it is sent 'value'), it is set to the origin of
 	 * the base block context. */
@@ -763,6 +765,17 @@ struct moo_context_t
 	moo_oop_t          stack[1]; /* context stack that stores arguments and temporaries */
 };
 
+#define MOO_BLOCK_NAMED_INSTVARS 4
+typedef struct moo_block_t moo_block_t;
+typedef struct moo_block_t* moo_oop_block_t;
+struct moo_block_t
+{
+	MOO_OBJ_HEADER;
+	moo_oop_t ip; /* smooi. instruction pointer where the byte code begins in home->origin */
+	moo_oop_t ntmprs;
+	moo_oop_t nargs;
+	moo_oop_context_t home; /* home context */
+};
 
 #define MOO_PROCESS_NAMED_INSTVARS 13
 typedef struct moo_process_t moo_process_t;
@@ -1609,6 +1622,7 @@ struct moo_t
 	moo_oop_class_t _method_dictionary; /* MethodDictionary */
 	moo_oop_class_t _method; /* CompiledMethod */
 	moo_oop_class_t _methsig; /* MethodSignature */
+	moo_oop_class_t _block; /* CompiledBlock */
 
 	moo_oop_class_t _method_context; /* MethodContext */
 	moo_oop_class_t _block_context; /* BlockContext */

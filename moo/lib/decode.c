@@ -585,10 +585,6 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				MOO_ASSERT (moo, b2 >= b1);
 				break;
 
-			case BCODE_SEND_BLOCK_COPY:
-				LOG_INST_0 (moo, "send_block_copy");
-				break;
-
 			case BCODE_NOOP:
 				/* do nothing */
 				LOG_INST_0 (moo, "noop");

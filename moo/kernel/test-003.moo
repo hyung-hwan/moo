@@ -172,26 +172,30 @@ start:
 			// 10-14
 			[(10 isKindOf: Integer) == true],
 			[(10 isKindOf: 20) == false],
-			[([] isKindOf: BlockContext) == true],
-			[([] isKindOf: MethodContext) == false],
-			[([] isKindOf: Context) == true],
+			[([] isKindOf: CompiledBlock) == true],
+			[([] isKindOf: CompiledMethod) == false],
+			[([] isKindOf: BlockContext) == false],
+
+
 
 			// 15-19
+			[([] isKindOf: MethodContext) == false],
+			[([] isKindOf: Context) == false],
 			[("string" isKindOf: String) == true],
 			[(#symbol isKindOf: String) == true],
 			[("string" isKindOf: Symbol) == false],
-			[(#symbol isKindOf: Symbol) == true],
-			[ [] value == nil ],
 			
 			// 20-24
+			[(#symbol isKindOf: Symbol) == true],
+			[ [] value == nil ],
 			[ self test_local_return_001 ],
 			[ self test_if_001 ],
 			[ self test_while_001 ],
 			[ (if (1 > 2) { } else { }) == nil. ],
-			[ (if (1 < 2) { } else { }) == nil. ],
-			[ (if (1 > 2) { } else { goto A01. A01: nil }) == nil ],
 
 			// 25-29
+			[ (if (1 < 2) { } else { }) == nil. ],
+			[ (if (1 > 2) { } else { goto A01. A01: nil }) == nil ],
 			[ (if (1 > 2) { } else { 9876. goto A02. A02: 9876. }) == 9876 ],
 			[ [ | a3 | a3:= 20. if (a3 == 21) { a3 := 4321. goto L03 } else { a3 := 1234. goto L03 }. a3 := 8888. L03: a3 ] value == 1234 ],
 			[ [ | a4 | a4:= 21. if (a4 == 21) { a4 := 4321. goto L04 } else { a4 := 1234. goto L04 }. a4 := 8888. L04: a4 ] value == 4321 ]

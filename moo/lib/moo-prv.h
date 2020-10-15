@@ -42,10 +42,6 @@
 /* define this to generate XXXX_CTXTEMVAR instructions */
 #define MOO_USE_CTXTEMPVAR
 
-/* define this to use the MAKE_BLOCK instruction instead of
- * PUSH_CONTEXT, PUSH_INTLIT, PUSH_INTLIT, SEND_BLOCK_COPY */
-#define MOO_USE_MAKE_BLOCK
-
 /* define this to enable karatsuba multiplication in bigint */
 #define MOO_ENABLE_KARATSUBA
 #define MOO_KARATSUBA_CUTOFF 32
@@ -1021,7 +1017,7 @@ enum moo_bcode_t
 	BCODE_RETURN_FROM_BLOCK        = 0xFB, /* return the stack top from a block */
 	BCODE_LOCAL_RETURN             = 0xFC,
 	BCODE_MAKE_BLOCK               = 0xFD,
-	BCODE_SEND_BLOCK_COPY          = 0xFE,
+	/* UNUSED 0xFE */
 	BCODE_NOOP                     = 0xFF
 };
 

@@ -111,6 +111,80 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		^self.home vargAt: index
 	}
 
+	method pc
+	{
+		^self.ip
+	}
+
+	method pc: anInteger
+	{
+		self.ip := anInteger.
+	}
+	
+	method sp
+	{
+		^self.sp
+	}
+
+	method sp: anInteger
+	{
+		self.sp := anInteger.
+	}
+
+	method restart
+	{
+		ip := self.source pc.
+	}
+}
+
+
+class(#pointer) CompiledMethod(Object)
+{
+	var owner, 
+	    name,
+	    preamble,
+	    preamble_data_1,
+	    preamble_data_2,
+	    ntmprs,
+	    nargs,
+	    dbi_file_offset,
+	    dbi_method_offset.
+
+	method preamble
+	{
+		^self.preamble
+	}
+
+	method preambleCode
+	{
+		/* TODO: make this a primtive for performance */
+		^(self.preamble bitShift: -4) bitAnd: 16r1F.
+	}
+
+	method owner
+	{
+		^self.owner
+	}
+
+	method name
+	{
+		^self.name
+	}
+
+	method(#primitive) sourceText.
+	method(#primitive) sourceFile.
+	method(#primitive) sourceLine.
+	method(#primitive) ipSourceLine: ip.
+}
+
+class CompiledBlock(Object)
+{
+	var ip, ntmprs, nargs, home.
+
+	// create a new process in the suspended state
+	method(#variadic,#primitive) newProcess().
+	method(#variadic,#primitive) newSystemProcess(). // this method is for internal use only. never call this.
+
 // TODO: how can i pass variadic arguments to newProcess
 // method(#variadic) fork() -> how to pass them to newProcess???
 	method fork 
@@ -119,39 +193,34 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		^self newProcess resume.
 	}
 
-	// create a new process in the suspended state
-	method(#variadic,#primitive) newProcess().
-	method(#variadic,#primitive) newSystemProcess(). // this method is for internal use only. never call this.
-
 	// evaluate the block
 	method(#variadic,#primitive) value().
 
 	method value: a 
 	{
-		<primitive: #BlockContext_value>
+		<primitive: #CompiledBlock_value>
 		self primitiveFailed.
 	}
 	method value: a value: b
 	{
-		<primitive: #BlockContext_value>
+		<primitive: #CompiledBlock_value>
 		self primitiveFailed.
 	}
 	method value: a value: b value: c
 	{
-		<primitive: #BlockContext_value>
+		<primitive: #CompiledBlock_value>
 		self primitiveFailed.
 	}
 	method value: a value: b value: c value: d
 	{
-		<primitive: #BlockContext_value>
+		<primitive: #CompiledBlock_value>
 		self primitiveFailed.
 	}
 	method value: a value: b value: c value: d value: e
 	{
-		<primitive: #BlockContext_value>
+		<primitive: #CompiledBlock_value>
 		self primitiveFailed.
 	}
-
 
 	method ifTrue: aBlock
 	{
@@ -285,69 +354,4 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		* -------------------------------------------------- */
 		while ((self value) == false) { }.
 	}
-
-	method pc
-	{
-		^self.ip
-	}
-
-	method pc: anInteger
-	{
-		self.ip := anInteger.
-	}
-	
-	method sp
-	{
-		^self.sp
-	}
-
-	method sp: anInteger
-	{
-		self.sp := anInteger.
-	}
-
-	method restart
-	{
-		ip := self.source pc.
-	}
-}
-
-
-class(#pointer) CompiledMethod(Object)
-{
-	var owner, 
-	    name,
-	    preamble,
-	    preamble_data_1,
-	    preamble_data_2,
-	    ntmprs,
-	    nargs,
-	    dbi_file_offset,
-	    dbi_method_offset.
-
-	method preamble
-	{
-		^self.preamble
-	}
-
-	method preambleCode
-	{
-		/* TODO: make this a primtive for performance */
-		^(self.preamble bitShift: -4) bitAnd: 16r1F.
-	}
-
-	method owner
-	{
-		^self.owner
-	}
-
-	method name
-	{
-		^self.name
-	}
-
-	method(#primitive) sourceText.
-	method(#primitive) sourceFile.
-	method(#primitive) sourceLine.
-	method(#primitive) ipSourceLine: ip.
 }

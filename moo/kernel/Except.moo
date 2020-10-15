@@ -337,13 +337,12 @@ extend MethodContext
 }
 
 //============================================================================
-extend BlockContext
+extend CompiledBlock
 {
 	method on: anException do: anExceptionBlock
 	{
 		| exception_active |
 		<exception>
-
 /* ------------------------------- 
 thisContext isExceptionContext dump.
 (thisContext basicSize) dump.

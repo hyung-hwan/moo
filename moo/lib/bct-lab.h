@@ -254,5 +254,5 @@
 		/* 251 */ &&case_BCODE_RETURN_FROM_BLOCK,
 		/* 252 */ &&case_BCODE_LOCAL_RETURN,
 		/* 253 */ &&case_BCODE_MAKE_BLOCK,
-		/* 254 */ &&case_BCODE_SEND_BLOCK_COPY,
+		/* 254 */ &&case_DEFAULT,
 		/* 255 */ &&case_BCODE_NOOP

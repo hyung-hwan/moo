@@ -868,7 +868,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	}
 
 	mnsym = (moo_oop_char_t)moo_makesymbol(moo, mthname, i);
-	if (!mnsym) goto oops;
+	if (MOO_UNLIKELY(!mnsym)) goto oops;
 	moo_pushvolat (moo, (moo_oop_t*)&mnsym); tmp_count++;
 
 	/* compose a full primitive function identifier to VM's string buffer.
@@ -882,15 +882,15 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	}
 
 	pfidsym = (moo_oop_char_t)moo_makesymbol(moo, moo->sbuf[MOO_SBUF_ID_TMP].ptr, moo->sbuf[MOO_SBUF_ID_TMP].len);
-	if (!pfidsym) 
+	if (MOO_UNLIKELY(!pfidsym))
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - symbol instantiation failure\n", mthname, _class->name);
 		goto oops;
 	}
 	moo_pushvolat (moo, (moo_oop_t*)&pfidsym); tmp_count++;
 
-	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, 1, MOO_NULL, 0); 
-	if (!mth)
+	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, 1, MOO_NULL, 0); 
+	if (MOO_UNLIKELY(!mth))
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - method instantiation failure\n", mthname, _class->name);
 		goto oops;

@@ -427,5 +427,9 @@ extend MyObject
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
+
+
+		[ 10 dump. [20 dump] value; value;  ] value; value.
+
 	}
 }
