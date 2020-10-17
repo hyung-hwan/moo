@@ -34,6 +34,9 @@
 /* TODO: move this macro out to the build files.... */
 #define MOO_INCLUDE_COMPILER
 
+/*#define MOO_ENABLE_GC_MARK_SWEEP*/
+
+
 typedef struct moo_mod_t moo_mod_t;
 
 /* ========================================================================== */
@@ -197,6 +200,19 @@ enum moo_method_type_t
 	MOO_METHOD_DUAL     = 2
 };
 typedef enum moo_method_type_t moo_method_type_t;
+
+
+/* =========================================================================
+ * HEADER FOR SOME GC IMPLEMENTATIONS
+ * ========================================================================= */
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+typedef struct moo_gchdr_t moo_gchdr_t;
+struct moo_gchdr_t
+{
+	moo_gchdr_t* next;
+};
+/* The size of moo_gchdr_t must be aligned to MOO_SIZEOF_OOP_T */
+#endif
 
 /* =========================================================================
  * OBJECT STRUCTURE
@@ -1779,6 +1795,10 @@ struct moo_t
 		moo_oow_t message_sends;
 		moo_uintmax_t inst_counter;
 	} stat;
+
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	moo_gchdr_t* gch;
+#endif
 
 #if defined(MOO_INCLUDE_COMPILER)
 	moo_compiler_t* c;

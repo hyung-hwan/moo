@@ -514,7 +514,7 @@ static int ignite_2 (moo_t* moo)
 	/* Create 'true' and 'false objects */
 	moo->_true = moo_instantiate(moo, moo->_true_class, MOO_NULL, 0);
 	moo->_false = moo_instantiate(moo, moo->_false_class, MOO_NULL, 0);
-	if (!moo->_true || !moo->_false) return -1;
+	if (MOO_UNLIKELY(!moo->_true) || MOO_UNLIKELY(!moo->_false)) return -1;
 
 	/* Prevent the object instations in the permspace. 
 	 *
@@ -537,7 +537,7 @@ static int ignite_2 (moo_t* moo)
 
 	/* Create the symbol table */
 	tmp = moo_instantiate(moo, moo->_symbol_table, MOO_NULL, 0);
-	if (!tmp) return -1;
+	if (MOO_UNLIKELY(!tmp)) return -1;
 	moo->symtab = (moo_oop_dic_t)tmp;
 
 	moo->symtab->tally = MOO_SMOOI_TO_OOP(0);
@@ -937,6 +937,11 @@ static moo_rbt_walk_t call_module_gc (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void
 
 void moo_gc (moo_t* moo)
 {
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	/* TODO: */
+
+
+#else
 	/* 
 	 * move a referenced object to the new heap.
 	 * inspect the fields of the moved object in the new heap.
@@ -1103,6 +1108,7 @@ void moo_gc (moo_t* moo)
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
 		"Finished GC curheap base %p ptr %p newheap base %p ptr %p\n",
 		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
+#endif
 }
 
 void moo_pushvolat (moo_t* moo, moo_oop_t* oop_ptr)

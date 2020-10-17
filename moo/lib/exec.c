@@ -1629,7 +1629,7 @@ static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 
 	proc = make_process(moo, c, MOO_OBJ_FLAGS_PROC_INNATE);
-	if (!proc) return MOO_NULL;
+	if (MOO_UNLIKELY(!proc)) return MOO_NULL;
 
 	chain_into_processor (moo, proc, PROC_STATE_RUNNING);
 	moo->processor->active = proc;
@@ -1666,7 +1666,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	moo_pushvolat (moo, (moo_oop_t*)&mth);
 	ctx = (moo_oop_context_t)moo_instantiate(moo, moo->_method_context, MOO_NULL, actual_ntmprs);
 	moo_popvolat (moo);
-	if (!ctx) return -1;
+	if (MOO_UNLIKELY(!ctx)) return -1;
 
 	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->sender, (moo_oop_t)moo->active_context); 
 	ctx->ip = MOO_SMOOI_TO_OOP(0);
@@ -1968,7 +1968,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 	moo_oop_process_t proc;
 	moo_oow_t tmp_count = 0;
 	moo_oop_t sym_startup;
-	
+
 #if defined(INVOKE_DIRECTLY)
 	moo_oop_association_t ass;
 #else
@@ -1984,7 +1984,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 		MOO_LOG2 (moo, MOO_LOG_DEBUG, "Cannot find a class '%.*js'", objname->len, objname->ptr);
 		return -1;
 	}
-	
+
 	sym_statup = moo_findsymbol(moo, mthname->ptr, mthname->len;
 	if (!sym_startup)
 	{
@@ -2476,7 +2476,7 @@ static moo_pfrc_t pf_method_get_ip_source_line (moo_t* moo, moo_mod_t* mod, moo_
 		if (ipv < di->code_loc_len && code_loc_ptr[ipv] <= MOO_SMOOI_MAX) 
 		{
 			retv = moo_oowtoint(moo, code_loc_ptr[ipv]);
-			if (!retv) return MOO_PF_FAILURE;
+			if (MOO_UNLIKELY(!retv)) return MOO_PF_FAILURE;
 		}
 	}
 
@@ -5258,16 +5258,17 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 	{
 		unwind_protect = 0;
 
-		/* set the instruction pointer to an invalid value.
-		 * this is stored into the current method context
-		 * before context switching and marks a dead context */
+
 		if (moo->active_context->origin == moo->active_context)
 		{
 			/* returning from a method */
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_method_context);
 
-			/* mark that the context is dead. it will be 
-			 * save to the context object by SWITCH_ACTIVE_CONTEXT() */
+
+			/* set the instruction pointer to an invalid value.
+			 * this is stored into the current method context
+			 * before context switching  by SWITCH_ACTIVE_CONTEXT()
+			 * and marks the context dead */
 			moo->ip = -1;
 		}
 		else

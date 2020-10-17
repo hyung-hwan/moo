@@ -720,7 +720,6 @@ struct moo_compiler_t
 #	error Unsupported MOO_BCODE_LONG_PARAM_SIZE
 #endif
 
-
 /*
 ----------------------------------------------------------------------------------------------------------------
 SHORT INSTRUCTION CODE                                        LONG INSTRUCTION CODE

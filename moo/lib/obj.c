@@ -29,11 +29,38 @@
 void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 {
 	moo_uint8_t* ptr;
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	moo_gchdr_t* gch;
+#endif
 
 #if defined(MOO_BUILD_DEBUG)
 	if ((moo->option.trait & MOO_TRAIT_DEBUG_GC) && !(moo->option.trait & MOO_TRAIT_NOGC)) moo_gc (moo);
 #endif
 
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	if (MOO_UNLIKELY(moo->igniting))
+	{
+		gch = (moo_gchdr_t*)moo_allocmem(moo, MOO_SIZEOF(*gch) + size); 
+		if (MOO_UNLIKELY(!gch)) return MOO_NULL;
+	}
+	else
+	{
+// TODO: perform GC if allocation got above threshold...
+		gch = (moo_gchdr_t*)moo_allocmem(moo, MOO_SIZEOF(*gch) + size); 
+		if (!gch && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
+		{
+			moo_gc (moo);
+			MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "GC completed\n"); /* TODO: add more inforamtion */
+			gch = (moo_gchdr_t*)moo_allocmem(moo, MOO_SIZEOF(*gch) + size); 
+			if (MOO_UNLIKELY(!gch)) return MOO_NULL;
+		}
+	}
+
+	gch->next = moo->gch;
+	moo->gch = gch;
+
+	ptr = (moo_uint8_t*)(gch + 1);
+#else
 	if (MOO_UNLIKELY(moo->igniting))
 	{
 		/* you must increase the size of the permspace if this allocation fails */
@@ -55,6 +82,8 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	/* TODO: grow heap if ptr is still null. */
 		}
 	}
+#endif
+
 	return ptr;
 }
 
@@ -74,7 +103,7 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	 * of the allocated space to be an even number. 
 	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
-	if (!hdr) return MOO_NULL;
+	if (MOO_UNLIKELY(!hdr)) return MOO_NULL;
 
 	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 0, 0, 0);
 	MOO_OBJ_SET_SIZE (hdr, size);
