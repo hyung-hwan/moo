@@ -705,6 +705,7 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 		MOO_ASSERT (moo, tmp != _nil);
 		MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Compacting away a symbol - %.*js\n", MOO_OBJ_GET_SIZE(tmp), MOO_OBJ_GET_CHAR_SLOT(tmp));
 
+		/* delete a symbol table entry which has not been moved (excluding permanent entries) */
 		for (i = 0, x = index, y = index; i < bucket_size; i++)
 		{
 			y = (y + 1) % bucket_size;
@@ -781,10 +782,195 @@ moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop)
 	return nbytes;
 }
 
+static moo_rbt_walk_t call_module_gc (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void* ctx)
+{
+	moo_t* moo = (moo_t*)ctx;
+	moo_mod_data_t* mdp;
+
+	mdp = MOO_RBT_VPTR(pair);
+	MOO_ASSERT (moo, mdp != MOO_NULL);
+
+	if (mdp->mod.gc) mdp->mod.gc (moo, &mdp->mod);
+
+	return MOO_RBT_WALK_FORWARD;
+}
+
+/* ----------------------------------------------------------------------- */
+
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+
+static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
+{
+	moo_oow_t i, sz;
+
+#if defined(MOO_SUPPORT_GC_DURING_IGNITION)
+	if (!oop) return;
+#endif
+
+	if (!MOO_OOP_IS_POINTER(oop)) return;
+	if (MOO_OBJ_GET_FLAGS_MOVED(oop)) return; /* already marked */
+
+	MOO_OBJ_SET_FLAGS_MOVED(oop, 1); /* mark */
+
+	gc_mark (moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)); /* TODO: remove recursion */
+
+	if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
+	{
+		moo_oow_t size, i;
+
+		/* is it really better to use a flag bit in the header to
+		 * determine that it is an instance of process? */
+		if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(oop)))
+		{
+			/* the stack in a process object doesn't need to be 
+			 * scanned in full. the slots above the stack pointer 
+			 * are garbages. */
+			size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)oop)->sp) + 1;
+			MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(oop));
+		}
+		else
+		{
+			size = MOO_OBJ_GET_SIZE(oop);
+		}
+
+		for (i = 0; i < size; i++)
+		{
+			moo_oop_t tmp = MOO_OBJ_GET_OOP_VAL(oop, i);
+			if (MOO_OOP_IS_POINTER(tmp)) gc_mark (moo, tmp);  /* TODO: no resursion */
+		}
+	}
+}
+
+static MOO_INLINE void gc_mark_root (moo_t* moo)
+{
+	moo_oow_t i, gcfin_count;
+	moo_evtcb_t* cb;
+
+	gc_mark (moo, moo->_nil);
+	gc_mark (moo, moo->_true);
+	gc_mark (moo, moo->_false);
+
+	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
+	{
+		moo_oop_t tmp;
+		tmp = *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
+		gc_mark (moo, tmp);
+	}
+
+	gc_mark (moo, (moo_oop_t)moo->sysdic);
+	gc_mark (moo, (moo_oop_t)moo->processor);
+	gc_mark (moo, (moo_oop_t)moo->nil_process);
+	gc_mark (moo, (moo_oop_t)moo->dicnewsym);
+	gc_mark (moo, (moo_oop_t)moo->dicputassocsym);
+	gc_mark (moo, (moo_oop_t)moo->does_not_understand_sym);
+	gc_mark (moo, (moo_oop_t)moo->primitive_failed_sym);
+	gc_mark (moo, (moo_oop_t)moo->unwindto_return_sym);
+
+	for (i = 0; i < moo->sem_list_count; i++)
+	{
+		gc_mark (moo, (moo_oop_t)moo->sem_list[i]);
+	}
+
+	for (i = 0; i < moo->sem_heap_count; i++)
+	{
+		gc_mark (moo, (moo_oop_t)moo->sem_heap[i]);
+	}
+
+	for (i = 0; i < moo->sem_io_tuple_count; i++)
+	{
+		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
+			gc_mark (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
+		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
+			gc_mark (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+	}
+
+	gc_mark (moo, (moo_oop_t)moo->sem_gcfin);
+
+	for (i = 0; i < moo->proc_map_capa; i++)
+	{
+		gc_mark (moo, moo->proc_map[i]);
+	}
+
+	for (i = 0; i < moo->volat_count; i++)
+	{
+		gc_mark (moo, *moo->volat_stack[i]);
+	}
+
+	if (moo->initial_context) gc_mark (moo, (moo_oop_t)moo->initial_context);
+	if (moo->active_context) gc_mark (moo, (moo_oop_t)moo->active_context);
+	if (moo->active_method) gc_mark (moo, (moo_oop_t)moo->active_method);
+
+	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
+
+	for (cb = moo->evtcb_list; cb; cb = cb->next)
+	{
+		if (cb->gc) cb->gc (moo);
+	}
+
+	gcfin_count = move_finalizable_objects (moo); /* mark finalizable objects */
+
+	if (moo->symtab)
+	{
+		compact_symbol_table (moo, moo->_nil); /* delete symbol table entries that are not marked */
+	#if 0
+		gc_mark (moo, (moo_oop_t)moo->symtab); /* mark the symbol table */
+	#else
+		MOO_OBJ_SET_FLAGS_MOVED(moo->symtab, 1); /* mark */
+		MOO_OBJ_SET_FLAGS_MOVED(moo->symtab->bucket, 1); /* mark */
+	#endif
+	}
+
+	if (gcfin_count > 0) moo->sem_gcfin_sigreq = 1;
+
+	if (moo->active_method) moo->active_code = MOO_METHOD_GET_CODE_BYTE(moo->active_method); /* update moo->active_code */
+
+	/* invalidate method cache. TODO: GCing entries on the method cache is also one way instead of full invalidation */
+	moo_clearmethodcache (moo);
+}
+
+static MOO_INLINE void gc_sweep (moo_t* moo)
+{
+	moo_gchdr_t* curr, * next, * prev;
+	moo_oop_t obj;
+
+	prev = MOO_NULL;
+	curr = moo->gch;
+	while (curr)
+	{
+		next = curr->next;
+		obj = (moo_oop_t)(curr + 1);
+
+		if (MOO_OBJ_GET_FLAGS_MOVED(obj))
+		{
+			/* unmark */
+			MOO_OBJ_SET_FLAGS_MOVED (obj, 0);
+			prev = curr;
+		}
+		else
+		{
+			/* destroy */
+			if (prev) prev->next = next;
+			else moo->gch = next;
+			moo_freemem (moo, curr);
+		}
+
+		curr = next;
+	}
+}
+#endif
+
+/* ----------------------------------------------------------------------- */
+
 moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 {
 #if defined(MOO_SUPPORT_GC_DURING_IGNITION)
 	if (!oop) return oop;
+#endif
+
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+/* TODO: temporary... */
+	gc_mark (moo, oop);
+	return oop;
 #endif
 
 	if (!MOO_OOP_IS_POINTER(oop)) return oop;
@@ -922,25 +1108,14 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 	return ptr; 
 }
 
-static moo_rbt_walk_t call_module_gc (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void* ctx)
-{
-	moo_t* moo = (moo_t*)ctx;
-	moo_mod_data_t* mdp;
-
-	mdp = MOO_RBT_VPTR(pair);
-	MOO_ASSERT (moo, mdp != MOO_NULL);
-
-	if (mdp->mod.gc) mdp->mod.gc (moo, &mdp->mod);
-
-	return MOO_RBT_WALK_FORWARD;
-}
 
 void moo_gc (moo_t* moo)
 {
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	/* TODO: */
-
-
+	MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Starting GC (mark-sweep)\n");
+	gc_mark_root (moo);
+	gc_sweep (moo);
+	MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Finished GC (mark-sweep)\n");
 #else
 	/* 
 	 * move a referenced object to the new heap.
@@ -958,7 +1133,6 @@ void moo_gc (moo_t* moo)
 	if (moo->active_context)
 	{
 /* TODO: verify if this is correct */
-	
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor != moo->_nil);
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor->active != moo->_nil);
 		/* store the stack pointer to the active process */

@@ -5412,53 +5412,6 @@ static MOO_INLINE void do_return_from_block (moo_t* moo)
 
 static MOO_INLINE int make_block (moo_t* moo)
 {
-#if 0
-	moo_oop_context_t blkctx;
-	moo_oob_t b1, b2;
-
-	/* b1 - number of block arguments
-	 * b2 - number of block temporaries */
-	FETCH_PARAM_CODE_TO (moo, b1);
-	FETCH_PARAM_CODE_TO (moo, b2);
-
-	LOG_INST2 (moo, "make_block %zu %zu", b1, b2);
-
-	MOO_ASSERT (moo, b1 >= 0);
-	MOO_ASSERT (moo, b2 >= b1);
-
-	/* the block context object created here is used as a base
-	 * object for block context activation. pf_block_value()
-	 * clones a block context and activates the cloned context.
-	 * this base block context is created with no stack for 
-	 * this reason */
-	blkctx = (moo_oop_context_t)moo_instantiate(moo, moo->_block_context, MOO_NULL, 0); 
-	if (!blkctx) return -1;
-
-	/* the long forward jump instruction has the format of 
-	 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
-	 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
-	 * the instruction after the jump. */
-	blkctx->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
-	/* stack pointer below the bottom. this base block context
-	 * has an empty stack anyway. */
-	blkctx->sp = MOO_SMOOI_TO_OOP(-1);
-	/* the number of arguments for a block context is local to the block */
-	blkctx->method_or_nargs = MOO_SMOOI_TO_OOP(b1);
-	/* the number of temporaries here is an accumulated count including
-	 * the number of temporaries of a home context */
-	blkctx->ntmprs = MOO_SMOOI_TO_OOP(b2);
-
-	/* set the home context where it's defined */
-	MOO_STORE_OOP (moo, &blkctx->home, (moo_oop_t)moo->active_context); 
-	/* no source for a base block context. */
-	blkctx->receiver_or_base = moo->_nil; 
-
-	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)moo->active_context->origin);
-
-	/* push the new block context to the stack of the active context */
-	MOO_STACK_PUSH (moo, (moo_oop_t)blkctx);
-	return 0;
-#else
 	moo_oop_block_t block;
 	moo_oob_t b1, b2;
 
@@ -5497,7 +5450,6 @@ static MOO_INLINE int make_block (moo_t* moo)
 	/* push the new block context to the stack of the active context */
 	MOO_STACK_PUSH (moo, (moo_oop_t)block);
 	return 0;
-#endif
 }
 
 static int __execute (moo_t* moo)

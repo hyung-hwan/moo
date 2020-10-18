@@ -40,18 +40,18 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	if (MOO_UNLIKELY(moo->igniting))
 	{
-		gch = (moo_gchdr_t*)moo_allocmem(moo, MOO_SIZEOF(*gch) + size); 
+		gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
 		if (MOO_UNLIKELY(!gch)) return MOO_NULL;
 	}
 	else
 	{
 // TODO: perform GC if allocation got above threshold...
-		gch = (moo_gchdr_t*)moo_allocmem(moo, MOO_SIZEOF(*gch) + size); 
+		gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
 		if (!gch && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
 		{
 			moo_gc (moo);
 			MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "GC completed\n"); /* TODO: add more inforamtion */
-			gch = (moo_gchdr_t*)moo_allocmem(moo, MOO_SIZEOF(*gch) + size); 
+			gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
 			if (MOO_UNLIKELY(!gch)) return MOO_NULL;
 		}
 	}
