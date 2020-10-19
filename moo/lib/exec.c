@@ -1834,6 +1834,7 @@ moo_oop_method_t moo_findmethod_noseterr (moo_t* moo, moo_oop_t receiver, moo_oo
 	message.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
 	message.len = MOO_OBJ_GET_SIZE(selector);
 
+//MOO_DEBUG4 (moo, "XXXXXXXXXxx %p %p %O %O\n", receiver, selector, receiver, selector);
 	_class = MOO_CLASSOF(moo, receiver);
 	if (_class == moo->_class)
 	{

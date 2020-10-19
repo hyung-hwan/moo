@@ -34,7 +34,7 @@
 /* TODO: move this macro out to the build files.... */
 #define MOO_INCLUDE_COMPILER
 
-/*#define MOO_ENABLE_GC_MARK_SWEEP*/
+//#define MOO_ENABLE_GC_MARK_SWEEP
 
 
 typedef struct moo_mod_t moo_mod_t;
@@ -1710,14 +1710,14 @@ struct moo_t
 	moo_oop_semaphore_t sem_gcfin;
 	int sem_gcfin_sigreq;
 
-	moo_oop_t* volat_stack[256]; /* stack for temporaries */
-	moo_oow_t volat_count;
-
 	moo_oop_t* proc_map;
 	moo_oow_t proc_map_capa;
 	moo_oow_t proc_map_used;
 	moo_ooi_t proc_map_free_first;
 	moo_ooi_t proc_map_free_last;
+
+	moo_oop_t* volat_stack[256]; /* stack for temporaries */
+	moo_oow_t volat_count;
 
 	/* =============================================================
 	 * EXECUTION REGISTERS

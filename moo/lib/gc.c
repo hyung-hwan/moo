@@ -852,9 +852,7 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
 	{
-		moo_oop_t tmp;
-		tmp = *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
-		gc_mark (moo, tmp);
+		gc_mark (moo, *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset));
 	}
 
 	gc_mark (moo, (moo_oop_t)moo->sysdic);
@@ -907,7 +905,7 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 		if (cb->gc) cb->gc (moo);
 	}
 
-	gcfin_count = move_finalizable_objects (moo); /* mark finalizable objects */
+	gcfin_count = move_finalizable_objects(moo); /* mark finalizable objects */
 
 	if (moo->symtab)
 	{
@@ -951,6 +949,8 @@ static MOO_INLINE void gc_sweep (moo_t* moo)
 			/* destroy */
 			if (prev) prev->next = next;
 			else moo->gch = next;
+if (!moo->igniting)
+MOO_DEBUG2(moo, "** DESTROYING curr %p %O\n", curr, obj);
 			moo_freemem (moo, curr);
 		}
 
@@ -1447,7 +1447,7 @@ static moo_oow_t move_finalizable_objects (moo_t* moo)
 		}
 		else
 		{
-			x->oop = moo_moveoop (moo, x->oop);
+			x->oop = moo_moveoop(moo, x->oop);
 		}
 
 		x = y;
