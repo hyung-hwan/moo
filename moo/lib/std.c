@@ -1416,8 +1416,8 @@ static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* fil
 
 #elif defined(USE_DLFCN)
 #	define sys_dl_error() dlerror()
-#	define sys_dl_open(x) dlopen(x,RTLD_NOW)
-#	define sys_dl_openext(x) dlopen(x,RTLD_NOW)
+#	define sys_dl_open(x) dlopen(x,RTLD_NOW | RTLD_LOCAL)
+#	define sys_dl_openext(x) dlopen(x,RTLD_NOW | RTLD_LOCAL)
 #	define sys_dl_close(x) dlclose(x)
 #	define sys_dl_getsym(x,n) dlsym(x,n)
 
