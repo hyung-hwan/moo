@@ -846,6 +846,19 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 	moo_oow_t i, gcfin_count;
 	moo_evtcb_t* cb;
 
+	if (moo->active_context)
+	{
+		MOO_ASSERT (moo, (moo_oop_t)moo->processor != moo->_nil);
+		MOO_ASSERT (moo, (moo_oop_t)moo->processor->active != moo->_nil);
+		moo->active_context->ip = MOO_SMOOI_TO_OOP(moo->ip); /* not needed but do it */
+		
+		/* commit the stack pointer to the active process because
+		 * gc utilizes the stack pointer of a process object when marking */
+		
+		moo->processor->active->sp = MOO_SMOOI_TO_OOP(moo->sp);
+		
+	}
+
 	gc_mark (moo, moo->_nil);
 	gc_mark (moo, moo->_true);
 	gc_mark (moo, moo->_false);
