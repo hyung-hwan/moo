@@ -850,13 +850,15 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 	{
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor != moo->_nil);
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor->active != moo->_nil);
-		moo->active_context->ip = MOO_SMOOI_TO_OOP(moo->ip); /* not needed but do it */
 		
 		/* commit the stack pointer to the active process because
 		 * gc utilizes the stack pointer of a process object when marking */
 		
 		moo->processor->active->sp = MOO_SMOOI_TO_OOP(moo->sp);
-		
+
+	#if 0
+		moo->active_context->ip = MOO_SMOOI_TO_OOP(moo->ip); /* not needed but do it */
+	#endif
 	}
 
 	gc_mark (moo, moo->_nil);
@@ -962,8 +964,8 @@ static MOO_INLINE void gc_sweep (moo_t* moo)
 			/* destroy */
 			if (prev) prev->next = next;
 			else moo->gch = next;
-if (!moo->igniting)
-MOO_DEBUG2(moo, "** DESTROYING curr %p %O\n", curr, obj);
+//if (!moo->igniting)
+//MOO_DEBUG2(moo, "** DESTROYING curr %p %O\n", curr, obj);
 			moo_freemem (moo, curr);
 		}
 
@@ -1148,11 +1150,14 @@ void moo_gc (moo_t* moo)
 /* TODO: verify if this is correct */
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor != moo->_nil);
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor->active != moo->_nil);
-		/* store the stack pointer to the active process */
+		/* commit the stack pointer to the active process 
+		 * to limit scanning of the process stack properly */
 		moo->processor->active->sp = MOO_SMOOI_TO_OOP(moo->sp);
 
+	#if 0 /* ip doesn't need to be committed */
 		/* store the instruction pointer to the active context */
 		moo->active_context->ip = MOO_SMOOI_TO_OOP(moo->ip);
+	#endif
 	}
 
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
