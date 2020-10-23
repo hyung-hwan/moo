@@ -205,6 +205,9 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 	 */
 	moo_deregallfinalizables (moo);
 
+	/* final garbage collection */
+	moo_gc (moo);
+
 	MOO_DEBUG0 (moo, "VM cleaned up\n");
 }
 
@@ -688,8 +691,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 			proc->sp = MOO_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 			MOO_STORE_OOP (moo, (moo_oop_t*)&proc->current_context, (moo_oop_t)proc->initial_context); /* not needed but just in case */
 
-			/* a runnable or running process must not be chanined to the
-			 * process list of a semaphore */
+			/* a runnable or running process must not be chanined to the process list of a semaphore */
 			MOO_ASSERT (moo, (moo_oop_t)proc->sem == moo->_nil);
 
 			if (nrp == proc)
@@ -5146,6 +5148,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				"%zd suspended process(es) found - check your program\n",
 				MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
 		}
+
 		return 0;
 	}
 

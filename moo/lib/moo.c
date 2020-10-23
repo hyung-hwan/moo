@@ -250,7 +250,23 @@ void moo_fini (moo_t* moo)
 	 * the heap may not exist */
 	if (moo->heap) moo_killheap (moo, moo->heap);
 
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	if (moo->gch)
+	{
+		moo_gchdr_t* next;
+
+		do
+		{
+			next = moo->gch->next;
+			moo_freemem (moo, moo->gch);
+			moo->gch = next;
+		}
+		while (moo->gch);
+	}
+#endif
+
 	moo_finidbgi (moo);
+
 
 	for (i = 0; i < MOO_COUNTOF(moo->sbuf); i++)
 	{
