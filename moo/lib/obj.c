@@ -34,7 +34,8 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 #endif
 
 #if defined(MOO_BUILD_DEBUG)
-	if ((moo->option.trait & MOO_TRAIT_DEBUG_GC) && !(moo->option.trait & MOO_TRAIT_NOGC)) moo_gc (moo);
+	/* DEBUG_GC is set but NOGC is not set */
+	if ((moo->option.trait & (MOO_TRAIT_DEBUG_GC | MOO_TRAIT_NOGC)) == MOO_TRAIT_DEBUG_GC) moo_gc (moo);
 #endif
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
