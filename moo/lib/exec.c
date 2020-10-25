@@ -5627,8 +5627,7 @@ static int __execute (moo_t* moo)
 			bx = b1;
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, ctx) == moo->_method_context);
 		#else
-			/* otherwise, the index may point to a temporaries
-			 * declared inside a block */
+			/* otherwise, the index may point to a temporaries declared inside a block */ 
 
 			if (moo->active_context->home != moo->_nil)
 			{
