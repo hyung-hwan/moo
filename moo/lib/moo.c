@@ -132,9 +132,13 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 	 * reallocation fails */
 	/* +1 required for consistency with put_oocs and put_ooch in fmtout.c */
 	moo->log.ptr = moo_allocmem(moo, (moo->log.capa + 1) * MOO_SIZEOF(*moo->log.ptr)); 
-	if (!moo->log.ptr) goto oops;
+	if (MOO_UNLIKELY(!moo->log.ptr)) goto oops;
 
-	if (moo_rbt_init (&moo->modtab, moo, MOO_SIZEOF(moo_ooch_t), 1) <= -1) goto oops;
+	moo->gci.stack.capa = MOO_ALIGN_POW2(1, 1024); /* TODO: is this a good initial size? */
+	moo->gci.stack.ptr = moo_allocmem(moo, (moo->gci.stack.capa + 1) * MOO_SIZEOF(*moo->gci.stack.ptr));
+	if (MOO_UNLIKELY(!moo->gci.stack.ptr)) goto oops;
+
+	if (moo_rbt_init(&moo->modtab, moo, MOO_SIZEOF(moo_ooch_t), 1) <= -1) goto oops;
 	modtab_inited = 1;
 	moo_rbt_setstyle (&moo->modtab, moo_get_rbt_style(MOO_RBT_STYLE_INLINE_COPIERS));
 
@@ -153,8 +157,16 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 
 oops:
 	if (modtab_inited) moo_rbt_fini (&moo->modtab);
-	if (moo->log.ptr) moo_freemem (moo, moo->log.ptr);
-	moo->log.capa = 0;
+	if (moo->gci.stack.ptr) 
+	{
+		moo_freemem (moo, moo->gci.stack.ptr);
+		moo->gci.stack.capa = 0;
+	}
+	if (moo->log.ptr) 
+	{
+		moo_freemem (moo, moo->log.ptr);
+		moo->log.capa = 0;
+	}
 	return -1;
 }
 
@@ -251,22 +263,32 @@ void moo_fini (moo_t* moo)
 	if (moo->heap) moo_killheap (moo, moo->heap);
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	if (moo->gch)
+	if (moo->gci.b)
 	{
 		moo_gchdr_t* next;
-
 		do
 		{
-			next = moo->gch->next;
-			moo_freemem (moo, moo->gch);
-			moo->gch = next;
+			next = moo->gci.b->next;
+
+			moo->gci.bsz -= MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, (moo_oop_t)(moo->gci.b + 1));
+			moo_freemem (moo, moo->gci.b);
+			moo->gci.b = next;
 		}
-		while (moo->gch);
+		while (moo->gci.b);
+
+		MOO_ASSERT (moo, moo->gci.bsz == 0); 
+	}
+
+	if (moo->gci.stack.ptr)
+	{
+		moo_freemem (moo, moo->gci.stack.ptr);
+		moo->gci.stack.ptr = 0;
+		moo->gci.stack.capa = 0;
+		moo->gci.stack.len = 0;
 	}
 #endif
 
 	moo_finidbgi (moo);
-
 
 	for (i = 0; i < MOO_COUNTOF(moo->sbuf); i++)
 	{

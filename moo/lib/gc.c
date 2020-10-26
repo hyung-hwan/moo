@@ -646,11 +646,11 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 
 	if (moo->heap) moo_killheap (moo, moo->heap);
 	moo->heap = moo_makeheap(moo, heapsz);
-	if (!moo->heap) return -1;
+	if (MOO_UNLIKELY(!moo->heap)) return -1;
 
 	moo->igniting = 1;
 	moo->_nil = moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t));
-	if (!moo->_nil) goto oops;
+	if (MOO_UNLIKELY(!moo->_nil)) goto oops;
 
 	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, moo->igniting, 0, 0, 0, 0, 0);
 	moo->_nil->_size = 0;
@@ -799,6 +799,9 @@ static moo_rbt_walk_t call_module_gc (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 
+
+
+#if 0
 static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
 {
 	moo_oow_t i, sz;
@@ -840,6 +843,63 @@ static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
 		}
 	}
 }
+#else
+static MOO_INLINE void gc_mark_object (moo_t* moo, moo_oop_t oop)
+{
+#if defined(MOO_SUPPORT_GC_DURING_IGNITION)
+	if (!oop) return;
+#endif
+	if (!MOO_OOP_IS_POINTER(oop) || MOO_OBJ_GET_FLAGS_MOVED(oop)) return; /* non-pointer or already marked */
+
+	MOO_OBJ_SET_FLAGS_MOVED(oop, 1); /* mark */
+MOO_ASSERT (moo, moo->gci.stack.len < moo->gci.stack.capa);
+	moo->gci.stack.ptr[moo->gci.stack.len++] = oop; /* push */
+if (moo->gci.stack.len > moo->gci.stack.max) moo->gci.stack.max = moo->gci.stack.len;
+}
+
+static MOO_INLINE void gc_scan_stack (moo_t* moo)
+{
+	moo_oop_t oop;
+
+	while (moo->gci.stack.len > 0)
+	{
+		oop = moo->gci.stack.ptr[--moo->gci.stack.len];
+
+		gc_mark_object (moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
+
+		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
+		{
+			moo_oow_t size, i;
+
+			/* is it really better to use a flag bit in the header to
+			 * determine that it is an instance of process? */
+			if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(oop)))
+			{
+				/* the stack in a process object doesn't need to be 
+				 * scanned in full. the slots above the stack pointer 
+				 * are garbages. */
+				size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)oop)->sp) + 1;
+				MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(oop));
+			}
+			else
+			{
+				size = MOO_OBJ_GET_SIZE(oop);
+			}
+
+			for (i = 0; i < size; i++)
+			{
+				gc_mark_object (moo, MOO_OBJ_GET_OOP_VAL(oop, i));
+			}
+		}
+	}
+}
+
+static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
+{
+	gc_mark_object (moo, oop);
+	gc_scan_stack (moo);
+}
+#endif
 
 static MOO_INLINE void gc_mark_root (moo_t* moo)
 {
@@ -855,10 +915,6 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 		 * gc needs the correct stack pointer for a process object */
 		moo->processor->active->sp = MOO_SMOOI_TO_OOP(moo->sp);
 	}
-
-	#if 0
-	if (moo->active_context) moo->active_context->ip = MOO_SMOOI_TO_OOP(moo->ip); /* no need to commit the instruction pointer */
-	#endif
 
 	gc_mark (moo, moo->_nil);
 	gc_mark (moo, moo->_true);
@@ -946,7 +1002,7 @@ static MOO_INLINE void gc_sweep (moo_t* moo)
 	moo_oop_t obj;
 
 	prev = MOO_NULL;
-	curr = moo->gch;
+	curr = moo->gci.b;
 	while (curr)
 	{
 		next = curr->next;
@@ -962,9 +1018,9 @@ static MOO_INLINE void gc_sweep (moo_t* moo)
 		{
 			/* destroy */
 			if (prev) prev->next = next;
-			else moo->gch = next;
-//if (!moo->igniting)
-//MOO_DEBUG2(moo, "** DESTROYING curr %p %O\n", curr, obj);
+			else moo->gci.b = next;
+
+			moo->gci.bsz -= MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, obj);
 			moo_freemem (moo, curr);
 		}
 
@@ -1126,10 +1182,12 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 void moo_gc (moo_t* moo)
 {
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Starting GC (mark-sweep)\n");
+	MOO_LOG1 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Starting GC (mark-sweep) - gci.bsz = %zu\n", moo->gci.bsz);
+moo->gci.stack.len = 0;
+/*moo->gci.stack.max = 0;*/
 	gc_mark_root (moo);
 	gc_sweep (moo);
-	MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Finished GC (mark-sweep)\n");
+	MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Finished GC (mark-sweep) - gci.bsz = %zu, gci.stack.max %zu\n", moo->gci.bsz, moo->gci.stack.max);
 #else
 	/* 
 	 * move a referenced object to the new heap.
@@ -1152,11 +1210,6 @@ void moo_gc (moo_t* moo)
 		/* commit the stack pointer to the active process 
 		 * to limit scanning of the process stack properly */
 		moo->processor->active->sp = MOO_SMOOI_TO_OOP(moo->sp);
-
-	#if 0 /* ip doesn't need to be committed */
-		/* store the instruction pointer to the active context */
-		moo->active_context->ip = MOO_SMOOI_TO_OOP(moo->ip);
-	#endif
 	}
 
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 

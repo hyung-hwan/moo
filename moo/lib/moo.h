@@ -1797,7 +1797,21 @@ struct moo_t
 	} stat;
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	moo_gchdr_t* gch;
+	struct
+	{
+		moo_gchdr_t* b; /* object blocks allocated */
+		moo_oow_t bsz; /* total size of object blocks allocated */
+		moo_oow_t threshold;
+
+		struct
+		{
+			moo_oop_t* ptr;
+			moo_oow_t capa;
+			moo_oow_t len;
+
+			moo_oow_t max;
+		} stack;
+	} gci;
 #endif
 
 #if defined(MOO_INCLUDE_COMPILER)

@@ -46,7 +46,12 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	}
 	else
 	{
-// TODO: perform GC if allocation got above threshold...
+		if (moo->gci.bsz >= moo->gci.threshold) 
+		{
+			moo_gc (moo);
+			moo->gci.threshold = moo->gci.bsz + 100000; /* TODO: change this fomula */
+		}
+
 		gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
 		if (!gch && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
 		{
@@ -57,8 +62,9 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 		}
 	}
 
-	gch->next = moo->gch;
-	moo->gch = gch;
+	gch->next = moo->gci.b;
+	moo->gci.b = gch;
+	moo->gci.bsz += size;
 
 	ptr = (moo_uint8_t*)(gch + 1);
 #else
@@ -130,7 +136,7 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t)); 
 
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
-	if (!hdr) return MOO_NULL;
+	if (MOO_UNLIKELY(!hdr)) return MOO_NULL;
 
 	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 1, 0, 1); /* TRAILER -> 1, UNCOPYABLE -> 1 */
 	MOO_OBJ_SET_SIZE (hdr, size);
@@ -177,7 +183,7 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 	 * of the allocated space to be an even number. 
 	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
 	hdr = (moo_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
-	if (!hdr) return MOO_NULL;
+	if (MOO_UNLIKELY(!hdr)) return MOO_NULL;
 
 	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, moo->igniting, 0, 0, 0, 0, 0); /* TODO: review. ngc and perm flags seems to conflict with each other ... the diff is that ngc is malloc() and perm is allocated in the perm heap */
 	hdr->_size = len;

@@ -1350,8 +1350,8 @@ static void backtrace_stack_frames (moo_t* moo)
 	moo_oow_t btsize;
 	char** btsyms;
 
-	btsize = backtrace (btarray, MOO_COUNTOF(btarray));
-	btsyms = backtrace_symbols (btarray, btsize);
+	btsize = backtrace(btarray, MOO_COUNTOF(btarray));
+	btsyms = backtrace_symbols(btarray, btsize);
 	if (btsyms)
 	{
 		moo_oow_t i;
