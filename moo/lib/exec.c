@@ -6427,6 +6427,9 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Total message sends: %zu\n", moo->stat.message_sends);
 	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Method cache - hits: %zu, misses: %zu\n", moo->stat.method_cache_hits, moo->stat.method_cache_misses);
 	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Total instructions: %zu\n", moo->stat.inst_counter);
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "GC - gci.bsz: %zu, gci.stack.max: %zu\n", moo->gci.bsz, moo->gci.stack.max);
+#endif
 #endif
 
 	return n;

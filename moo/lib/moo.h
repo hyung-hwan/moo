@@ -305,7 +305,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_FLAGS_EXTRA_BITS      1
 #define MOO_OBJ_FLAGS_KERNEL_BITS     2
 #define MOO_OBJ_FLAGS_PERM_BITS       1
-#define MOO_OBJ_FLAGS_MOVED_BITS      1
+#define MOO_OBJ_FLAGS_MOVED_BITS      2
 #define MOO_OBJ_FLAGS_PROC_BITS       2
 #define MOO_OBJ_FLAGS_RDONLY_BITS     1
 #define MOO_OBJ_FLAGS_GCFIN_BITS      4
