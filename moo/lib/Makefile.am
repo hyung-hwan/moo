@@ -61,6 +61,7 @@ libmoo_la_SOURCES = \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
+	moo-xma.h \
 	pack1.h \
 	unpack.h \
 	bigint.c \
@@ -88,7 +89,8 @@ libmoo_la_SOURCES = \
 	uch-prop.h \
 	utf8.c \
 	utf16.c \
-	utl.c
+	utl.c \
+	xma.c 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) 
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)

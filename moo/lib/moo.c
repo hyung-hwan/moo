@@ -134,9 +134,11 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 	moo->log.ptr = moo_allocmem(moo, (moo->log.capa + 1) * MOO_SIZEOF(*moo->log.ptr)); 
 	if (MOO_UNLIKELY(!moo->log.ptr)) goto oops;
 
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	moo->gci.stack.capa = MOO_ALIGN_POW2(1, 1024); /* TODO: is this a good initial size? */
 	moo->gci.stack.ptr = moo_allocmem(moo, (moo->gci.stack.capa + 1) * MOO_SIZEOF(*moo->gci.stack.ptr));
 	if (MOO_UNLIKELY(!moo->gci.stack.ptr)) goto oops;
+#endif
 
 	if (moo_rbt_init(&moo->modtab, moo, MOO_SIZEOF(moo_ooch_t), 1) <= -1) goto oops;
 	modtab_inited = 1;
@@ -157,11 +159,13 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 
 oops:
 	if (modtab_inited) moo_rbt_fini (&moo->modtab);
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	if (moo->gci.stack.ptr) 
 	{
 		moo_freemem (moo, moo->gci.stack.ptr);
 		moo->gci.stack.capa = 0;
 	}
+#endif
 	if (moo->log.ptr) 
 	{
 		moo_freemem (moo, moo->log.ptr);

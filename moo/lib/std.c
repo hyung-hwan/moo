@@ -4210,7 +4210,7 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* er
 	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
 
-	/* adjust the object size by the sizeof xtn_t so that qse_getxtn() returns the right pointer. */
+	/* adjust the object size by the sizeof xtn_t so that moo_getxtn() returns the right pointer. */
 	moo->_instsize += MOO_SIZEOF(xtn_t);
 
 	xtn = GET_XTN(moo);

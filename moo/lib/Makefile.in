@@ -159,7 +159,8 @@ am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-chr.lo \
 	libmoo_la-mb8.lo libmoo_la-moo.lo libmoo_la-number.lo \
 	libmoo_la-obj.lo libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo \
 	libmoo_la-pf-utf8.lo libmoo_la-rbt.lo libmoo_la-sym.lo \
-	libmoo_la-utf8.lo libmoo_la-utf16.lo libmoo_la-utl.lo
+	libmoo_la-utf8.lo libmoo_la-utf16.lo libmoo_la-utl.lo \
+	libmoo_la-xma.lo
 libmoo_la_OBJECTS = $(am_libmoo_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -210,7 +211,8 @@ am__depfiles_remade = ./$(DEPDIR)/libmoo_la-bigint.Plo \
 	./$(DEPDIR)/libmoo_la-pf-utf8.Plo \
 	./$(DEPDIR)/libmoo_la-rbt.Plo ./$(DEPDIR)/libmoo_la-sym.Plo \
 	./$(DEPDIR)/libmoo_la-utf16.Plo ./$(DEPDIR)/libmoo_la-utf8.Plo \
-	./$(DEPDIR)/libmoo_la-utl.Plo ./$(DEPDIR)/libmoox_la-opt.Plo \
+	./$(DEPDIR)/libmoo_la-utl.Plo ./$(DEPDIR)/libmoo_la-xma.Plo \
+	./$(DEPDIR)/libmoox_la-opt.Plo \
 	./$(DEPDIR)/libmoox_la-poll-msw.Plo \
 	./$(DEPDIR)/libmoox_la-std.Plo
 am__mv = mv -f
@@ -325,6 +327,18 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MOO_PROJECT_AUTHOR = @MOO_PROJECT_AUTHOR@
 MOO_PROJECT_URL = @MOO_PROJECT_URL@
+MOO_SIZEOF_CHAR = @MOO_SIZEOF_CHAR@
+MOO_SIZEOF_DOUBLE = @MOO_SIZEOF_DOUBLE@
+MOO_SIZEOF_FLOAT = @MOO_SIZEOF_FLOAT@
+MOO_SIZEOF_INT = @MOO_SIZEOF_INT@
+MOO_SIZEOF_LONG = @MOO_SIZEOF_LONG@
+MOO_SIZEOF_LONG_DOUBLE = @MOO_SIZEOF_LONG_DOUBLE@
+MOO_SIZEOF_LONG_LONG = @MOO_SIZEOF_LONG_LONG@
+MOO_SIZEOF_OFF64_T = @MOO_SIZEOF_OFF64_T@
+MOO_SIZEOF_OFF_T = @MOO_SIZEOF_OFF_T@
+MOO_SIZEOF_SHORT = @MOO_SIZEOF_SHORT@
+MOO_SIZEOF_VOID_P = @MOO_SIZEOF_VOID_P@
+MOO_SIZEOF_WCHAR_T = @MOO_SIZEOF_WCHAR_T@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -401,6 +415,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -453,6 +468,7 @@ libmoo_la_SOURCES = \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
+	moo-xma.h \
 	pack1.h \
 	unpack.h \
 	bigint.c \
@@ -480,7 +496,8 @@ libmoo_la_SOURCES = \
 	uch-prop.h \
 	utf8.c \
 	utf16.c \
-	utl.c
+	utl.c \
+	xma.c 
 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) 
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
@@ -622,6 +639,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf16.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf8.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utl.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-xma.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoox_la-opt.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoox_la-poll-msw.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoox_la-std.Plo@am__quote@ # am--include-marker
@@ -816,6 +834,13 @@ libmoo_la-utl.lo: utl.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utl.c' object='libmoo_la-utl.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-utl.lo `test -f 'utl.c' || echo '$(srcdir)/'`utl.c
+
+libmoo_la-xma.lo: xma.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-xma.lo -MD -MP -MF $(DEPDIR)/libmoo_la-xma.Tpo -c -o libmoo_la-xma.lo `test -f 'xma.c' || echo '$(srcdir)/'`xma.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-xma.Tpo $(DEPDIR)/libmoo_la-xma.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xma.c' object='libmoo_la-xma.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-xma.lo `test -f 'xma.c' || echo '$(srcdir)/'`xma.c
 
 libmoox_la-opt.lo: opt.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoox_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoox_la-opt.lo -MD -MP -MF $(DEPDIR)/libmoox_la-opt.Tpo -c -o libmoox_la-opt.lo `test -f 'opt.c' || echo '$(srcdir)/'`opt.c
@@ -1016,6 +1041,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libmoo_la-utf16.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-utf8.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-utl.Plo
+	-rm -f ./$(DEPDIR)/libmoo_la-xma.Plo
 	-rm -f ./$(DEPDIR)/libmoox_la-opt.Plo
 	-rm -f ./$(DEPDIR)/libmoox_la-poll-msw.Plo
 	-rm -f ./$(DEPDIR)/libmoox_la-std.Plo
@@ -1088,6 +1114,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libmoo_la-utf16.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-utf8.Plo
 	-rm -f ./$(DEPDIR)/libmoo_la-utl.Plo
+	-rm -f ./$(DEPDIR)/libmoo_la-xma.Plo
 	-rm -f ./$(DEPDIR)/libmoox_la-opt.Plo
 	-rm -f ./$(DEPDIR)/libmoox_la-poll-msw.Plo
 	-rm -f ./$(DEPDIR)/libmoox_la-std.Plo
