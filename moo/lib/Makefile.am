@@ -41,6 +41,7 @@ pkginclude_HEADERS = \
 	moo-opt.h \
 	moo-rbt.h \
 	moo-utl.h \
+	moo-xma.h \
 	moo-std.h
 
 ##################################################
@@ -61,7 +62,6 @@ libmoo_la_SOURCES = \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
-	moo-xma.h \
 	pack1.h \
 	unpack.h \
 	bigint.c \

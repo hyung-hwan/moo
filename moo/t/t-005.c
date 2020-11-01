@@ -41,7 +41,7 @@ int main ()
 	void* ptr1, * ptr2, * ptr3;
 
 
-	xma = moo_xma_open(&sys_mmgr, 0, 100000);
+	xma = moo_xma_open(&sys_mmgr, 0, MOO_NULL, 100000);
 
 
 	ptr1 = moo_xma_alloc(xma, 1000);

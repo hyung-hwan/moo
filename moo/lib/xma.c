@@ -125,14 +125,14 @@ static MOO_INLINE moo_oow_t getxfi (moo_xma_t* xma, moo_oow_t size)
 	return xfi;
 }
 
-moo_xma_t* moo_xma_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t zonesize)
+moo_xma_t* moo_xma_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, void* zoneptr, moo_oow_t zonesize)
 {
 	moo_xma_t* xma;
 
 	xma = (moo_xma_t*)MOO_MMGR_ALLOC(mmgr, MOO_SIZEOF(*xma) + xtnsize);
 	if (MOO_UNLIKELY(!xma)) return MOO_NULL;
 
-	if (moo_xma_init(xma, mmgr, zonesize) <= -1)
+	if (moo_xma_init(xma, mmgr, zoneptr, zonesize) <= -1)
 	{
 		MOO_MMGR_FREE (mmgr, xma);
 		return MOO_NULL;
@@ -148,20 +148,28 @@ void moo_xma_close (moo_xma_t* xma)
 	MOO_MMGR_FREE (xma->_mmgr, xma);
 }
 
-int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, moo_oow_t zonesize)
+int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zonesize)
 {
 	moo_xma_fblk_t* free;
 	moo_oow_t xfi;
 
-	/* round 'zonesize' to be the multiples of ALIGN */
-	zonesize = MOO_ALIGN_POW2(zonesize, ALIGN);
+	if (!zoneptr)
+	{
+		/* round 'zonesize' to be the multiples of ALIGN */
+		zonesize = MOO_ALIGN_POW2(zonesize, ALIGN);
 
-	/* adjust 'zonesize' to be large enough to hold a single smallest block */
-	if (zonesize < MINBLKLEN) zonesize = MINBLKLEN;
+		/* adjust 'zonesize' to be large enough to hold a single smallest block */
+		if (zonesize < MINBLKLEN) zonesize = MINBLKLEN;
 
-	/* allocate a memory chunk to use for actual memory allocation */
-	free = MOO_MMGR_ALLOC(mmgr, zonesize);
-	if (MOO_UNLIKELY(!free)) return -1;
+		zoneptr = MOO_MMGR_ALLOC(mmgr, zonesize);
+		if (MOO_UNLIKELY(!zoneptr)) return -1;
+	}
+	else
+	{
+		xma->external = 1;
+	}
+
+	free = (moo_xma_fblk_t*)zoneptr;
 
 	/* initialize the header part of the free chunk. the entire zone is a single free block */
 	free->prev_size = 0;
@@ -201,7 +209,7 @@ void moo_xma_fini (moo_xma_t* xma)
 {
 	/* the head must point to the free chunk allocated in init().
 	 * let's deallocate it */
-	MOO_MMGR_FREE (xma->_mmgr, xma->start);
+	if (!xma->external) MOO_MMGR_FREE (xma->_mmgr, xma->start);
 	xma->start = MOO_NULL;
 	xma->end = MOO_NULL;
 }
@@ -650,7 +658,7 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		/* attach blk to the free list */
 		attach_to_freelist (xma, (moo_xma_fblk_t*)blk);
 	}
-	else if ((moo_uint8_t*)x < xma->end && x->avail)
+	else if ((moo_uint8_t*)x >= xma->start && x->avail)
 	{
 		/*
 		 * Merge the block with the previous block 
@@ -661,17 +669,12 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		 * +------------+------------+------------+
 		 * |     X      |            |     Y      |
 		 * +------------+------------+------------+
-		 *         ^      |      ^      | 
-		 *         +------+      +------+   
 		 *
-		 *               
-		 *          +---------------------+  
-		 *          |                     v  
 		 * +-------------------------+------------+
 		 * |     X                   |     Y      |
 		 * +-------------------------+------------+
-		 *         ^                    | 
-		 *         +--------------------+   
+		 *
+		 *
 		 *
 		 */
 #if defined(MOO_XMA_ENABLE_STAT)

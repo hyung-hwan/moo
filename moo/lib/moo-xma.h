@@ -91,6 +91,7 @@ struct moo_xma_t
 
 	moo_uint8_t* start; /* zone beginning */
 	moo_uint8_t* end; /* zone end */
+	int          external;
 
 	/** pointer array to free memory blocks */
 	moo_xma_fblk_t* xfree[MOO_XMA_FIXED + MOO_XMA_SIZE_BITS + 1]; 
@@ -134,8 +135,9 @@ extern "C" {
  */
 MOO_EXPORT moo_xma_t* moo_xma_open (
 	moo_mmgr_t* mmgr,    /**< memory manager */
-	moo_oow_t  xtnsize, /**< extension size in bytes */
-	moo_oow_t  zonesize /**< zone size in bytes */
+	moo_oow_t   xtnsize, /**< extension size in bytes */
+	void*       zoneptr,
+	moo_oow_t   zonesize /**< zone size in bytes */
 );
 
 /**
@@ -171,7 +173,8 @@ static MOO_INLINE void* moo_xma_getxtn (moo_xma_t* xma) { return (void*)(xma + 1
 MOO_EXPORT int moo_xma_init (
 	moo_xma_t*  xma,     /**< memory allocator */
 	moo_mmgr_t* mmgr,    /**< memory manager */
-	moo_oow_t  zonesize /**< zone size in bytes */
+	void*       zoneptr,  /**< pointer to memory zone. if #MOO_NULL, a zone is auto-created */
+	moo_oow_t   zonesize /**< zone size in bytes */
 );
 
 /**
