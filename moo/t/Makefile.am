@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = nostdinc
 
+AM_CFLAGS = $(PTHREAD_CFLAGS)
+
 AM_CPPFLAGS = \
 	-I$(abs_builddir) \
 	-I$(abs_builddir)/../lib \
@@ -10,7 +12,7 @@ AM_CPPFLAGS = \
 AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
 LDADD =
 
-bin_PROGRAMS = t-001 t-002 t-003 t-004
+check_PROGRAMS = t-001 t-002 t-003 t-004 t-005
 
 t_001_SOURCES = t-001.c
 
@@ -19,9 +21,16 @@ t_002_LDADD = -lmoo $(LDADD)
 t_002_DEPENDENCIES = ../lib/libmoo.la
 
 t_003_SOURCES = t-003.c
-t_003_LDADD = -lmoo $(LDADD)
+t_003_LDADD = -lmoo $(LDADD) $(LIBM)
 t_003_DEPENDENCIES = ../lib/libmoo.la
 
 t_004_SOURCES = t-004.c
 t_004_LDADD = -lmoox $(LDADD)
 t_004_DEPENDENCIES = ../lib/libmoox.la
+
+t_005_SOURCES = t-005.c
+t_005_LDADD = -lmoo $(LDADD)
+t_005_DEPENDENCIES = ../lib/libmoo.la
+
+
+TESTS = $(check_PROGRAMS)

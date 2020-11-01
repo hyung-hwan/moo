@@ -41,6 +41,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	if (MOO_UNLIKELY(moo->igniting))
 	{
+//moo_xma_calloc(moo->gci.xma, MOO_SIZEOF(*gch) + size);
 		gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
 		if (MOO_UNLIKELY(!gch)) return MOO_NULL;
 	}

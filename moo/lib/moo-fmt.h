@@ -28,6 +28,7 @@
 #define _MOO_FMT_H_
 
 #include <moo-cmn.h>
+#include <stdarg.h>
 
 /** \file
  * This file defines various formatting functions.

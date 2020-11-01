@@ -46,11 +46,11 @@
  *
  *   // create a new memory allocator obtaining a 100K byte zone 
  *   // with the default memory allocator
- *   xma = moo_xma_open (MOO_NULL, 0, 100000L); 
+ *   xma = moo_xma_open(MOO_NULL, 0, 100000L); 
  *
- *   ptr1 = moo_xma_alloc (xma, 5000); // allocate a 5K block from the zone
- *   ptr2 = moo_xma_alloc (xma, 1000); // allocate a 1K block from the zone
- *   ptr1 = moo_xma_realloc (xma, ptr1, 6000); // resize the 5K block to 6K.
+ *   ptr1 = moo_xma_alloc(xma, 5000); // allocate a 5K block from the zone
+ *   ptr2 = moo_xma_alloc(xma, 1000); // allocate a 1K block from the zone
+ *   ptr1 = moo_xma_realloc(xma, ptr1, 6000); // resize the 5K block to 6K.
  *
  *   moo_xma_dump (xma, moo_fprintf, MOO_STDOUT); // dump memory blocks 
  *
@@ -77,9 +77,10 @@
 typedef struct moo_xma_t moo_xma_t;
 
 /**
- * The moo_xma_blk_t type defines a memory block allocated.
+ * The moo_xma_fblk_t type defines a memory block allocated.
  */
-typedef struct moo_xma_blk_t moo_xma_blk_t;
+typedef struct moo_xma_fblk_t moo_xma_fblk_t;
+typedef struct moo_xma_mblk_t moo_xma_mblk_t;
 
 #define MOO_XMA_FIXED 32
 #define MOO_XMA_SIZE_BITS ((MOO_SIZEOF_OOW_T*8)-1)
@@ -88,11 +89,11 @@ struct moo_xma_t
 {
 	moo_mmgr_t* _mmgr;
 
-	/** pointer to the first memory block */
-	moo_xma_blk_t* head; 
+	moo_uint8_t* start; /* zone beginning */
+	moo_uint8_t* end; /* zone end */
 
 	/** pointer array to free memory blocks */
-	moo_xma_blk_t* xfree[MOO_XMA_FIXED + MOO_XMA_SIZE_BITS + 1]; 
+	moo_xma_fblk_t* xfree[MOO_XMA_FIXED + MOO_XMA_SIZE_BITS + 1]; 
 
 	/** pre-computed value for fast xfree index calculation */
 	moo_oow_t     bdec;

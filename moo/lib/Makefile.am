@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = nostdinc
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
-	-I$(includedir)
+	-I$(includedir) $(PTHREAD_CFLAGS)
 
 if ENABLE_STATIC_MODULE
 LDFLAGS_ALL_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
@@ -93,7 +93,7 @@ libmoo_la_SOURCES = \
 	xma.c 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) 
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(PTHREAD_LIBS)
 libmoo_la_DEPENDENCIES =
 
 if ENABLE_STATIC_MODULE

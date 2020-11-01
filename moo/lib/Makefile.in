@@ -327,18 +327,6 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MOO_PROJECT_AUTHOR = @MOO_PROJECT_AUTHOR@
 MOO_PROJECT_URL = @MOO_PROJECT_URL@
-MOO_SIZEOF_CHAR = @MOO_SIZEOF_CHAR@
-MOO_SIZEOF_DOUBLE = @MOO_SIZEOF_DOUBLE@
-MOO_SIZEOF_FLOAT = @MOO_SIZEOF_FLOAT@
-MOO_SIZEOF_INT = @MOO_SIZEOF_INT@
-MOO_SIZEOF_LONG = @MOO_SIZEOF_LONG@
-MOO_SIZEOF_LONG_DOUBLE = @MOO_SIZEOF_LONG_DOUBLE@
-MOO_SIZEOF_LONG_LONG = @MOO_SIZEOF_LONG_LONG@
-MOO_SIZEOF_OFF64_T = @MOO_SIZEOF_OFF64_T@
-MOO_SIZEOF_OFF_T = @MOO_SIZEOF_OFF_T@
-MOO_SIZEOF_SHORT = @MOO_SIZEOF_SHORT@
-MOO_SIZEOF_VOID_P = @MOO_SIZEOF_VOID_P@
-MOO_SIZEOF_WCHAR_T = @MOO_SIZEOF_WCHAR_T@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -428,7 +416,7 @@ AUTOMAKE_OPTIONS = nostdinc
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
-	-I$(includedir)
+	-I$(includedir) $(PTHREAD_CFLAGS)
 
 @ENABLE_STATIC_MODULE_FALSE@LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_ALL_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
@@ -501,9 +489,9 @@ libmoo_la_SOURCES = \
 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) 
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_3) \
-	$(am__append_5) $(am__append_7) $(am__append_9) \
-	$(am__append_11) $(am__append_13)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(PTHREAD_LIBS) \
+	$(am__append_3) $(am__append_5) $(am__append_7) \
+	$(am__append_9) $(am__append_11) $(am__append_13)
 libmoo_la_DEPENDENCIES = $(am__append_4) $(am__append_6) \
 	$(am__append_8) $(am__append_10) $(am__append_12) \
 	$(am__append_14)

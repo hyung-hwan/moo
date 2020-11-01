@@ -321,6 +321,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -335,7 +336,8 @@ CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir)/../lib  \
 	-I$(abs_srcdir) \
 	-I$(abs_srcdir)/../lib \
-	-I$(includedir)
+	-I$(includedir) \
+	$(PTHREAD_CFLAGS)
 
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(abs_builddir)/../lib -L$(libdir)
 CPPFLAGS_BIN_COMMON = $(CPPFLAGS_ALL_COMMON)
@@ -348,7 +350,7 @@ LIBADD_BIN_COMMON = $(LIBM)
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON)
 moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
-moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox 
+moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox $(PTHREAD_LIBS)
 moo_DEPENDENCIES = ../lib/libmoox.la
 @ENABLE_EXPERIMENTAL_TRUE@moo_gtk_SOURCES = gtk-main.c
 @ENABLE_EXPERIMENTAL_TRUE@moo_gtk_CPPFLAGS = $(CPPFLAGS_ALL_COMMON) -pthread -I/usr/include/gtk-3.0 -I/usr/include/at-spi2-atk/2.0 -I/usr/include/at-spi-2.0 -I/usr/include/dbus-1.0 -I/usr/lib64/dbus-1.0/include -I/usr/include/gtk-3.0 -I/usr/include/gio-unix-2.0/ -I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/harfbuzz -I/usr/include/pango-1.0 -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pixman-1 -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/freetype2 -I/usr/include/libdrm -I/usr/include/libpng16 -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/libpng16 -I/usr/include/glib-2.0 -I/usr/lib64/glib-2.0/include

@@ -5,7 +5,8 @@ CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir)/../lib  \
 	-I$(abs_srcdir) \
 	-I$(abs_srcdir)/../lib \
-	-I$(includedir)
+	-I$(includedir) \
+	$(PTHREAD_CFLAGS)
 
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(abs_builddir)/../lib -L$(libdir)
 
@@ -21,7 +22,7 @@ bin_PROGRAMS = moo
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON)
 moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
-moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox 
+moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox $(PTHREAD_LIBS)
 moo_DEPENDENCIES = ../lib/libmoox.la
 
 

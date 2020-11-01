@@ -1,8 +1,10 @@
+#include <moo-fmt.h>
 #include <moo-utl.h>
 #include <string.h>
 #include <stdio.h>
 #include <wchar.h>
 #include <locale.h>
+#include <stdarg.h>
 #include "t.h"
 
 static int put_bcs (moo_fmtout_t* fmtout, const moo_bch_t* c, moo_oow_t len)
@@ -40,8 +42,8 @@ static moo_ooi_t bfmt_out (const moo_bch_t* fmt, ...)
 	int n;
 
 	memset (&fmtout, 0, MOO_SIZEOF(fmtout));
-	fmtout.putbcs = put_bcs;
-	fmtout.putucs = put_ucs;
+	fmtout.putbchars = put_bcs;
+	fmtout.putuchars = put_ucs;
 
 	va_start (ap, fmt);
 	n = moo_bfmt_outv (&fmtout, fmt, ap);
