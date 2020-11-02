@@ -191,12 +191,12 @@ MOO_EXPORT void moo_xma_fini (
  */
 MOO_EXPORT void* moo_xma_alloc (
 	moo_xma_t* xma, /**< memory allocator */
-	moo_oow_t size /**< size in bytes */
+	moo_oow_t  size /**< size in bytes */
 );
 
 MOO_EXPORT void* moo_xma_calloc (
 	moo_xma_t* xma,
-	moo_oow_t size
+	moo_oow_t  size
 );
 
 /**
@@ -206,7 +206,7 @@ MOO_EXPORT void* moo_xma_calloc (
 MOO_EXPORT void* moo_xma_realloc (
 	moo_xma_t* xma,  /**< memory allocator */
 	void*      b,    /**< memory block */
-	moo_oow_t size  /**< new size in bytes */
+	moo_oow_t  size  /**< new size in bytes */
 );
 
 /**

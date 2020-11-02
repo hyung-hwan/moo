@@ -30,13 +30,12 @@
 
 
 #define ALIGN MOO_SIZEOF(moo_oow_t) /* this must be a power of 2 */
-#define HDRSIZE MOO_SIZEOF(moo_xma_mblk_t)
-/*#define MINBLKLEN (HDRSIZE + ALIGN + ALIGN)*/
+#define MBLKHDRSIZE MOO_SIZEOF(moo_xma_mblk_t)
 #define MINBLKLEN MOO_SIZEOF(moo_xma_fblk_t) /* need space for the free links when the block is freeed */
-#define MINCHUNKSIZE (ALIGN + ALIGN) /* as large as the free links in moo_xma_fblk_t */
+#define MINALLOCSIZE (ALIGN + ALIGN) /* as large as the free links in moo_xma_fblk_t */
 
-#define SYS_TO_USR(_) (((moo_xma_mblk_t*)_) + 1)
-#define USR_TO_SYS(_) (((moo_xma_mblk_t*)_) - 1)
+#define SYS_TO_USR(b) ((moo_uint8_t*)(b) + MBLKHDRSIZE)
+#define USR_TO_SYS(b) ((moo_uint8_t*)(b) - MBLKHDRSIZE)
 
 /*
  * the xfree array is divided into three region
@@ -46,10 +45,10 @@
 #define FIXED MOO_XMA_FIXED
 #define XFIMAX(xma) (MOO_COUNTOF(xma->xfree)-1)
 
-
-#define next_mblk(b) ((moo_xma_mblk_t*)((moo_uint8_t*)((moo_xma_mblk_t*)(b) + 1) + ((moo_xma_mblk_t*)(b))->size))
-#define prev_mblk(b) ((moo_xma_mblk_t*)((moo_uint8_t*)b - ((moo_xma_mblk_t*)(b))->prev_size) - HDRSIZE)
-
+#define mblk_size(b) (((moo_xma_mblk_t*)(b))->size)
+#define mblk_prev_size(b) (((moo_xma_mblk_t*)(b))->prev_size)
+#define next_mblk(b) ((moo_xma_mblk_t*)((moo_uint8_t*)b + MBLKHDRSIZE + mblk_size(b)))
+#define prev_mblk(b) ((moo_xma_mblk_t*)((moo_uint8_t*)b - (MBLKHDRSIZE + mblk_prev_size(b))))
 
 struct moo_xma_mblk_t
 {
@@ -64,12 +63,33 @@ struct moo_xma_fblk_t
 	moo_oow_t avail: 1;
 	moo_oow_t size: MOO_XMA_SIZE_BITS;/**< block size */
 
-	struct
-	{
-		moo_xma_fblk_t* prev; /**< link to the previous free block */
-		moo_xma_fblk_t* next; /**< link to the next free block */
-	} f;
+	/* these two fields are used only if the block is free */
+	moo_xma_fblk_t* free_prev; /**< link to the previous free block */
+	moo_xma_fblk_t* free_next; /**< link to the next free block */
 };
+
+#if defined(VERIFY)
+static void DBG_VERIFY (moo_xma_t* xma, const char* desc)
+{
+	moo_xma_mblk_t* tmp, * next;
+	moo_oow_t cnt;
+	for (tmp = (moo_xma_mblk_t*)xma->start, cnt = 0; (moo_uint8_t*)tmp < xma->end; tmp = next, cnt++)
+	{
+		next = next_mblk(tmp);
+
+		if ((moo_uint8_t*)tmp == xma->start)
+		{
+			assert (tmp->prev_size == 0);
+		}
+		if ((moo_uint8_t*)next < xma->end)
+		{
+			assert (next->prev_size == tmp->size);
+		}
+	}
+}
+#else
+#define DBG_VERIFY(xma, desc)
+#endif
 
 static MOO_INLINE moo_oow_t szlog2 (moo_oow_t n) 
 {
@@ -125,6 +145,7 @@ static MOO_INLINE moo_oow_t getxfi (moo_xma_t* xma, moo_oow_t size)
 	return xfi;
 }
 
+
 moo_xma_t* moo_xma_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, void* zoneptr, moo_oow_t zonesize)
 {
 	moo_xma_t* xma;
@@ -174,9 +195,9 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 	/* initialize the header part of the free chunk. the entire zone is a single free block */
 	free->prev_size = 0;
 	free->avail = 1;
-	free->size = zonesize - HDRSIZE; /* size excluding the block header */
-	free->f.prev = MOO_NULL;
-	free->f.next = MOO_NULL;
+	free->size = zonesize - MBLKHDRSIZE; /* size excluding the block header */
+	free->free_prev = MOO_NULL;
+	free->free_next = MOO_NULL;
 
 	MOO_MEMSET (xma, 0, MOO_SIZEOF(*xma));
 	xma->_mmgr = mmgr;
@@ -191,13 +212,12 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 	/* let it be the head, which is natural with only a block */
 	xma->start = (moo_uint8_t*)free;
 	xma->end = xma->start + zonesize;
-	
 
 	/* initialize some statistical variables */
 #if defined(MOO_XMA_ENABLE_STAT)
 	xma->stat.total = zonesize;
 	xma->stat.alloc = 0;
-	xma->stat.avail = zonesize - HDRSIZE;
+	xma->stat.avail = zonesize - MBLKHDRSIZE;
 	xma->stat.nfree = 1;
 	xma->stat.nused = 0;
 #endif
@@ -224,28 +244,26 @@ static MOO_INLINE void attach_to_freelist (moo_xma_t* xma, moo_xma_fblk_t* b)
 	moo_oow_t xfi = getxfi(xma, b->size); 
 
 	/* let it be the head of the free list doubly-linked */
-	b->f.prev = MOO_NULL; 
-	b->f.next = xma->xfree[xfi];
-	if (xma->xfree[xfi]) xma->xfree[xfi]->f.prev = b;
+	b->free_prev = MOO_NULL; 
+	b->free_next = xma->xfree[xfi];
+	if (xma->xfree[xfi]) xma->xfree[xfi]->free_prev = b;
 	xma->xfree[xfi] = b;
 }
 
 static MOO_INLINE void detach_from_freelist (moo_xma_t* xma, moo_xma_fblk_t* b)
 {
-	/*
- 	 * detach a block from a free list 
- 	 */
+	/* detach a block from a free list */
 	moo_xma_fblk_t* p, * n;
 
 	/* alias the previous and the next with short variable names */
-	p = b->f.prev;
-	n = b->f.next;
+	p = b->free_prev;
+	n = b->free_next;
 
 	if (p)
 	{
 		/* the previous item exists. let its 'next' pointer point to 
 		 * the block's next item. */
-		p->f.next = n;
+		p->free_next = n;
 	}
 	else 
 	{
@@ -260,14 +278,14 @@ static MOO_INLINE void detach_from_freelist (moo_xma_t* xma, moo_xma_fblk_t* b)
 
 	/* let the 'prev' pointer of the block's next item point to the 
 	 * block's previous item */
-	if (n) n->f.prev = p; 
+	if (n) n->free_prev = p;
 }
 
 static moo_xma_fblk_t* alloc_from_freelist (moo_xma_t* xma, moo_oow_t xfi, moo_oow_t size)
 {
 	moo_xma_fblk_t* free;
 
-	for (free = xma->xfree[xfi]; free; free = free->f.next)
+	for (free = xma->xfree[xfi]; free; free = free->free_next)
 	{
 		if (free->size >= size)
 		{
@@ -278,7 +296,7 @@ static moo_xma_fblk_t* alloc_from_freelist (moo_xma_t* xma, moo_oow_t xfi, moo_o
 			rem = free->size - size;
 			if (rem >= MINBLKLEN)
 			{
-				moo_xma_fblk_t* tmp;
+				moo_xma_mblk_t* y, * z;
 
 				/* the remaining part is large enough to hold 
 				 * another block. let's split it 
@@ -288,18 +306,21 @@ static moo_xma_fblk_t* alloc_from_freelist (moo_xma_t* xma, moo_oow_t xfi, moo_o
 				free->size = size;
 
 				/* let 'tmp' point to the remaining part */
-				tmp = (moo_xma_fblk_t*)next_mblk(free); /* get the next adjacent block */
+				y = next_mblk(free); /* get the next adjacent block */
 
 				/* initialize some fields */
-				tmp->avail = 1;
-				tmp->size = rem - HDRSIZE;
-				tmp->prev_size = free->size;
+				y->avail = 1;
+				y->size = rem - MBLKHDRSIZE;
+				y->prev_size = free->size;
 
 				/* add the remaining part to the free list */
-				attach_to_freelist (xma, tmp);
+				attach_to_freelist (xma, (moo_xma_fblk_t*)y);
+
+				z = next_mblk(y);
+				if ((moo_uint8_t*)z < xma->end) z->prev_size = y->size;
 
 #if defined(MOO_XMA_ENABLE_STAT)
-				xma->stat.avail -= HDRSIZE;
+				xma->stat.avail -= MBLKHDRSIZE;
 #endif
 			}
 #if defined(MOO_XMA_ENABLE_STAT)
@@ -313,8 +334,8 @@ static moo_xma_fblk_t* alloc_from_freelist (moo_xma_t* xma, moo_oow_t xfi, moo_o
 
 			free->avail = 0;
 			/*
-			free->f.next = MOO_NULL;
-			free->f.prev = MOO_NULL;
+			free->free_next = MOO_NULL;
+			free->free_prev = MOO_NULL;
 			*/
 
 #if defined(MOO_XMA_ENABLE_STAT)
@@ -329,15 +350,16 @@ static moo_xma_fblk_t* alloc_from_freelist (moo_xma_t* xma, moo_oow_t xfi, moo_o
 	return MOO_NULL;
 }
 
+
 void* moo_xma_alloc (moo_xma_t* xma, moo_oow_t size)
 {
 	moo_xma_fblk_t* free;
 	moo_oow_t xfi;
 
-	if (size <= 0) size = 1;
+	DBG_VERIFY (xma, "alloc start");
 
 	/* round up 'size' to the multiples of ALIGN */
-	if (size < MINCHUNKSIZE) size = MINCHUNKSIZE;
+	if (size < MINALLOCSIZE) size = MINALLOCSIZE;
 	size = MOO_ALIGN_POW2(size, ALIGN);
 
 	assert (size >= ALIGN);
@@ -399,15 +421,17 @@ void* moo_xma_alloc (moo_xma_t* xma, moo_oow_t size)
 		}
 	}
 
+	DBG_VERIFY (xma, "alloc end");
 	return SYS_TO_USR(free);
 }
 
 static void* _realloc_merge (moo_xma_t* xma, void* b, moo_oow_t size)
 {
-	moo_xma_mblk_t* blk = USR_TO_SYS(b);
+	moo_xma_mblk_t* blk = (moo_xma_mblk_t*)USR_TO_SYS(b);
 
+	DBG_VERIFY (xma, "realloc merge start");
 	/* rounds up 'size' to be multiples of ALIGN */ 
-	if (size < MINCHUNKSIZE) size = MINCHUNKSIZE;
+	if (size < MINALLOCSIZE) size = MINALLOCSIZE;
 	size = MOO_ALIGN_POW2(size, ALIGN);
 
 	if (size > blk->size)
@@ -423,10 +447,12 @@ static void* _realloc_merge (moo_xma_t* xma, void* b, moo_oow_t size)
 		/* check if the next adjacent block is available */
 		if ((moo_uint8_t*)n >= xma->end || !n->avail || req > n->size) return MOO_NULL; /* no! */
 
+		assert (blk->size == n->prev_size);
+
 		/* let's merge the current block with the next block */
 		detach_from_freelist (xma, (moo_xma_fblk_t*)n);
 
-		rem = (HDRSIZE + n->size) - req;
+		rem = (MBLKHDRSIZE + n->size) - req;
 		if (rem >= MINBLKLEN)
 		{
 			/* 
@@ -434,37 +460,35 @@ static void* _realloc_merge (moo_xma_t* xma, void* b, moo_oow_t size)
 			 * to hold a block. break the next block.
 			 */
 
-			moo_xma_fblk_t* tmp;
-
-			tmp = (moo_xma_fblk_t*)(((moo_uint8_t*)n) + req);
+			moo_xma_mblk_t* tmp;
 
 			blk->size += req;
-
+			tmp = next_mblk(blk);
 			tmp->avail = 1;
-			tmp->size = rem - HDRSIZE;
+			tmp->size = rem - MBLKHDRSIZE;
 			tmp->prev_size = blk->size;
-			attach_to_freelist (xma, tmp);
+			attach_to_freelist (xma, (moo_xma_fblk_t*)tmp);
 
 			n = next_mblk(tmp);
 			if ((moo_uint8_t*)n < xma->end) n->prev_size = tmp->size;
 
 #if defined(MOO_XMA_ENABLE_STAT)
 			xma->stat.alloc += req;
-			xma->stat.avail -= req; /* req + HDRSIZE(tmp) - HDRSIZE(n) */
+			xma->stat.avail -= req; /* req + MBLKHDRSIZE(tmp) - MBLKHDRSIZE(n) */
 #endif
 		}
 		else
 		{
-			/* the remaining part of the next block is negligible.
+			/* the remaining part of the next block is too small to form an indepent block.
 			 * utilize the whole block by merging to the resizing block */
-			blk->size += HDRSIZE + n->size;
+			blk->size += MBLKHDRSIZE + n->size;
 
 			n = next_mblk(blk);
 			if ((moo_uint8_t*)n < xma->end) n->prev_size = blk->size;
 
 #if defined(MOO_XMA_ENABLE_STAT)
 			xma->stat.nfree--;
-			xma->stat.alloc += HDRSIZE + n->size;
+			xma->stat.alloc += MBLKHDRSIZE + n->size;
 			xma->stat.avail -= n->size;
 #endif
 		}
@@ -472,20 +496,16 @@ static void* _realloc_merge (moo_xma_t* xma, void* b, moo_oow_t size)
 	else if (size < blk->size)
 	{
 		/* shrink the block */
-
 		moo_oow_t rem = blk->size - size;
 		if (rem >= MINBLKLEN) 
 		{
-			moo_xma_fblk_t* tmp;
+			moo_xma_mblk_t* tmp;
 			moo_xma_mblk_t* n;
 
 			n = next_mblk(blk);
 
 			/* the leftover is large enough to hold a block of minimum size.
 			 * split the current block. let 'tmp' point to the leftover. */
-			tmp = (moo_xma_fblk_t*)(((moo_uint8_t*)(blk + 1)) + size);
-			tmp->avail = 1;
-
 			if ((moo_uint8_t*)n < xma->end && n->avail)
 			{
 				/* let the leftover block merge with the next block */
@@ -493,25 +513,37 @@ static void* _realloc_merge (moo_xma_t* xma, void* b, moo_oow_t size)
 
 				blk->size = size;
 
-				tmp->size = rem - HDRSIZE + HDRSIZE + n->size;
-				tmp->prev_size = size;
+				tmp = next_mblk(blk);
+				tmp->avail = 1;
+				tmp->size = rem + n->size;
+				tmp->prev_size = blk->size;
 
-				n = next_mblk(blk);
+				/* add 'tmp' to the free list */
+				attach_to_freelist (xma, (moo_xma_fblk_t*)tmp);
+
+				n = next_mblk(tmp);
 				if ((moo_uint8_t*)n < xma->end) n->prev_size = tmp->size;
+
 
 #if defined(MOO_XMA_ENABLE_STAT)
 				xma->stat.alloc -= rem;
-				/* rem - HDRSIZE(tmp) + HDRSIZE(n) */
+				/* rem - MBLKHDRSIZE(tmp) + MBLKHDRSIZE(n) */
 				xma->stat.avail += rem;
 #endif
 			}
 			else
 			{
-				/* link 'tmp' to the block list */
+				/* link the leftover block to the free list */
 				blk->size = size;
 
-				tmp->size = rem - HDRSIZE;
+				tmp = next_mblk(blk);
+				tmp->avail = 1;
+				tmp->size = rem - MBLKHDRSIZE;
 				tmp->prev_size = blk->size;
+
+				attach_to_freelist (xma, (moo_xma_fblk_t*)tmp);
+				/*n = next_mblk(tmp);
+				if ((moo_uint8_t*)n < xma->end)*/ n->prev_size = tmp->size;
 
 #if defined(MOO_XMA_ENABLE_STAT)
 				xma->stat.nfree++;
@@ -519,18 +551,16 @@ static void* _realloc_merge (moo_xma_t* xma, void* b, moo_oow_t size)
 				xma->stat.avail += tmp->size;
 #endif
 			}
-
-			/* add 'tmp' to the free list */
-			attach_to_freelist (xma, tmp);
 		}
 	}
 
+	DBG_VERIFY (xma, "realloc merge end");
 	return b;
 }
 
 void* moo_xma_calloc (moo_xma_t* xma, moo_oow_t size)
 {
-	void* ptr = moo_xma_alloc (xma, size);
+	void* ptr = moo_xma_alloc(xma, size);
 	if (ptr) MOO_MEMSET (ptr, 0, size);
 	return ptr;
 }
@@ -542,17 +572,17 @@ void* moo_xma_realloc (moo_xma_t* xma, void* b, moo_oow_t size)
 	if (b == MOO_NULL) 
 	{
 		/* 'realloc' with NULL is the same as 'alloc' */
-		n = moo_xma_alloc (xma, size);
+		n = moo_xma_alloc(xma, size);
 	}
 	else
 	{
 		/* try reallocation by merging the adjacent continuous blocks */
 		n = _realloc_merge (xma, b, size);
-		if (n == MOO_NULL)
+		if (!n)
 		{
 			/* reallocation by merging failed. fall back to the slow
 			 * allocation-copy-free scheme */
-			n = moo_xma_alloc (xma, size);
+			n = moo_xma_alloc(xma, size);
 			if (n)
 			{
 				MOO_MEMCPY (n, b, size);
@@ -566,10 +596,10 @@ void* moo_xma_realloc (moo_xma_t* xma, void* b, moo_oow_t size)
 
 void moo_xma_free (moo_xma_t* xma, void* b)
 {
-	moo_xma_mblk_t* blk = USR_TO_SYS(b);
+	moo_xma_mblk_t* blk = (moo_xma_mblk_t*)USR_TO_SYS(b);
 	moo_xma_mblk_t* x, * y;
 
-	/*assert (blk->f.next == MOO_NULL);*/
+	DBG_VERIFY (xma, "free start");
 
 #if defined(MOO_XMA_ENABLE_STAT)
 	/* update statistical variables */
@@ -599,16 +629,17 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		 */
 		
 		moo_xma_mblk_t* z = next_mblk(y);
-		moo_oow_t ns = HDRSIZE + blk->size + HDRSIZE;
+		moo_oow_t ns = MBLKHDRSIZE + blk->size + MBLKHDRSIZE;
 		moo_oow_t bs = ns + y->size;
 
 		detach_from_freelist (xma, (moo_xma_fblk_t*)x);
 		detach_from_freelist (xma, (moo_xma_fblk_t*)y);
 
 		x->size += bs;
-		if ((moo_uint8_t*)z < xma->end) z->prev_size = x->size;
-
 		attach_to_freelist (xma, (moo_xma_fblk_t*)x);
+
+		z = next_mblk(x);
+		if ((moo_uint8_t*)z < xma->end) z->prev_size = x->size;
 
 #if defined(MOO_XMA_ENABLE_STAT)
 		xma->stat.nfree--;
@@ -641,7 +672,7 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		moo_xma_mblk_t* z = next_mblk(y);
 
 #if defined(MOO_XMA_ENABLE_STAT)
-		xma->stat.avail += blk->size + HDRSIZE;
+		xma->stat.avail += blk->size + MBLKHDRSIZE;
 #endif
 
 		/* detach y from the free list */
@@ -649,8 +680,8 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 
 		/* update the block availability */
 		blk->avail = 1;
-		/* update the block size. HDRSIZE for the header space in x */
-		blk->size += HDRSIZE + y->size;
+		/* update the block size. MBLKHDRSIZE for the header space in x */
+		blk->size += MBLKHDRSIZE + y->size;
 
 		/* update the backward link of Y */
 		if ((moo_uint8_t*)z < xma->end) z->prev_size = blk->size;
@@ -663,9 +694,9 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		/*
 		 * Merge the block with the previous block 
 		 *
-		 *                   blk
-		 *          +-----+   |    +-----+  
-		 *          |     V   v    |     v  
+		 *                 blk
+		 *                 |
+		 *                 v
 		 * +------------+------------+------------+
 		 * |     X      |            |     Y      |
 		 * +------------+------------+------------+
@@ -673,23 +704,21 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		 * +-------------------------+------------+
 		 * |     X                   |     Y      |
 		 * +-------------------------+------------+
-		 *
-		 *
-		 *
 		 */
 #if defined(MOO_XMA_ENABLE_STAT)
-		xma->stat.avail += HDRSIZE + blk->size;
+		xma->stat.avail += MBLKHDRSIZE + blk->size;
 #endif
 
 		detach_from_freelist (xma, (moo_xma_fblk_t*)x);
 
-		x->size += HDRSIZE + blk->size;
+		x->size += MBLKHDRSIZE + blk->size;
 		if ((moo_uint8_t*)y < xma->end) y->prev_size = x->size;
 
 		attach_to_freelist (xma, (moo_xma_fblk_t*)x);
 	}
 	else
 	{
+
 		blk->avail = 1;
 		attach_to_freelist (xma, (moo_xma_fblk_t*)blk);
 
@@ -698,6 +727,8 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		xma->stat.avail += blk->size;
 #endif
 	}
+
+	DBG_VERIFY (xma, "free end");
 }
 
 void moo_xma_dump (moo_xma_t* xma, moo_xma_dumper_t dumper, void* ctx)
@@ -727,7 +758,7 @@ void moo_xma_dump (moo_xma_t* xma, moo_xma_dumper_t dumper, void* ctx)
 	}
 
 #if defined(MOO_XMA_ENABLE_STAT)
-	isum = (xma->stat.nfree + xma->stat.nused) * HDRSIZE;
+	isum = (xma->stat.nfree + xma->stat.nused) * MBLKHDRSIZE;
 #endif
 
 	dumper (ctx, "---------------------------------------\n");
