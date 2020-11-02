@@ -91,7 +91,7 @@ struct moo_xma_t
 
 	moo_uint8_t* start; /* zone beginning */
 	moo_uint8_t* end; /* zone end */
-	int          external;
+	int          internal;
 
 	/** pointer array to free memory blocks */
 	moo_xma_fblk_t* xfree[MOO_XMA_FIXED + MOO_XMA_SIZE_BITS + 1]; 

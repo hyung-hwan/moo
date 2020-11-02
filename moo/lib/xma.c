@@ -173,6 +173,7 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 {
 	moo_xma_fblk_t* free;
 	moo_oow_t xfi;
+	int internal = 0;
 
 	if (!zoneptr)
 	{
@@ -184,10 +185,8 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 
 		zoneptr = MOO_MMGR_ALLOC(mmgr, zonesize);
 		if (MOO_UNLIKELY(!zoneptr)) return -1;
-	}
-	else
-	{
-		xma->external = 1;
+
+		internal = 1;
 	}
 
 	free = (moo_xma_fblk_t*)zoneptr;
@@ -212,6 +211,7 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 	/* let it be the head, which is natural with only a block */
 	xma->start = (moo_uint8_t*)free;
 	xma->end = xma->start + zonesize;
+	xma->internal = 1;
 
 	/* initialize some statistical variables */
 #if defined(MOO_XMA_ENABLE_STAT)
@@ -229,7 +229,7 @@ void moo_xma_fini (moo_xma_t* xma)
 {
 	/* the head must point to the free chunk allocated in init().
 	 * let's deallocate it */
-	if (!xma->external) MOO_MMGR_FREE (xma->_mmgr, xma->start);
+	if (xma->internal) MOO_MMGR_FREE (xma->_mmgr, xma->start);
 	xma->start = MOO_NULL;
 	xma->end = MOO_NULL;
 }
