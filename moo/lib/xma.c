@@ -353,8 +353,8 @@ static moo_xma_fblk_t* alloc_from_freelist (moo_xma_t* xma, moo_oow_t xfi, moo_o
 				/* shrink the size of the 'cand' block */
 				cand->size = size;
 
-				/* let 'tmp' point to the remaining part */
-				y = next_mblk(cand); /* get the next adjacent block */
+				/* let 'y' point to the remaining part */
+				y = next_mblk(cand);
 
 				/* initialize some fields */
 				y->free = 1;
@@ -651,13 +651,16 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 {
 	moo_xma_mblk_t* blk = (moo_xma_mblk_t*)USR_TO_SYS(b);
 	moo_xma_mblk_t* x, * y;
+	moo_oow_t org_blk_size;
 
 	DBG_VERIFY (xma, "free start");
+
+	org_blk_size = blk->size;
 
 #if defined(MOO_XMA_ENABLE_STAT)
 	/* update statistical variables */
 	xma->stat.nused--;
-	xma->stat.alloc -= blk->size;
+	xma->stat.alloc -= org_blk_size;
 #endif
 
 	x = prev_mblk(blk);
@@ -682,7 +685,7 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		 */
 		
 		moo_xma_mblk_t* z = next_mblk(y);
-		moo_oow_t ns = MBLKHDRSIZE + blk->size + MBLKHDRSIZE;
+		moo_oow_t ns = MBLKHDRSIZE + org_blk_size + MBLKHDRSIZE;
 		moo_oow_t bs = ns + y->size;
 
 		detach_from_freelist (xma, (moo_xma_fblk_t*)x);
@@ -724,10 +727,6 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		 */
 		moo_xma_mblk_t* z = next_mblk(y);
 
-#if defined(MOO_XMA_ENABLE_STAT)
-		xma->stat.avail += blk->size + MBLKHDRSIZE;
-#endif
-
 		/* detach y from the free list */
 		detach_from_freelist (xma, (moo_xma_fblk_t*)y);
 
@@ -741,6 +740,10 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 
 		/* attach blk to the free list */
 		attach_to_freelist (xma, (moo_xma_fblk_t*)blk);
+
+#if defined(MOO_XMA_ENABLE_STAT)
+		xma->stat.avail += org_blk_size + MBLKHDRSIZE;
+#endif
 	}
 	else if ((moo_uint8_t*)x >= xma->start && x->free)
 	{
@@ -758,27 +761,27 @@ void moo_xma_free (moo_xma_t* xma, void* b)
 		 * |     X                   |     Y      |
 		 * +-------------------------+------------+
 		 */
-#if defined(MOO_XMA_ENABLE_STAT)
-		xma->stat.avail += MBLKHDRSIZE + blk->size;
-#endif
-
 		detach_from_freelist (xma, (moo_xma_fblk_t*)x);
 
-		x->size += MBLKHDRSIZE + blk->size;
+		x->size += MBLKHDRSIZE + org_blk_size;
+
 		assert (y == next_mblk(x));
 		if ((moo_uint8_t*)y < xma->end) y->prev_size = x->size;
 
 		attach_to_freelist (xma, (moo_xma_fblk_t*)x);
+
+#if defined(MOO_XMA_ENABLE_STAT)
+		xma->stat.avail += MBLKHDRSIZE + org_blk_size;
+#endif
 	}
 	else
 	{
-
 		blk->free = 1;
 		attach_to_freelist (xma, (moo_xma_fblk_t*)blk);
 
 #if defined(MOO_XMA_ENABLE_STAT)
 		xma->stat.nfree++;
-		xma->stat.avail += blk->size;
+		xma->stat.avail += org_blk_size;
 #endif
 	}
 
