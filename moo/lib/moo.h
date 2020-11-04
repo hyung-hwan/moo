@@ -29,6 +29,7 @@
 
 #include <moo-cmn.h>
 #include <moo-rbt.h>
+#include <moo-xma.h>
 #include <stdarg.h>
 
 /* TODO: move this macro out to the build files.... */
@@ -213,6 +214,14 @@ struct moo_gchdr_t
 };
 /* The size of moo_gchdr_t must be aligned to MOO_SIZEOF_OOP_T */
 #endif
+
+
+enum moo_gc_type_t
+{
+	MOO_GC_TYPE_SS_COPY,
+	MOO_GC_TYPE_MARK_SWEEP
+};
+typedef enum moo_gc_type_t moo_gc_type_t;
 
 /* =========================================================================
  * OBJECT STRUCTURE
@@ -1006,6 +1015,9 @@ struct moo_heap_t
 	moo_space_t  permspace;
 	moo_space_t  curspace;
 	moo_space_t  newspace;
+
+	moo_xma_t*   xma; /* used if MARK_SWEEP is enabled */
+	moo_mmgr_t   xmmgr;
 };
 
 typedef struct moo_dbgi_t moo_dbgi_t;
@@ -1570,6 +1582,7 @@ struct moo_t
 
 	int shuterr;
 	int igniting;
+	moo_gc_type_t gc_type;
 
 	struct
 	{

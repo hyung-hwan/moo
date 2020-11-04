@@ -29,15 +29,30 @@
 #define MIN_HEAP_SIZE 65536 * 5 /* TODO: adjust this value? */
 #define PERM_SPACE_SIZE 65536 * 2 /* TODO: adjust perm space size depending on what's allocated in the permspace */
 
+static void* xma_alloc (moo_mmgr_t* mmgr, moo_oow_t size)
+{
+	return moo_xma_alloc(mmgr->ctx, size);
+}
+
+static void* xma_realloc (moo_mmgr_t* mmgr, void* ptr, moo_oow_t size)
+{
+	return moo_xma_realloc(mmgr->ctx, ptr, size);
+}
+
+static void xma_free (moo_mmgr_t* mmgr, void* ptr)
+{
+	return moo_xma_free (mmgr->ctx, ptr);
+}
+
 moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {
 	moo_heap_t* heap;
 	moo_oow_t space_size;
 
-	if (size < MIN_HEAP_SIZE) size = MIN_HEAP_SIZE;
+	if (size < MIN_HEAP_SIZE && moo->gc_type != MOO_GC_TYPE_MARK_SWEEP) size = MIN_HEAP_SIZE;
 
 	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, MOO_SIZEOF(*heap) + size);
-	if (!heap) 
+	if (MOO_UNLIKELY(!heap)) 
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to allocate heap - %js", oldmsg);
@@ -48,33 +63,61 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	heap->base = (moo_uint8_t*)(heap + 1);
 	heap->size = size;
 
-	space_size = (size - PERM_SPACE_SIZE) / 2;
+	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
+	{
+		if (size <= 0)
+		{
+			heap->xmmgr = *moo_getmmgr(moo);
+		}
+		else
+		{
+			heap->xma = moo_xma_open(moo_getmmgr(moo), 0, heap->base, heap->size);
+			if (MOO_UNLIKELY(!heap->xma))
+			{
+				moo->vmprim.free_heap (moo, heap);
+				moo_seterrbfmt (moo, MOO_ESYSMEM, "unable to allocate xma");
+				return MOO_NULL;
+			}
 
-	/* TODO: consider placing permspace in a separate memory chunk in case we have to grow
-	 *       other spaces. we may be able to realloc() the entire heap region without affecting the separately
-	 *       allocated chunk. */
-	heap->permspace.base = (moo_uint8_t*)(heap + 1);
-	heap->permspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->permspace.base), MOO_SIZEOF(moo_oop_t));
-	heap->permspace.limit = heap->permspace.base + PERM_SPACE_SIZE;
+			heap->xmmgr.alloc = xma_alloc;
+			heap->xmmgr.realloc = xma_realloc;
+			heap->xmmgr.free = xma_free;
+			heap->xmmgr.ctx = heap->xma;
+		}
+	}
+	else
+	{
+		MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_SS_COPY);
 
-	heap->curspace.base = heap->permspace.limit;
-	heap->curspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->curspace.base), MOO_SIZEOF(moo_oop_t));
-	heap->curspace.limit = heap->curspace.base + space_size;
+		space_size = (size - PERM_SPACE_SIZE) / 2;
 
-	heap->newspace.base = heap->curspace.limit;
-	heap->newspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->newspace.base), MOO_SIZEOF(moo_oop_t));
-	heap->newspace.limit = heap->newspace.base + space_size;
+		/* TODO: consider placing permspace in a separate memory chunk in case we have to grow
+		 *       other spaces. we may be able to realloc() the entire heap region without affecting the separately
+		 *       allocated chunk. */
+		heap->permspace.base = (moo_uint8_t*)(heap + 1);
+		heap->permspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->permspace.base), MOO_SIZEOF(moo_oop_t));
+		heap->permspace.limit = heap->permspace.base + PERM_SPACE_SIZE;
 
-	/* if size is too small, space.ptr may go past space.limit even at 
-	 * this moment depending on the alignment of space.base. subsequent
-	 * calls to moo_allocheapspace() are bound to fail. Make sure to
-	 * pass a heap size large enough */
+		heap->curspace.base = heap->permspace.limit;
+		heap->curspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->curspace.base), MOO_SIZEOF(moo_oop_t));
+		heap->curspace.limit = heap->curspace.base + space_size;
+
+		heap->newspace.base = heap->curspace.limit;
+		heap->newspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->newspace.base), MOO_SIZEOF(moo_oop_t));
+		heap->newspace.limit = heap->newspace.base + space_size;
+
+		/* if size is too small, space.ptr may go past space.limit even at 
+		 * this moment depending on the alignment of space.base. subsequent
+		 * calls to moo_allocheapspace() are bound to fail. Make sure to
+		 * pass a heap size large enough */
+	}
 
 	return heap;
 }
 
 void moo_killheap (moo_t* moo, moo_heap_t* heap)
 {
+	if (heap->xma) moo_xma_close (heap->xma);
 	moo->vmprim.free_heap (moo, heap);
 }
 
