@@ -114,21 +114,20 @@ PROGRAMS = $(bin_PROGRAMS)
 am_moo_OBJECTS = moo-main.$(OBJEXT)
 moo_OBJECTS = $(am_moo_OBJECTS)
 am__DEPENDENCIES_1 =
-am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
 moo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(moo_CFLAGS) $(CFLAGS) \
 	$(moo_LDFLAGS) $(LDFLAGS) -o $@
 am__moo_gtk_SOURCES_DIST = gtk-main.c
 @ENABLE_EXPERIMENTAL_TRUE@am_moo_gtk_OBJECTS =  \
 @ENABLE_EXPERIMENTAL_TRUE@	moo_gtk-gtk-main.$(OBJEXT)
 moo_gtk_OBJECTS = $(am_moo_gtk_OBJECTS)
 moo_gtk_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(moo_gtk_LDFLAGS) $(LDFLAGS) -o $@
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(moo_gtk_CFLAGS) \
+	$(CFLAGS) $(moo_gtk_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -321,6 +320,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -330,7 +330,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = nostdinc
-CPPFLAGS_ALL_COMMON = \
+CPPFLAGS_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_builddir)/../lib  \
 	-I$(abs_srcdir) \
@@ -338,24 +338,26 @@ CPPFLAGS_ALL_COMMON = \
 	-I$(includedir) \
 	$(PTHREAD_CFLAGS)
 
-LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(abs_builddir)/../lib -L$(libdir)
-CPPFLAGS_BIN_COMMON = $(CPPFLAGS_ALL_COMMON)
-LDFLAGS_BIN_COMMON = $(LDFLAGS_ALL_COMMON) -no-undefined
-LIBADD_BIN_COMMON = $(LIBM) 
+CFLAGS_COMMON = 
+LDFLAGS_COMMON = -L$(abs_builddir)/../lib -L$(libdir)
+LIBADD_COMMON = -lmoo
+DEPENDENCIES_COMMON = 
 
 ##################################################
 # moo
 ##################################################
 moo_SOURCES = main.c
-moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON)
-moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
-moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox $(PTHREAD_LIBS)
-moo_DEPENDENCIES = ../lib/libmoox.la
+moo_CPPFLAGS = $(CPPFLAGS_COMMON)
+moo_CFLAGS = $(CFLAGS_COMMON)
+moo_LDFLAGS = $(LDFLAGS_COMMON)
+moo_LDADD = $(LIBADD_COMMON)
+moo_DEPENDENCIES = ../lib/libmoo.la
 @ENABLE_EXPERIMENTAL_TRUE@moo_gtk_SOURCES = gtk-main.c
-@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_CPPFLAGS = $(CPPFLAGS_ALL_COMMON) -pthread -I/usr/include/gtk-3.0 -I/usr/include/at-spi2-atk/2.0 -I/usr/include/at-spi-2.0 -I/usr/include/dbus-1.0 -I/usr/lib64/dbus-1.0/include -I/usr/include/gtk-3.0 -I/usr/include/gio-unix-2.0/ -I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/harfbuzz -I/usr/include/pango-1.0 -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pixman-1 -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/freetype2 -I/usr/include/libdrm -I/usr/include/libpng16 -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/libpng16 -I/usr/include/glib-2.0 -I/usr/lib64/glib-2.0/include
-@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_LDFLAGS = $(LDFLAGS_ALL_COMMON)
-@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_LDADD = $(LIBADD_BIN_COMMON) -lmoox -lgtk-3 -lgdk-3 -lpangocairo-1.0 -lpango-1.0 -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0
-@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_DEPENDENCIES = ../lib/libmoox.la
+@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_CPPFLAGS = $(CPPFLAGS_COMMON) -I/usr/include/gtk-3.0 -I/usr/include/at-spi2-atk/2.0 -I/usr/include/at-spi-2.0 -I/usr/include/dbus-1.0 -I/usr/lib64/dbus-1.0/include -I/usr/include/gtk-3.0 -I/usr/include/gio-unix-2.0/ -I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/harfbuzz -I/usr/include/pango-1.0 -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pixman-1 -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/freetype2 -I/usr/include/libdrm -I/usr/include/libpng16 -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/libpng16 -I/usr/include/glib-2.0 -I/usr/lib64/glib-2.0/include
+@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_CFLAGS = $(CFLAGS_COMMON)
+@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_LDFLAGS = $(LDFLAGS_COMMON)
+@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_LDADD = $(LIBADD_COMMON) -lgtk-3 -lgdk-3 -lpangocairo-1.0 -lpango-1.0 -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0
+@ENABLE_EXPERIMENTAL_TRUE@moo_gtk_DEPENDENCIES = ../lib/libmoo.la
 all: all-am
 
 .SUFFIXES:
@@ -487,32 +489,32 @@ am--depfiles: $(am__depfiles_remade)
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
 moo-main.o: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-main.o -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(moo_CFLAGS) $(CFLAGS) -MT moo-main.o -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-main.Tpo $(DEPDIR)/moo-main.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='moo-main.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(moo_CFLAGS) $(CFLAGS) -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
 
 moo-main.obj: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-main.obj -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(moo_CFLAGS) $(CFLAGS) -MT moo-main.obj -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-main.Tpo $(DEPDIR)/moo-main.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='moo-main.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(moo_CFLAGS) $(CFLAGS) -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
 
 moo_gtk-gtk-main.o: gtk-main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo_gtk-gtk-main.o -MD -MP -MF $(DEPDIR)/moo_gtk-gtk-main.Tpo -c -o moo_gtk-gtk-main.o `test -f 'gtk-main.c' || echo '$(srcdir)/'`gtk-main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(moo_gtk_CFLAGS) $(CFLAGS) -MT moo_gtk-gtk-main.o -MD -MP -MF $(DEPDIR)/moo_gtk-gtk-main.Tpo -c -o moo_gtk-gtk-main.o `test -f 'gtk-main.c' || echo '$(srcdir)/'`gtk-main.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo_gtk-gtk-main.Tpo $(DEPDIR)/moo_gtk-gtk-main.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gtk-main.c' object='moo_gtk-gtk-main.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo_gtk-gtk-main.o `test -f 'gtk-main.c' || echo '$(srcdir)/'`gtk-main.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(moo_gtk_CFLAGS) $(CFLAGS) -c -o moo_gtk-gtk-main.o `test -f 'gtk-main.c' || echo '$(srcdir)/'`gtk-main.c
 
 moo_gtk-gtk-main.obj: gtk-main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo_gtk-gtk-main.obj -MD -MP -MF $(DEPDIR)/moo_gtk-gtk-main.Tpo -c -o moo_gtk-gtk-main.obj `if test -f 'gtk-main.c'; then $(CYGPATH_W) 'gtk-main.c'; else $(CYGPATH_W) '$(srcdir)/gtk-main.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(moo_gtk_CFLAGS) $(CFLAGS) -MT moo_gtk-gtk-main.obj -MD -MP -MF $(DEPDIR)/moo_gtk-gtk-main.Tpo -c -o moo_gtk-gtk-main.obj `if test -f 'gtk-main.c'; then $(CYGPATH_W) 'gtk-main.c'; else $(CYGPATH_W) '$(srcdir)/gtk-main.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo_gtk-gtk-main.Tpo $(DEPDIR)/moo_gtk-gtk-main.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gtk-main.c' object='moo_gtk-gtk-main.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo_gtk-gtk-main.obj `if test -f 'gtk-main.c'; then $(CYGPATH_W) 'gtk-main.c'; else $(CYGPATH_W) '$(srcdir)/gtk-main.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_gtk_CPPFLAGS) $(CPPFLAGS) $(moo_gtk_CFLAGS) $(CFLAGS) -c -o moo_gtk-gtk-main.obj `if test -f 'gtk-main.c'; then $(CYGPATH_W) 'gtk-main.c'; else $(CYGPATH_W) '$(srcdir)/gtk-main.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

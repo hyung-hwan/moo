@@ -87,8 +87,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_STATIC_MODULE_TRUE@am__append_1 = tools mod lib bin
-@ENABLE_STATIC_MODULE_FALSE@am__append_2 = tools lib mod bin
+@ENABLE_STATIC_MODULE_TRUE@am__append_1 = tools mod lib bin t
+@ENABLE_STATIC_MODULE_FALSE@am__append_2 = tools lib mod bin t
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -337,6 +337,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -349,7 +350,7 @@ AUTOMAKE_OPTION = foreign
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = 
 SUBDIRS = $(am__append_1) $(am__append_2)
-DIST_SUBDIRS = $(SUBDIRS) t wasm
+DIST_SUBDIRS = $(SUBDIRS) wasm
 all: all-recursive
 
 .SUFFIXES:

@@ -103,23 +103,34 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/lib/moo-cfg.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am_t_001_OBJECTS = t-001.$(OBJEXT)
+am_t_001_OBJECTS = t_001-t-001.$(OBJEXT)
 t_001_OBJECTS = $(am_t_001_OBJECTS)
 t_001_LDADD = $(LDADD)
-t_001_DEPENDENCIES =
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-am_t_002_OBJECTS = t-002.$(OBJEXT)
+am_t_002_OBJECTS = t_002-t-002.$(OBJEXT)
 t_002_OBJECTS = $(am_t_002_OBJECTS)
 am__DEPENDENCIES_1 =
-am_t_003_OBJECTS = t-003.$(OBJEXT)
+t_002_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(t_002_CFLAGS) $(CFLAGS) \
+	$(t_002_LDFLAGS) $(LDFLAGS) -o $@
+am_t_003_OBJECTS = t_003-t-003.$(OBJEXT)
 t_003_OBJECTS = $(am_t_003_OBJECTS)
-am_t_004_OBJECTS = t-004.$(OBJEXT)
+t_003_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(t_003_CFLAGS) $(CFLAGS) \
+	$(t_003_LDFLAGS) $(LDFLAGS) -o $@
+am_t_004_OBJECTS = t_004-t-004.$(OBJEXT)
 t_004_OBJECTS = $(am_t_004_OBJECTS)
-am_t_005_OBJECTS = t-005.$(OBJEXT)
+t_004_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(t_004_CFLAGS) $(CFLAGS) \
+	$(t_004_LDFLAGS) $(LDFLAGS) -o $@
+am_t_005_OBJECTS = t_005-t-005.$(OBJEXT)
 t_005_OBJECTS = $(am_t_005_OBJECTS)
+t_005_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(t_005_CFLAGS) $(CFLAGS) \
+	$(t_005_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -135,8 +146,9 @@ am__v_at_1 =
 DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/ac/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/t-001.Po ./$(DEPDIR)/t-002.Po \
-	./$(DEPDIR)/t-003.Po ./$(DEPDIR)/t-004.Po ./$(DEPDIR)/t-005.Po
+am__depfiles_remade = ./$(DEPDIR)/t_001-t-001.Po \
+	./$(DEPDIR)/t_002-t-002.Po ./$(DEPDIR)/t_003-t-003.Po \
+	./$(DEPDIR)/t_004-t-004.Po ./$(DEPDIR)/t_005-t-005.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -519,6 +531,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -528,29 +541,43 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = nostdinc
-AM_CFLAGS = $(PTHREAD_CFLAGS)
-AM_CPPFLAGS = \
+CPPFLAGS_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_builddir)/../lib \
 	-I$(abs_srcdir) \
 	-I$(abs_srcdir)/../lib \
 	-I$(includedir)
 
-AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
-LDADD = 
-t_001_SOURCES = t-001.c
-t_002_SOURCES = t-002.c
-t_002_LDADD = -lmoo $(LDADD)
-t_002_DEPENDENCIES = ../lib/libmoo.la
-t_003_SOURCES = t-003.c
-t_003_LDADD = -lmoo $(LDADD) $(LIBM)
-t_003_DEPENDENCIES = ../lib/libmoo.la
-t_004_SOURCES = t-004.c
-t_004_LDADD = -lmoox $(LDADD)
-t_004_DEPENDENCIES = ../lib/libmoox.la
-t_005_SOURCES = t-005.c
-t_005_LDADD = -lmoo $(LDADD)
-t_005_DEPENDENCIES = ../lib/libmoo.la
+CFLAGS_COMMON = 
+LDFLAGS_COMMON = -L$(abs_builddir)/../lib  -L$(libdir)
+LIBADD_COMMON = -lmoo
+DEPENDENCIES_COMMON = ../lib/libmoo.la
+t_001_SOURCES = t-001.c t.h
+t_001_CPPFLAGS = $(CPPFLAGS_COMMON)
+t_002_SOURCES = t-002.c t.h
+t_002_CPPFLAGS = $(CPPFLAGS_COMMON)
+t_002_CFLAGS = $(CFLAGS_COMMON)
+t_002_LDFLAGS = $(LDFLAGS_COMMON)
+t_002_LDADD = $(LIBADD_COMMON)
+t_002_DEPENDENCIES = $(DEPENDENCIES_COMMON)
+t_003_SOURCES = t-003.c t.h
+t_003_CPPFLAGS = $(CPPFLAGS_COMMON)
+t_003_CFLAGS = $(CFLAGS_COMMON)
+t_003_LDFLAGS = $(LDFLAGS_COMMON)
+t_003_LDADD = $(LIBADD_COMMON)
+t_003_DEPENDENCIES = $(DEPENDENCIES_COMMON)
+t_004_SOURCES = t-004.c t.h
+t_004_CPPFLAGS = $(CPPFLAGS_COMMON)
+t_004_CFLAGS = $(CFLAGS_COMMON)
+t_004_LDFLAGS = $(LDFLAGS_COMMON)
+t_004_LDADD = $(LIBADD_COMMON)
+t_004_DEPENDENCIES = $(DEPENDENCIES_COMMON)
+t_005_SOURCES = t-005.c t.h
+t_005_CPPFLAGS = $(CPPFLAGS_COMMON)
+t_005_CFLAGS = $(CFLAGS_COMMON)
+t_005_LDFLAGS = $(LDFLAGS_COMMON)
+t_005_LDADD = $(LIBADD_COMMON)
+t_005_DEPENDENCIES = $(DEPENDENCIES_COMMON)
 TESTS = $(check_PROGRAMS)
 all: all-am
 
@@ -601,19 +628,19 @@ t-001$(EXEEXT): $(t_001_OBJECTS) $(t_001_DEPENDENCIES) $(EXTRA_t_001_DEPENDENCIE
 
 t-002$(EXEEXT): $(t_002_OBJECTS) $(t_002_DEPENDENCIES) $(EXTRA_t_002_DEPENDENCIES) 
 	@rm -f t-002$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(t_002_OBJECTS) $(t_002_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(t_002_LINK) $(t_002_OBJECTS) $(t_002_LDADD) $(LIBS)
 
 t-003$(EXEEXT): $(t_003_OBJECTS) $(t_003_DEPENDENCIES) $(EXTRA_t_003_DEPENDENCIES) 
 	@rm -f t-003$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(t_003_OBJECTS) $(t_003_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(t_003_LINK) $(t_003_OBJECTS) $(t_003_LDADD) $(LIBS)
 
 t-004$(EXEEXT): $(t_004_OBJECTS) $(t_004_DEPENDENCIES) $(EXTRA_t_004_DEPENDENCIES) 
 	@rm -f t-004$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(t_004_OBJECTS) $(t_004_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(t_004_LINK) $(t_004_OBJECTS) $(t_004_LDADD) $(LIBS)
 
 t-005$(EXEEXT): $(t_005_OBJECTS) $(t_005_DEPENDENCIES) $(EXTRA_t_005_DEPENDENCIES) 
 	@rm -f t-005$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(t_005_OBJECTS) $(t_005_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(t_005_LINK) $(t_005_OBJECTS) $(t_005_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -621,11 +648,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-001.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-002.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-003.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-004.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-005.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_001-t-001.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_002-t-002.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_003-t-003.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_004-t-004.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_005-t-005.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -656,6 +683,76 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+t_001-t-001.o: t-001.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_001_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_001-t-001.o -MD -MP -MF $(DEPDIR)/t_001-t-001.Tpo -c -o t_001-t-001.o `test -f 't-001.c' || echo '$(srcdir)/'`t-001.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_001-t-001.Tpo $(DEPDIR)/t_001-t-001.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-001.c' object='t_001-t-001.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_001_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_001-t-001.o `test -f 't-001.c' || echo '$(srcdir)/'`t-001.c
+
+t_001-t-001.obj: t-001.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_001_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_001-t-001.obj -MD -MP -MF $(DEPDIR)/t_001-t-001.Tpo -c -o t_001-t-001.obj `if test -f 't-001.c'; then $(CYGPATH_W) 't-001.c'; else $(CYGPATH_W) '$(srcdir)/t-001.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_001-t-001.Tpo $(DEPDIR)/t_001-t-001.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-001.c' object='t_001-t-001.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_001_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_001-t-001.obj `if test -f 't-001.c'; then $(CYGPATH_W) 't-001.c'; else $(CYGPATH_W) '$(srcdir)/t-001.c'; fi`
+
+t_002-t-002.o: t-002.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_002_CPPFLAGS) $(CPPFLAGS) $(t_002_CFLAGS) $(CFLAGS) -MT t_002-t-002.o -MD -MP -MF $(DEPDIR)/t_002-t-002.Tpo -c -o t_002-t-002.o `test -f 't-002.c' || echo '$(srcdir)/'`t-002.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_002-t-002.Tpo $(DEPDIR)/t_002-t-002.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-002.c' object='t_002-t-002.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_002_CPPFLAGS) $(CPPFLAGS) $(t_002_CFLAGS) $(CFLAGS) -c -o t_002-t-002.o `test -f 't-002.c' || echo '$(srcdir)/'`t-002.c
+
+t_002-t-002.obj: t-002.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_002_CPPFLAGS) $(CPPFLAGS) $(t_002_CFLAGS) $(CFLAGS) -MT t_002-t-002.obj -MD -MP -MF $(DEPDIR)/t_002-t-002.Tpo -c -o t_002-t-002.obj `if test -f 't-002.c'; then $(CYGPATH_W) 't-002.c'; else $(CYGPATH_W) '$(srcdir)/t-002.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_002-t-002.Tpo $(DEPDIR)/t_002-t-002.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-002.c' object='t_002-t-002.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_002_CPPFLAGS) $(CPPFLAGS) $(t_002_CFLAGS) $(CFLAGS) -c -o t_002-t-002.obj `if test -f 't-002.c'; then $(CYGPATH_W) 't-002.c'; else $(CYGPATH_W) '$(srcdir)/t-002.c'; fi`
+
+t_003-t-003.o: t-003.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_003_CPPFLAGS) $(CPPFLAGS) $(t_003_CFLAGS) $(CFLAGS) -MT t_003-t-003.o -MD -MP -MF $(DEPDIR)/t_003-t-003.Tpo -c -o t_003-t-003.o `test -f 't-003.c' || echo '$(srcdir)/'`t-003.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_003-t-003.Tpo $(DEPDIR)/t_003-t-003.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-003.c' object='t_003-t-003.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_003_CPPFLAGS) $(CPPFLAGS) $(t_003_CFLAGS) $(CFLAGS) -c -o t_003-t-003.o `test -f 't-003.c' || echo '$(srcdir)/'`t-003.c
+
+t_003-t-003.obj: t-003.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_003_CPPFLAGS) $(CPPFLAGS) $(t_003_CFLAGS) $(CFLAGS) -MT t_003-t-003.obj -MD -MP -MF $(DEPDIR)/t_003-t-003.Tpo -c -o t_003-t-003.obj `if test -f 't-003.c'; then $(CYGPATH_W) 't-003.c'; else $(CYGPATH_W) '$(srcdir)/t-003.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_003-t-003.Tpo $(DEPDIR)/t_003-t-003.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-003.c' object='t_003-t-003.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_003_CPPFLAGS) $(CPPFLAGS) $(t_003_CFLAGS) $(CFLAGS) -c -o t_003-t-003.obj `if test -f 't-003.c'; then $(CYGPATH_W) 't-003.c'; else $(CYGPATH_W) '$(srcdir)/t-003.c'; fi`
+
+t_004-t-004.o: t-004.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_004_CPPFLAGS) $(CPPFLAGS) $(t_004_CFLAGS) $(CFLAGS) -MT t_004-t-004.o -MD -MP -MF $(DEPDIR)/t_004-t-004.Tpo -c -o t_004-t-004.o `test -f 't-004.c' || echo '$(srcdir)/'`t-004.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_004-t-004.Tpo $(DEPDIR)/t_004-t-004.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-004.c' object='t_004-t-004.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_004_CPPFLAGS) $(CPPFLAGS) $(t_004_CFLAGS) $(CFLAGS) -c -o t_004-t-004.o `test -f 't-004.c' || echo '$(srcdir)/'`t-004.c
+
+t_004-t-004.obj: t-004.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_004_CPPFLAGS) $(CPPFLAGS) $(t_004_CFLAGS) $(CFLAGS) -MT t_004-t-004.obj -MD -MP -MF $(DEPDIR)/t_004-t-004.Tpo -c -o t_004-t-004.obj `if test -f 't-004.c'; then $(CYGPATH_W) 't-004.c'; else $(CYGPATH_W) '$(srcdir)/t-004.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_004-t-004.Tpo $(DEPDIR)/t_004-t-004.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-004.c' object='t_004-t-004.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_004_CPPFLAGS) $(CPPFLAGS) $(t_004_CFLAGS) $(CFLAGS) -c -o t_004-t-004.obj `if test -f 't-004.c'; then $(CYGPATH_W) 't-004.c'; else $(CYGPATH_W) '$(srcdir)/t-004.c'; fi`
+
+t_005-t-005.o: t-005.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_005_CPPFLAGS) $(CPPFLAGS) $(t_005_CFLAGS) $(CFLAGS) -MT t_005-t-005.o -MD -MP -MF $(DEPDIR)/t_005-t-005.Tpo -c -o t_005-t-005.o `test -f 't-005.c' || echo '$(srcdir)/'`t-005.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_005-t-005.Tpo $(DEPDIR)/t_005-t-005.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-005.c' object='t_005-t-005.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_005_CPPFLAGS) $(CPPFLAGS) $(t_005_CFLAGS) $(CFLAGS) -c -o t_005-t-005.o `test -f 't-005.c' || echo '$(srcdir)/'`t-005.c
+
+t_005-t-005.obj: t-005.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_005_CPPFLAGS) $(CPPFLAGS) $(t_005_CFLAGS) $(CFLAGS) -MT t_005-t-005.obj -MD -MP -MF $(DEPDIR)/t_005-t-005.Tpo -c -o t_005-t-005.obj `if test -f 't-005.c'; then $(CYGPATH_W) 't-005.c'; else $(CYGPATH_W) '$(srcdir)/t-005.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_005-t-005.Tpo $(DEPDIR)/t_005-t-005.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-005.c' object='t_005-t-005.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_005_CPPFLAGS) $(CPPFLAGS) $(t_005_CFLAGS) $(CFLAGS) -c -o t_005-t-005.obj `if test -f 't-005.c'; then $(CYGPATH_W) 't-005.c'; else $(CYGPATH_W) '$(srcdir)/t-005.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -984,11 +1081,11 @@ clean-am: clean-checkPROGRAMS clean-generic clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/t-001.Po
-	-rm -f ./$(DEPDIR)/t-002.Po
-	-rm -f ./$(DEPDIR)/t-003.Po
-	-rm -f ./$(DEPDIR)/t-004.Po
-	-rm -f ./$(DEPDIR)/t-005.Po
+		-rm -f ./$(DEPDIR)/t_001-t-001.Po
+	-rm -f ./$(DEPDIR)/t_002-t-002.Po
+	-rm -f ./$(DEPDIR)/t_003-t-003.Po
+	-rm -f ./$(DEPDIR)/t_004-t-004.Po
+	-rm -f ./$(DEPDIR)/t_005-t-005.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1034,11 +1131,11 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/t-001.Po
-	-rm -f ./$(DEPDIR)/t-002.Po
-	-rm -f ./$(DEPDIR)/t-003.Po
-	-rm -f ./$(DEPDIR)/t-004.Po
-	-rm -f ./$(DEPDIR)/t-005.Po
+		-rm -f ./$(DEPDIR)/t_001-t-001.Po
+	-rm -f ./$(DEPDIR)/t_002-t-002.Po
+	-rm -f ./$(DEPDIR)/t_003-t-003.Po
+	-rm -f ./$(DEPDIR)/t_004-t-004.Po
+	-rm -f ./$(DEPDIR)/t_005-t-005.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

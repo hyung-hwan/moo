@@ -1157,13 +1157,13 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			/* best effort to avoid buffer overflow when no snprintf is available. 
 			 * i really can't do much if it happens. */
 			newcapa = precision + width + 32;
-			if (fltout->capa < newcapa)
+			if (fb.out.capa < newcapa)
 			{
-				MOO_ASSERT (moo, fltout->ptr == fltout->buf);
+				MOO_ASSERT (moo, fb.out.ptr == fb.out.sbuf);
 
-				fltout->ptr = MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(char_t) * (newcapa + 1));
-				if (!fltout->ptr) goto oops;
-				fltout->capa = newcapa;
+				fb.out.ptr = MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(moo_bch_t) * (newcapa + 1));
+				if (!fb.out.ptr) goto oops;
+				fb.out.capa = newcapa;
 			}
 		#endif
 
@@ -1199,27 +1199,17 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 
 				if (fb.out.ptr == fb.out.sbuf)
 				{
-					fb.out.ptr = (moo_bch_t*)MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(char_t) * (newcapa + 1));
+					fb.out.ptr = (moo_bch_t*)MOO_MMGR_ALLOC(fmtout->mmgr, MOO_SIZEOF(moo_bch_t) * (newcapa + 1));
 					if (!fb.out.ptr) goto oops;
 				}
 				else
 				{
 					moo_bch_t* tmpptr;
-					tmpptr = (moo_bch_t*)MOO_MMGR_REALLOC(fmtout->mmgr, fb.out.ptr, MOO_SIZEOF(char_t) * (newcapa + 1));
+					tmpptr = (moo_bch_t*)MOO_MMGR_REALLOC(fmtout->mmgr, fb.out.ptr, MOO_SIZEOF(moo_bch_t) * (newcapa + 1));
 					if (!tmpptr) goto oops;
 					fb.out.ptr = tmpptr;
 				}
 				fb.out.capa = newcapa;
-			}
-
-			if (MOO_SIZEOF(char_t) != MOO_SIZEOF(moo_bch_t))
-			{
-				fb.out.ptr[q] = '\0';
-				while (q > 0)
-				{
-					q--;
-					fb.out.ptr[q] = ((moo_bch_t*)fb.out.ptr)[q];
-				}
 			}
 
 			bsp = fb.out.ptr;

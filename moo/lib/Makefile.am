@@ -1,19 +1,20 @@
 AUTOMAKE_OPTIONS = nostdinc
 
-CPPFLAGS_ALL_COMMON = \
+CPPFLAGS_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
-	-I$(includedir) $(PTHREAD_CFLAGS)
+	-I$(includedir)
+
+CFLAGS_COMMON =
 
 if ENABLE_STATIC_MODULE
-LDFLAGS_ALL_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
+LDFLAGS_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
 else
-LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
+LDFLAGS_COMMON = -L$(abs_builddir) -L$(libdir)
 endif
 
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON)
-LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
-LIBADD_LIB_COMMON =
+LDFLAGS_COMMON += -version-info 1:0:0 -no-undefined
+LIBADD_COMMON =
 
 if WIN32
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
@@ -48,11 +49,12 @@ pkginclude_HEADERS = \
 # libraries to deploy
 ##################################################
 pkglibdir = $(libdir)
-pkglib_LTLIBRARIES = libmoo.la libmoox.la
+pkglib_LTLIBRARIES = libmoo.la
 
 ##################################################
 # libmoo
 ##################################################
+## core source code
 libmoo_la_SOURCES = \
 	bct-lab.h \
 	moo.h \
@@ -91,9 +93,36 @@ libmoo_la_SOURCES = \
 	utf16.c \
 	utl.c \
 	xma.c 
-libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) 
-libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(PTHREAD_LIBS)
+
+# non-core/helper source code
+libmoo_la_SOURCES += \
+	moo-opt.h \
+	moo-std.h \
+	opt-imp.h \
+	opt.c \
+	std.c
+if WIN32
+libmoo_la_SOURCES += poll-msw.c poll-msw.h
+endif
+
+libmoo_la_CPPFLAGS = $(CPPFLAGS_COMMON) 
+libmoo_la_CFLAGS = $(CFLAGS_COMMON)
+libmoo_la_LDFLAGS = $(LDFLAGS_COMMON)
+libmoo_la_LIBADD = $(LIBADD_COMMON) $(LIBM)
+
+if ENABLE_LIBLTDL
+libmoo_la_LIBADD += $(LTDL_LIBS)
+else
+libmoo_la_LIBADD += $(DL_LIBS)
+endif
+if ENABLE_LIBUNWIND
+libmoo_la_LIBADD += $(UNWIND_LIBS)
+endif
+if WIN32
+libmoo_la_LIBADD += -lpsapi $(SOCKET_LIBS)
+endif
+
+
 libmoo_la_DEPENDENCIES =
 
 if ENABLE_STATIC_MODULE
@@ -125,35 +154,6 @@ libmoo_la_DEPENDENCIES += ../mod/libmoo-x11.la
 endif
 endif
 
-##############################################################
-# libmoox
-##############################################################
-libmoox_la_SOURCES = \
-	moo-opt.h \
-	moo-std.h \
-	opt-imp.h \
-	opt.c \
-	std.c
-if WIN32
-libmoox_la_SOURCES += poll-msw.c poll-msw.h
-endif
-libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
-libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoox_la_LIBADD = -lmoo $(LIBADD_LIB_COMMON) $(LIBM)
-
-if ENABLE_LIBLTDL
-libmoox_la_LIBADD += $(LTDL_LIBS)
-else
-libmoox_la_LIBADD += $(DL_LIBS)
-endif
-if ENABLE_LIBUNWIND
-libmoox_la_LIBADD += $(UNWIND_LIBS)
-endif
-if WIN32
-libmoox_la_LIBADD += -lpsapi $(SOCKET_LIBS)
-endif
-
-libmoox_la_DEPENDENCIES = libmoo.la
 
 ##############################################################
 # installation
