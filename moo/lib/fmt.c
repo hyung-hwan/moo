@@ -2095,6 +2095,7 @@ moo_ooi_t moo_logufmtv (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, va
 		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 		moo->log.len = 0;
 	}
+
 	return (x <= -1)? -1: fo.count;
 }
 
