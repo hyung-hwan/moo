@@ -711,17 +711,6 @@ then
 	AC_DEFINE([MOO_ENABLE_FULL_LIW],[1],[Use a full word as a large integer word])
 fi
 
-dnl ===== enable-fltmax =====
-AC_ARG_ENABLE([fltmax], 
-	[AS_HELP_STRING([--enable-awk-fltmax],[use hawk_fltmax_t for floating-point numbers (default. no)])],
-	enable_fltmax_is=$enableval,
-	enable_fltmax_is=no
-)
-if test "${enable_fltmax_is}" = "yes"
-then
-	AC_DEFINE([MOO_USE_FLTMAX],[],[use hawk_fltmax_t for floating-point numbers])
-fi
-
 dnl ===== enable-dynamic-module =====
 AC_ARG_ENABLE([dynamic-module],
 	[AS_HELP_STRING([--enable-dynamic-module],[enable dynamic module capability(default. yes)])],

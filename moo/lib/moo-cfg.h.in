@@ -501,9 +501,6 @@
 /* Define if socklen_t is signed */
 #undef MOO_SOCKLEN_T_IS_SIGNED
 
-/* use hawk_fltmax_t for floating-point numbers */
-#undef MOO_USE_FLTMAX
-
 /* Wide-character type size */
 #undef MOO_WIDE_CHAR_SIZE
 
