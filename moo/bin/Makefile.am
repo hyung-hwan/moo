@@ -5,13 +5,12 @@ CPPFLAGS_COMMON = \
 	-I$(abs_builddir)/../lib  \
 	-I$(abs_srcdir) \
 	-I$(abs_srcdir)/../lib \
-	-I$(includedir) \
-	$(PTHREAD_CFLAGS)
+	-I$(includedir)
 
 CFLAGS_COMMON =
 LDFLAGS_COMMON = -L$(abs_builddir)/../lib -L$(libdir)
 LIBADD_COMMON = -lmoo
-DEPENDENCIES_COMMON =
+DEPENDENCIES_COMMON = ../lib/libmoo.la
 
 bin_PROGRAMS = moo
 
@@ -23,7 +22,7 @@ moo_CPPFLAGS = $(CPPFLAGS_COMMON)
 moo_CFLAGS = $(CFLAGS_COMMON)
 moo_LDFLAGS = $(LDFLAGS_COMMON)
 moo_LDADD = $(LIBADD_COMMON)
-moo_DEPENDENCIES = ../lib/libmoo.la
+moo_DEPENDENCIES = $(DEPENDENCIES_COMMON)
 
 
 if ENABLE_EXPERIMENTAL
@@ -37,6 +36,6 @@ moo_gtk_CPPFLAGS = $(CPPFLAGS_COMMON) -I/usr/include/gtk-3.0 -I/usr/include/at-s
 moo_gtk_CFLAGS = $(CFLAGS_COMMON)
 moo_gtk_LDFLAGS = $(LDFLAGS_COMMON)
 moo_gtk_LDADD = $(LIBADD_COMMON) -lgtk-3 -lgdk-3 -lpangocairo-1.0 -lpango-1.0 -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0
-moo_gtk_DEPENDENCIES = ../lib/libmoo.la
+moo_gtk_DEPENDENCIES = $(DEPENDENCIES_COMMON)
 
 endif
