@@ -139,10 +139,11 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(pkgmodexecdir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(pkgmodexec_LTLIBRARIES)
-am__DEPENDENCIES_1 =
+@ENABLE_STATIC_MODULE_FALSE@am__DEPENDENCIES_1 = ../lib/libmoo.la
+am__DEPENDENCIES_2 =
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_DEPENDENCIES =  \
 @ENABLE_MOD_CON_TRUE@	$(am__DEPENDENCIES_1) \
-@ENABLE_MOD_CON_TRUE@	$(am__DEPENDENCIES_1)
+@ENABLE_MOD_CON_TRUE@	$(am__DEPENDENCIES_2)
 am__libmoo_con_la_SOURCES_DIST = _con.c _con.h
 @ENABLE_MOD_CON_TRUE@am_libmoo_con_la_OBJECTS = libmoo_con_la-_con.lo
 libmoo_con_la_OBJECTS = $(am_libmoo_con_la_OBJECTS)
@@ -159,8 +160,8 @@ libmoo_con_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 @ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am_libmoo_con_la_rpath =
 @ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_DEPENDENCIES =  \
 @ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_1) \
-@ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_1) \
-@ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_1)
+@ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_2) \
+@ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_2)
 am__libmoo_ffi_la_SOURCES_DIST = ffi.c _ffi.h
 @ENABLE_MOD_FFI_TRUE@am_libmoo_ffi_la_OBJECTS = libmoo_ffi_la-ffi.lo
 libmoo_ffi_la_OBJECTS = $(am_libmoo_ffi_la_OBJECTS)
@@ -182,7 +183,7 @@ libmoo_io_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 @ENABLE_STATIC_MODULE_TRUE@am_libmoo_io_la_rpath =
 @ENABLE_MOD_SCK_TRUE@libmoo_sck_la_DEPENDENCIES =  \
 @ENABLE_MOD_SCK_TRUE@	$(am__DEPENDENCIES_1) \
-@ENABLE_MOD_SCK_TRUE@	$(am__DEPENDENCIES_1)
+@ENABLE_MOD_SCK_TRUE@	$(am__DEPENDENCIES_2)
 am__libmoo_sck_la_SOURCES_DIST = sck.c sck-addr.c _sck.h
 @ENABLE_MOD_SCK_TRUE@am_libmoo_sck_la_OBJECTS = libmoo_sck_la-sck.lo \
 @ENABLE_MOD_SCK_TRUE@	libmoo_sck_la-sck-addr.lo
@@ -446,7 +447,7 @@ CPPFLAGS_COMMON = \
 # STATIC MODULES BUILT INTO MAIN LIBRARY
 ##################################################
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_COMMON = -L$(libdir) -version-info 1:0:0 -no-undefined
-@ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lmoo
+@ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = ../lib/libmoo.la
 @ENABLE_STATIC_MODULE_TRUE@LIBADD_COMMON = 
 @ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = $(am__append_1) \
 @ENABLE_STATIC_MODULE_TRUE@	$(am__append_2) libmoo-io.la \

@@ -94,18 +94,12 @@ host_triplet = @host@
 @ENABLE_LIBLTDL_FALSE@am__append_5 = $(DL_LIBS)
 @ENABLE_LIBUNWIND_TRUE@am__append_6 = $(UNWIND_LIBS)
 @WIN32_TRUE@am__append_7 = -lpsapi $(SOCKET_LIBS)
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-con
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = ../mod/libmoo-con.la
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = -lmoo-ffi
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = ../mod/libmoo-ffi.la
-@ENABLE_STATIC_MODULE_TRUE@am__append_12 = -lmoo-io
-@ENABLE_STATIC_MODULE_TRUE@am__append_13 = ../mod/libmoo-io.la
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_14 = -lmoo-sck
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_15 = ../mod/libmoo-sck.la
-@ENABLE_STATIC_MODULE_TRUE@am__append_16 = -lmoo-stdio
-@ENABLE_STATIC_MODULE_TRUE@am__append_17 = ../mod/libmoo-stdio.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_18 = -lmoo-x11
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_19 = ../mod/libmoo-x11.la
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = ../mod/libmoo-con.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = ../mod/libmoo-ffi.la
+@ENABLE_STATIC_MODULE_TRUE@am__append_10 = ../mod/libmoo-io.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = ../mod/libmoo-sck.la
+@ENABLE_STATIC_MODULE_TRUE@am__append_12 = ../mod/libmoo-stdio.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = ../mod/libmoo-x11.la
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -156,6 +150,11 @@ am__DEPENDENCIES_1 =
 @ENABLE_LIBLTDL_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 @ENABLE_LIBUNWIND_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
 @WIN32_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
+libmoo_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3) \
+	$(am__DEPENDENCIES_4) $(am__DEPENDENCIES_5) $(am__append_8) \
+	$(am__append_9) $(am__append_10) $(am__append_11) \
+	$(am__append_12) $(am__append_13)
 am__libmoo_la_SOURCES_DIST = bct-lab.h moo.h moo-chr.h moo-cmn.h \
 	moo-fmt.h moo-rbt.h moo-utl.h moo-prv.h pack1.h unpack.h \
 	bigint.c chr.c comp.c debug.c decode.c dic.c err.c exec.c \
@@ -464,11 +463,8 @@ libmoo_la_CFLAGS = $(CFLAGS_COMMON)
 libmoo_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_la_LIBADD = $(LIBADD_COMMON) $(LIBM) $(am__append_4) \
 	$(am__append_5) $(am__append_6) $(am__append_7) \
-	$(am__append_8) $(am__append_10) $(am__append_12) \
-	$(am__append_14) $(am__append_16) $(am__append_18)
-libmoo_la_DEPENDENCIES = $(am__append_9) $(am__append_11) \
-	$(am__append_13) $(am__append_15) $(am__append_17) \
-	$(am__append_19)
+	$(am__append_8) $(am__append_9) $(am__append_10) \
+	$(am__append_11) $(am__append_12) $(am__append_13)
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 

@@ -43,7 +43,7 @@ else
 # DYNAMIC MODULES 
 ##################################################
 LDFLAGS_COMMON = -L$(abs_builddir)/../lib -L$(libdir) -version-info 1:0:0 -no-undefined
-LIBADD_COMMON = -lmoo
+LIBADD_COMMON = ../lib/libmoo.la
 
 pkgmodexecdir = $(libdir)
 pkgmodexec_LTLIBRARIES =
