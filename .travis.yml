@@ -9,13 +9,13 @@ compiler:
   - clang
 
 env: 
-  - OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
+  - OPTIONS="--enable-static=yes --enable-shared=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-mod-x11=yes --enable-mod-ffi=yes"
 
 matrix:
   include:
     - os: osx
       compiler: clang
-      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2 --disable-mod-x11 --disable-mod-ffi"
+      env: OPTIONS="--enable-static=yes --enable-sharee=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-mod-x11=no --enable-mod-ffi=no"
 
 script:
-  - touch -r moo/configure moo/* moo/*/* && cd moo && ./configure $OPTIONS && make
+  - touch -r moo/configure moo/* moo/*/* && cd moo && ./configure $OPTIONS && make && make check
