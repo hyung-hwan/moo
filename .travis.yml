@@ -8,8 +8,16 @@ compiler:
   - gcc
   - clang
 
-env: 
-  - OPTIONS="--enable-static=yes --enable-shared=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+env:
+  matrix:
+    - OPTIONS="--enable-static=yes --enable-shared=no --enable-debug=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+    - OPTIONS="--enable-static=yes --enable-shared=no --enable-debug=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:4 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+    - OPTIONS="--enable-static=no --enable-shared=yes --enable-debug=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+    - OPTIONS="--enable-static=no --enable-shared=yes --enable-debug=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:4 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+    - OPTIONS="--enable-static=yes --enable-shared=no --enable-debug=yes --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+    - OPTIONS="--enable-static=yes --enable-shared=no --enable-debug=yes --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:4 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+    - OPTIONS="--enable-static=no --enable-shared=yes --enable-debug=yes --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
+    - OPTIONS="--enable-static=no --enable-shared=yes --enable-debug=yes --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:4 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
 
 matrix:
   include:
