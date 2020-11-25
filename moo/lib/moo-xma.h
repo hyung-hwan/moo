@@ -115,7 +115,7 @@ struct moo_xma_t
  * The moo_xma_dumper_t type defines a printf-like output function
  * for moo_xma_dump().
  */
-typedef int (*moo_xma_dumper_t) (
+typedef void (*moo_xma_dumper_t) (
 	void*            ctx,
 	const moo_bch_t* fmt,
 	...

@@ -35,7 +35,7 @@
 /* TODO: move this macro out to the build files.... */
 #define MOO_INCLUDE_COMPILER
 
-//#define MOO_ENABLE_GC_MARK_SWEEP
+#define MOO_ENABLE_GC_MARK_SWEEP
 
 
 typedef struct moo_mod_t moo_mod_t;
@@ -218,7 +218,7 @@ struct moo_gchdr_t
 
 enum moo_gc_type_t
 {
-	MOO_GC_TYPE_SS_COPY,
+	MOO_GC_TYPE_SEMISPACE,
 	MOO_GC_TYPE_MARK_SWEEP
 };
 typedef enum moo_gc_type_t moo_gc_type_t;
@@ -1012,10 +1012,13 @@ struct moo_heap_t
 	moo_uint8_t* base;
 	moo_oow_t    size;
 
+/* for semi-space gc */
 	moo_space_t  permspace;
 	moo_space_t  curspace;
 	moo_space_t  newspace;
 
+/* for mark sweep gc */
+/* TODO: use union ... */
 	moo_xma_t*   xma; /* used if MARK_SWEEP is enabled */
 	moo_mmgr_t   xmmgr;
 };
@@ -2084,6 +2087,7 @@ MOO_EXPORT moo_t* moo_open (
 	moo_oow_t           xtnsize,
 	moo_cmgr_t*         cmgr,
 	const moo_vmprim_t* vmprim,
+	moo_gc_type_t       gctype,
 	moo_errinf_t*       errinfo
 );
 
@@ -2095,7 +2099,8 @@ MOO_EXPORT int moo_init (
 	moo_t*              moo,
 	moo_mmgr_t*         mmgr,
 	moo_cmgr_t*         cmgr,
-	const moo_vmprim_t* vmprim
+	const moo_vmprim_t* vmprim,
+	moo_gc_type_t       gctype
 );
 
 MOO_EXPORT void moo_fini (

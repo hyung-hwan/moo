@@ -798,9 +798,6 @@ static moo_rbt_walk_t call_module_gc (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void
 /* ----------------------------------------------------------------------- */
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
-
-
-
 #if 0
 static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
 {
@@ -1021,7 +1018,7 @@ static MOO_INLINE void gc_sweep (moo_t* moo)
 			else moo->gci.b = next;
 
 			moo->gci.bsz -= MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, obj);
-			moo_freemem (moo, curr);
+			moo_freeheapmem (moo, moo->heap, curr);
 		}
 
 		curr = next;
@@ -1031,16 +1028,10 @@ static MOO_INLINE void gc_sweep (moo_t* moo)
 
 /* ----------------------------------------------------------------------- */
 
-moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
+static moo_oop_t move_oop_in_heap_space (moo_t* moo, moo_oop_t oop)
 {
 #if defined(MOO_SUPPORT_GC_DURING_IGNITION)
 	if (!oop) return oop;
-#endif
-
-#if defined(MOO_ENABLE_GC_MARK_SWEEP)
-/* TODO: temporary... */
-	gc_mark (moo, oop);
-	return oop;
 #endif
 
 	if (!MOO_OOP_IS_POINTER(oop)) return oop;
@@ -1179,16 +1170,8 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 }
 
 
-void moo_gc (moo_t* moo)
+static void scan_roots (moo_t* moo)
 {
-#if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	MOO_LOG1 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Starting GC (mark-sweep) - gci.bsz = %zu\n", moo->gci.bsz);
-moo->gci.stack.len = 0;
-/*moo->gci.stack.max = 0;*/
-	gc_mark_root (moo);
-	gc_sweep (moo);
-	MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Finished GC (mark-sweep) - gci.bsz = %zu, gci.stack.max %zu\n", moo->gci.bsz, moo->gci.stack.max);
-#else
 	/* 
 	 * move a referenced object to the new heap.
 	 * inspect the fields of the moved object in the new heap.
@@ -1352,7 +1335,41 @@ moo->gci.stack.len = 0;
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
 		"Finished GC curheap base %p ptr %p newheap base %p ptr %p\n",
 		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
+}
+
+
+void moo_gc (moo_t* moo)
+{
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
+	{
+		MOO_LOG1 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Starting GC (mark-sweep) - gci.bsz = %zu\n", moo->gci.bsz);
+		moo->gci.stack.len = 0;
+		/*moo->gci.stack.max = 0;*/
+		gc_mark_root (moo);
+		gc_sweep (moo);
+		MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Finished GC (mark-sweep) - gci.bsz = %zu, gci.stack.max %zu\n", moo->gci.bsz, moo->gci.stack.max);
+	}
+	else
 #endif
+	{
+		scan_roots (moo);
+	}
+}
+
+moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
+{
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
+	{
+		gc_mark (moo, oop);
+		return oop;
+	}
+	else
+#endif
+	{
+		return move_oop_in_heap_space(moo, oop);
+	}
 }
 
 void moo_pushvolat (moo_t* moo, moo_oop_t* oop_ptr)

@@ -67,10 +67,12 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	{
 		if (size <= 0)
 		{
+			/* use the existing memory allocator */
 			heap->xmmgr = *moo_getmmgr(moo);
 		}
 		else
 		{
+			/* create a new memory allocator over the allocated heap */
 			heap->xma = moo_xma_open(moo_getmmgr(moo), 0, heap->base, heap->size);
 			if (MOO_UNLIKELY(!heap->xma))
 			{
@@ -87,7 +89,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	}
 	else
 	{
-		MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_SS_COPY);
+		MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_SEMISPACE);
 
 		space_size = (size - PERM_SPACE_SIZE) / 2;
 
@@ -125,6 +127,8 @@ void* moo_allocheapspace (moo_t* moo, moo_space_t* space, moo_oow_t size)
 {
 	moo_uint8_t* ptr;
 
+	MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_SEMISPACE);
+
 	/* check the space size limit */
 	if (space->ptr >= space->limit || space->limit - space->ptr < size)
 	{
@@ -139,4 +143,42 @@ void* moo_allocheapspace (moo_t* moo, moo_space_t* space, moo_oow_t size)
 	space->ptr += size;
 
 	return ptr;
+}
+
+void* moo_allocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
+{
+	void* ptr;
+
+	MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_MARK_SWEEP);
+	ptr = MOO_MMGR_ALLOC(&heap->xmmgr, size);
+	if (MOO_UNLIKELY(!ptr)) 
+	{
+		MOO_DEBUG2 (moo, "Cannot allocate %zd bytes from heap - ptr %p\n", size, heap);
+		moo_seterrnum (moo, MOO_EOOMEM);
+	}
+	return ptr;
+}
+
+void* moo_callocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
+{
+	void* ptr;
+
+	MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_MARK_SWEEP);
+	ptr = MOO_MMGR_ALLOC(&heap->xmmgr, size);
+	if (MOO_UNLIKELY(!ptr)) 
+	{
+		MOO_DEBUG2 (moo, "Cannot callocate %zd bytes from heap - ptr %p\n", size, heap);
+		moo_seterrnum (moo, MOO_EOOMEM);
+	}
+	else
+	{
+		MOO_MEMSET (ptr, 0, size);
+	}
+	return ptr;
+}
+
+void moo_freeheapmem (moo_t* moo, moo_heap_t* heap, void* ptr)
+{
+	MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_MARK_SWEEP);
+	MOO_MMGR_FREE (&heap->xmmgr, ptr);
 }

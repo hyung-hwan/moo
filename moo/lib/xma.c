@@ -234,7 +234,7 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 		zoneptr = MOO_MMGR_ALLOC(mmgr, zonesize);
 		if (MOO_UNLIKELY(!zoneptr)) return -1;
 
-		internal = 1;
+		internal = 1; /* internally created. must be freed upon moo_xma_fini() */
 	}
 
 	first = (moo_xma_fblk_t*)zoneptr;
@@ -259,7 +259,7 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 	/* let it be the head, which is natural with only a block */
 	xma->start = (moo_uint8_t*)first;
 	xma->end = xma->start + zonesize;
-	xma->internal = 1;
+	xma->internal = internal;
 
 	/* initialize some statistical variables */
 #if defined(MOO_XMA_ENABLE_STAT)

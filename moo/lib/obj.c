@@ -28,71 +28,74 @@
 
 void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 {
-	moo_uint8_t* ptr;
-#if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	moo_gchdr_t* gch;
-#endif
-
 #if defined(MOO_BUILD_DEBUG)
 	/* DEBUG_GC is set but NOGC is not set */
 	if ((moo->option.trait & (MOO_TRAIT_DEBUG_GC | MOO_TRAIT_NOGC)) == MOO_TRAIT_DEBUG_GC) moo_gc (moo);
 #endif
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	if (MOO_UNLIKELY(moo->igniting))
+	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
 	{
-/* TODO: use heap.xmmgr for allocation... */
-		gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
-		if (MOO_UNLIKELY(!gch)) return MOO_NULL;
-	}
-	else
-	{
-		if (moo->gci.bsz >= moo->gci.threshold) 
-		{
-			moo_gc (moo);
-			moo->gci.threshold = moo->gci.bsz + 100000; /* TODO: change this fomula */
-		}
+		moo_gchdr_t* gch;
 
-		gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
-		if (!gch && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
+		if (MOO_UNLIKELY(moo->igniting))
 		{
-			moo_gc (moo);
-			MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "GC completed\n"); /* TODO: add more inforamtion */
-			gch = (moo_gchdr_t*)moo_callocmem(moo, MOO_SIZEOF(*gch) + size); 
+			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size); 
 			if (MOO_UNLIKELY(!gch)) return MOO_NULL;
 		}
-	}
+		else
+		{
+			if (moo->gci.bsz >= moo->gci.threshold) 
+			{
+				moo_gc (moo);
+				moo->gci.threshold = moo->gci.bsz + 100000; /* TODO: change this fomula */
+			}
 
-	gch->next = moo->gci.b;
-	moo->gci.b = gch;
-	moo->gci.bsz += size;
+			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size); 
+			if (!gch && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
+			{
+				moo_gc (moo);
+				MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "GC completed\n"); /* TODO: add more inforamtion */
+				gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size); 
+				if (MOO_UNLIKELY(!gch)) return MOO_NULL;
+			}
+		}
 
-	ptr = (moo_uint8_t*)(gch + 1);
-#else
-	if (MOO_UNLIKELY(moo->igniting))
-	{
-		/* you must increase the size of the permspace if this allocation fails */
-		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size); 
+		gch->next = moo->gci.b;
+		moo->gci.b = gch;
+		moo->gci.bsz += size;
+
+		return (moo_uint8_t*)(gch + 1);
 	}
 	else
-	{
-		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
-		if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
-		{
-			moo_gc (moo);
-			MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
-				"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
-				moo->heap->curspace.ptr, moo->heap->curspace.limit,
-				(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.base),
-				(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.ptr)
-			);
-			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
-	/* TODO: grow heap if ptr is still null. */
-		}
-	}
 #endif
+	{
+		moo_uint8_t* ptr;
 
-	return ptr;
+		if (MOO_UNLIKELY(moo->igniting))
+		{
+			/* you must increase the size of the permspace if this allocation fails */
+			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size); 
+		}
+		else
+		{
+			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
+			if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
+			{
+				moo_gc (moo);
+				MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
+					"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
+					moo->heap->curspace.ptr, moo->heap->curspace.limit,
+					(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.base),
+					(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.ptr)
+				);
+				ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
+		/* TODO: grow heap if ptr is still null. */
+			}
+		}
+
+		return ptr;
+	}
 }
 
 moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)

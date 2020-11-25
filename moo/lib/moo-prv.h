@@ -1109,8 +1109,8 @@ void moo_killheap (
 );
 
 /**
- * The moo_allocheapspace() function allocates \a size bytes in the heap pointed
- * to by \a heap.
+ * The moo_allocheapspace() function allocates \a size bytes in a semi-space 
+ * of the heap pointed to by \a heap.
  *
  * \return memory pointer on success and #MOO_NULL on failure.
  */
@@ -1120,6 +1120,27 @@ void* moo_allocheapspace (
 	moo_oow_t    size
 );
 
+
+/** 
+ * The moo_allocheapmem(0 function allocates  \a size bytes from the given heap.
+ */
+void* moo_allocheapmem (
+	moo_t*       moo,
+	moo_heap_t*  heap,
+	moo_oow_t    size
+);
+
+void* moo_callocheapmem (
+	moo_t*       moo,
+	moo_heap_t*  heap,
+	moo_oow_t    size
+);
+
+void moo_freeheapmem (
+	moo_t*       moo,
+	moo_heap_t*  heap,
+	void*        ptr
+);
 /* ========================================================================= */
 /* obj.c                                                                     */
 /* ========================================================================= */

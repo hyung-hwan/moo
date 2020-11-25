@@ -6369,6 +6369,16 @@ void moo_abort (moo_t* moo)
 	moo->abort_req = 1;
 }
 
+#if defined(MOO_PROFILE_VM) && defined(MOO_ENABLE_GC_MARK_SWEEP)
+static void xma_dumper (void* ctx, const char* fmt, ...)
+{
+	va_list ap;
+	va_start (ap, fmt);
+	moo_logbfmtv ((moo_t*)ctx, MOO_LOG_IC | MOO_LOG_INFO, fmt, ap);
+	va_end (ap);
+}
+#endif
+
 int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
 {
 	int n;
@@ -6428,7 +6438,11 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Method cache - hits: %zu, misses: %zu\n", moo->stat.method_cache_hits, moo->stat.method_cache_misses);
 	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Total instructions: %zu\n", moo->stat.inst_counter);
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
-	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "GC - gci.bsz: %zu, gci.stack.max: %zu\n", moo->gci.bsz, moo->gci.stack.max);
+	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
+	{
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "GC - gci.bsz: %zu, gci.stack.max: %zu\n", moo->gci.bsz, moo->gci.stack.max);
+		if (moo->heap->xma) moo_xma_dump (moo->heap->xma, xma_dumper, moo);
+	}
 #endif
 #endif
 

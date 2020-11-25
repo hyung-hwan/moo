@@ -89,6 +89,7 @@ int main (int argc, char* argv[])
 	{
 		{ ":log",              'l' },
 		{ ":heapsize",         '\0' },
+		{ ":gctype",           '\0' },
 		{ ":procstksize",      '\0' },
 		{ "large-pages",       '\0' },
 		{ ":base-charset",     '\0' },
@@ -114,11 +115,13 @@ int main (int argc, char* argv[])
 		fprintf (stderr, "Usage: %s [options] filename ...\n", argv[0]);
 		fprintf (stderr, " --log filename[,logopts]\n");
 		fprintf (stderr, " --heapsize=bytes\n");
+		fprintf (stderr, " --gctype=ms|ss\n");
 		fprintf (stderr, " --procstksize=number of oops\n");
 		fprintf (stderr, " --large-pages\n");
 		fprintf (stderr, " --base-charset=name\n");
 		fprintf (stderr, " --input-charset=name\n");
 		fprintf (stderr, " --log-charset=name\n");
+		
 	#if defined(MOO_BUILD_DEBUG)
 		fprintf (stderr, " --debug dbgopts\n");
 	#endif
@@ -145,10 +148,17 @@ int main (int argc, char* argv[])
 				if (moo_comp_bcstr(opt.lngopt, "heapsize") == 0)
 				{
 					heapsize = strtoul(opt.arg, MOO_NULL, 0);
-					if (heapsize <= MIN_HEAPSIZE) heapsize = MIN_HEAPSIZE;
 					break;
 				}
-				if (moo_comp_bcstr(opt.lngopt, "procstksize") == 0)
+				else if (moo_comp_bcstr(opt.lngopt, "gctype") == 0)
+				{
+					if (moo_comp_bcstr(opt.arg, "ms") == 0)
+						cfg.gc_type = MOO_GC_TYPE_MARK_SWEEP;
+					else
+						cfg.gc_type = MOO_GC_TYPE_SEMISPACE;
+					break;
+				}
+				else if (moo_comp_bcstr(opt.lngopt, "procstksize") == 0)
 				{
 					cfg.proc_stk_size = strtoul(opt.arg, MOO_NULL, 0);
 					break;
@@ -238,6 +248,7 @@ int main (int argc, char* argv[])
 		moo_setoption (moo, MOO_OPTION_SYSDIC_SIZE, &tab_size);
 	}
 
+	if (cfg.gc_type == MOO_GC_TYPE_SEMISPACE && heapsize <= MIN_HEAPSIZE) heapsize = MIN_HEAPSIZE;
 	if (moo_ignite(moo, heapsize) <= -1)
 	{
 		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));

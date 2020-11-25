@@ -26,7 +26,7 @@
 
 #include "moo-prv.h"
 
-moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim, moo_errinf_t* errinfo)
+moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim, moo_gc_type_t gctype, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 
@@ -36,7 +36,7 @@ moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_cmgr_t* cmgr, const mo
 	moo = (moo_t*)MOO_MMGR_ALLOC(mmgr, MOO_SIZEOF(*moo) + xtnsize);
 	if (moo)
 	{
-		if (moo_init(moo, mmgr, cmgr, vmprim) <= -1)
+		if (moo_init(moo, mmgr, cmgr, vmprim, gctype) <= -1)
 		{
 			if (errinfo) moo_geterrinf (moo, errinfo);
 			MOO_MMGR_FREE (mmgr, moo);
@@ -96,7 +96,7 @@ static MOO_INLINE void free_heap (moo_t* moo, void* ptr)
 	moo_freemem (moo, ptr);
 }
 
-int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim)
+int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim, moo_gc_type_t gctype)
 {
 	int modtab_inited = 0;
 
@@ -111,6 +111,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 	moo->_mmgr = mmgr;
 	moo->_cmgr = cmgr;
 
+	moo->gc_type = gctype;
 	moo->vmprim = *vmprim;
 	if (!moo->vmprim.alloc_heap) moo->vmprim.alloc_heap = alloc_heap;
 	if (!moo->vmprim.free_heap) moo->vmprim.free_heap = free_heap;
@@ -260,11 +261,7 @@ void moo_fini (moo_t* moo)
 		moo->proc_map_free_last = -1;
 	}
 
-/* TOOD: persistency? storing objects to image file? */
-
-	/* if the moo object is closed without moo_ignite(),
-	 * the heap may not exist */
-	if (moo->heap) moo_killheap (moo, moo->heap);
+/* TOOD: persistency? storing objects to image file before destroying all objects and the heap? */
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	if (moo->gci.b)
@@ -273,9 +270,8 @@ void moo_fini (moo_t* moo)
 		do
 		{
 			next = moo->gci.b->next;
-
 			moo->gci.bsz -= MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, (moo_oop_t)(moo->gci.b + 1));
-			moo_freemem (moo, moo->gci.b);
+			moo_freeheapmem (moo, moo->heap, moo->gci.b);
 			moo->gci.b = next;
 		}
 		while (moo->gci.b);
@@ -291,6 +287,10 @@ void moo_fini (moo_t* moo)
 		moo->gci.stack.len = 0;
 	}
 #endif
+
+	/* if the moo object is closed without moo_ignite(),
+	 * the heap may not exist */
+	if (moo->heap) moo_killheap (moo, moo->heap);
 
 	moo_finidbgi (moo);
 

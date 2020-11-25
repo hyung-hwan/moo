@@ -15,6 +15,7 @@ struct moo_cfgstd_t
 {
 	moo_cfgstd_type_t type;
 
+	moo_gc_type_t gc_type;
 	moo_oow_t proc_stk_size;
 	int large_pages;
 	moo_cmgr_t* cmgr;
