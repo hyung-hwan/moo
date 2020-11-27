@@ -6356,7 +6356,7 @@ int moo_execute (moo_t* moo)
 	moo->proc_switched = 0;
 	moo->abort_req = 0;
 
-moo->gci.lazy_sweep = 1;
+//moo->gci.lazy_sweep = 1;
 	n = __execute (moo);
 
 	vm_cleanup (moo);
