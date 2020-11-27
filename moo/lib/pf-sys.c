@@ -239,7 +239,7 @@ moo_pfrc_t moo_pf_system_find_next_process (moo_t* moo, moo_mod_t* mod, moo_ooi_
 
 moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_gc (moo);
+	moo_gc (moo, 1);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }

@@ -30,7 +30,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 {
 #if defined(MOO_BUILD_DEBUG)
 	/* DEBUG_GC is set but NOGC is not set */
-	if ((moo->option.trait & (MOO_TRAIT_DEBUG_GC | MOO_TRAIT_NOGC)) == MOO_TRAIT_DEBUG_GC) moo_gc (moo);
+	if ((moo->option.trait & (MOO_TRAIT_DEBUG_GC | MOO_TRAIT_NOGC)) == MOO_TRAIT_DEBUG_GC) moo_gc (moo, 1);
 #endif
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
@@ -45,19 +45,37 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 		}
 		else
 		{
+			moo_oow_t allocsize;
+
 			if (moo->gci.bsz >= moo->gci.threshold) 
 			{
-				moo_gc (moo);
+				moo_gc (moo, 0);
 				moo->gci.threshold = moo->gci.bsz + 100000; /* TODO: change this fomula */
 			}
 
-			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size); 
+			allocsize = MOO_SIZEOF(*gch) + size;
+			if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, allocsize);
+
+			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, allocsize); 
 			if (!gch && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
 			{
-				moo_gc (moo);
-				MOO_LOG0 (moo, MOO_LOG_GC | MOO_LOG_INFO, "GC completed\n"); /* TODO: add more inforamtion */
-				gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size); 
-				if (MOO_UNLIKELY(!gch)) return MOO_NULL;
+				moo_gc (moo, 0);
+				if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, allocsize);
+
+				gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, allocsize); 
+				if (MOO_UNLIKELY(!gch)) 
+				{
+					if (moo->gci.lazy_sweep)
+					{
+						moo_gc_ms_sweep_lazy (moo, MOO_TYPE_MAX(moo_oow_t)); /* sweep the rest */
+						gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, allocsize); 
+						if (MOO_UNLIKELY(!gch)) return MOO_NULL;
+					}
+					else
+					{
+						return MOO_NULL;
+					}
+				}
 			}
 		}
 
@@ -82,7 +100,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
 			if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
 			{
-				moo_gc (moo);
+				moo_gc (moo, 1);
 				MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
 					"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
 					moo->heap->curspace.ptr, moo->heap->curspace.limit,

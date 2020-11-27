@@ -55,7 +55,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	if (MOO_UNLIKELY(!heap)) 
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
-		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to allocate heap - %js", oldmsg);
+		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to allocate a heap - %js", oldmsg);
 		return MOO_NULL;
 	}
 

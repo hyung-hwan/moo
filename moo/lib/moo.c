@@ -276,7 +276,7 @@ void moo_fini (moo_t* moo)
 		}
 		while (moo->gci.b);
 
-		MOO_ASSERT (moo, moo->gci.bsz == 0); 
+		MOO_ASSERT (moo, moo->gci.bsz == 0);
 	}
 
 	if (moo->gci.stack.ptr)

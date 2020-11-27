@@ -1816,15 +1816,20 @@ struct moo_t
 	struct
 	{
 		moo_gchdr_t* b; /* object blocks allocated */
+		struct
+		{
+			moo_gchdr_t* curr;
+			moo_gchdr_t* prev;
+		} ls;
 		moo_oow_t bsz; /* total size of object blocks allocated */
 		moo_oow_t threshold;
+		int lazy_sweep;
 
 		struct
 		{
 			moo_oop_t* ptr;
 			moo_oow_t capa;
 			moo_oow_t len;
-
 			moo_oow_t max;
 		} stack;
 	} gci;
@@ -2219,15 +2224,16 @@ MOO_EXPORT void moo_deregevtcb (
  * It is not affected by #MOO_TRAIT_NOGC.
  */
 MOO_EXPORT void moo_gc (
-	moo_t* moo
+	moo_t* moo,
+	int    full
 );
 
 
 /**
- * The moo_moveoop() function moves an object and returns an updated pointer
- * after having moved. it must be called in the GC callback context only.
+ * The moo_updateoopforgc() function moves an object and returns an updated pointer
+ * after having moved. It must be called in the GC callback context only.
  */
-MOO_EXPORT moo_oop_t moo_moveoop (
+MOO_EXPORT moo_oop_t moo_updateoopforgc (
 	moo_t*     moo,
 	moo_oop_t  oop
 );

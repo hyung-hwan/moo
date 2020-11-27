@@ -834,7 +834,7 @@ static void gc_mod_x11 (moo_t* moo, moo_mod_t* mod)
 	x11_modctx_t* ctx = mod->ctx;
 
 	MOO_ASSERT (moo, ctx != MOO_NULL);
-	ctx->x11_class = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)ctx->x11_class);
+	ctx->x11_class = (moo_oop_class_t)moo_updateoopforgc(moo, (moo_oop_t)ctx->x11_class);
 }
 
 int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)

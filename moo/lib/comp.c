@@ -10585,7 +10585,7 @@ static void gc_oopbuf (moo_t* moo, moo_oopbuf_t* oopbuf)
 
 	for (i = 0; i < oopbuf->count; i++)
 	{
-		register moo_oop_t x = moo_moveoop(moo, oopbuf->ptr[i]);
+		moo_oop_t x = moo_updateoopforgc(moo, oopbuf->ptr[i]);
 		oopbuf->ptr[i] = x;
 	}
 }
@@ -10614,12 +10614,12 @@ static void gc_cunit_chain (moo_t* moo)
 				pd = (moo_cunit_pooldic_t*)cunit;
 				if (pd->pd_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->pd_oop);
+					moo_oop_t x = moo_updateoopforgc(moo, (moo_oop_t)pd->pd_oop);
 					pd->pd_oop = (moo_oop_dic_t)x;
 				}
 				if (pd->ns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->ns_oop);
+					moo_oop_t x = moo_updateoopforgc(moo, (moo_oop_t)pd->ns_oop);
 					pd->ns_oop = (moo_oop_nsdic_t)x;
 				}
 				break;
@@ -10632,29 +10632,29 @@ static void gc_cunit_chain (moo_t* moo)
 				cc = (moo_cunit_class_t*)cunit;
 
 				if (cc->self_oop) 
-					cc->self_oop = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)cc->self_oop);
+					cc->self_oop = (moo_oop_class_t)moo_updateoopforgc(moo, (moo_oop_t)cc->self_oop);
 
 				if (cc->super_oop)
-					cc->super_oop = moo_moveoop(moo, cc->super_oop);
+					cc->super_oop = moo_updateoopforgc(moo, cc->super_oop);
 
 				for (i = 0; i < MOO_COUNTOF(cc->var); i++)
 				{
 					for (j = 0; j < cc->var[i].initv_count; j++)
 					{
 						register moo_oop_t x = cc->var[i].initv[j].v;
-						if (x) cc->var[i].initv[j].v = moo_moveoop(moo, x);
+						if (x) cc->var[i].initv[j].v = moo_updateoopforgc(moo, x);
 					}
 				}
 
 				if (cc->ns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)cc->ns_oop);
+					moo_oop_t x = moo_updateoopforgc(moo, (moo_oop_t)cc->ns_oop);
 					cc->ns_oop = (moo_oop_nsdic_t)x;
 				}
 
 				if (cc->superns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)cc->superns_oop);
+					moo_oop_t x = moo_updateoopforgc(moo, (moo_oop_t)cc->superns_oop);
 					cc->superns_oop = (moo_oop_nsdic_t)x;
 				}
 
@@ -10672,11 +10672,11 @@ static void gc_cunit_chain (moo_t* moo)
 				ifce = (moo_cunit_interface_t*)cunit;
 
 				if (ifce->self_oop) 
-					ifce->self_oop = (moo_oop_interface_t)moo_moveoop(moo, (moo_oop_t)ifce->self_oop);
+					ifce->self_oop = (moo_oop_interface_t)moo_updateoopforgc(moo, (moo_oop_t)ifce->self_oop);
 
 				if (ifce->ns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)ifce->ns_oop);
+					moo_oop_t x = moo_updateoopforgc(moo, (moo_oop_t)ifce->ns_oop);
 					ifce->ns_oop = (moo_oop_nsdic_t)x;
 				}
 

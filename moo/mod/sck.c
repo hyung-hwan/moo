@@ -615,7 +615,7 @@ static void gc_mod_sck (moo_t* moo, moo_mod_t* mod)
 	MOO_ASSERT (moo, ctx != MOO_NULL);
 	if (ctx->sck_class)	
 	{
-		ctx->sck_class = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)ctx->sck_class);
+		ctx->sck_class = (moo_oop_class_t)moo_updateoopforgc(moo, (moo_oop_t)ctx->sck_class);
 	}
 }
 

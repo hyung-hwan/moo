@@ -799,7 +799,7 @@ static moo_rbt_walk_t call_module_gc (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void
 
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 #if 0
-static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
+static MOO_INLINE void gc_ms_mark (moo_t* moo, moo_oop_t oop)
 {
 	moo_oow_t i, sz;
 
@@ -812,7 +812,7 @@ static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
 
 	MOO_OBJ_SET_FLAGS_MOVED(oop, 1); /* mark */
 
-	gc_mark (moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)); /* TODO: remove recursion */
+	gc_ms_mark (moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)); /* TODO: remove recursion */
 
 	if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
 	{
@@ -836,12 +836,12 @@ static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
 		for (i = 0; i < size; i++)
 		{
 			moo_oop_t tmp = MOO_OBJ_GET_OOP_VAL(oop, i);
-			if (MOO_OOP_IS_POINTER(tmp)) gc_mark (moo, tmp);  /* TODO: no resursion */
+			if (MOO_OOP_IS_POINTER(tmp)) gc_ms_mark (moo, tmp);  /* TODO: no resursion */
 		}
 	}
 }
 #else
-static MOO_INLINE void gc_mark_object (moo_t* moo, moo_oop_t oop)
+static MOO_INLINE void gc_ms_mark_object (moo_t* moo, moo_oop_t oop)
 {
 #if defined(MOO_SUPPORT_GC_DURING_IGNITION)
 	if (!oop) return;
@@ -854,7 +854,7 @@ MOO_ASSERT (moo, moo->gci.stack.len < moo->gci.stack.capa);
 if (moo->gci.stack.len > moo->gci.stack.max) moo->gci.stack.max = moo->gci.stack.len;
 }
 
-static MOO_INLINE void gc_scan_stack (moo_t* moo)
+static MOO_INLINE void gc_ms_scan_stack (moo_t* moo)
 {
 	moo_oop_t oop;
 
@@ -862,7 +862,7 @@ static MOO_INLINE void gc_scan_stack (moo_t* moo)
 	{
 		oop = moo->gci.stack.ptr[--moo->gci.stack.len];
 
-		gc_mark_object (moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
+		gc_ms_mark_object (moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
 
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
 		{
@@ -885,20 +885,20 @@ static MOO_INLINE void gc_scan_stack (moo_t* moo)
 
 			for (i = 0; i < size; i++)
 			{
-				gc_mark_object (moo, MOO_OBJ_GET_OOP_VAL(oop, i));
+				gc_ms_mark_object (moo, MOO_OBJ_GET_OOP_VAL(oop, i));
 			}
 		}
 	}
 }
 
-static MOO_INLINE void gc_mark (moo_t* moo, moo_oop_t oop)
+static MOO_INLINE void gc_ms_mark (moo_t* moo, moo_oop_t oop)
 {
-	gc_mark_object (moo, oop);
-	gc_scan_stack (moo);
+	gc_ms_mark_object (moo, oop);
+	gc_ms_scan_stack (moo);
 }
 #endif
 
-static MOO_INLINE void gc_mark_root (moo_t* moo)
+static MOO_INLINE void gc_ms_mark_roots (moo_t* moo)
 {
 	moo_oow_t i, gcfin_count;
 	moo_evtcb_t* cb;
@@ -913,57 +913,57 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 		moo->processor->active->sp = MOO_SMOOI_TO_OOP(moo->sp);
 	}
 
-	gc_mark (moo, moo->_nil);
-	gc_mark (moo, moo->_true);
-	gc_mark (moo, moo->_false);
+	gc_ms_mark (moo, moo->_nil);
+	gc_ms_mark (moo, moo->_true);
+	gc_ms_mark (moo, moo->_false);
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
 	{
-		gc_mark (moo, *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset));
+		gc_ms_mark (moo, *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset));
 	}
 
-	gc_mark (moo, (moo_oop_t)moo->sysdic);
-	gc_mark (moo, (moo_oop_t)moo->processor);
-	gc_mark (moo, (moo_oop_t)moo->nil_process);
-	gc_mark (moo, (moo_oop_t)moo->dicnewsym);
-	gc_mark (moo, (moo_oop_t)moo->dicputassocsym);
-	gc_mark (moo, (moo_oop_t)moo->does_not_understand_sym);
-	gc_mark (moo, (moo_oop_t)moo->primitive_failed_sym);
-	gc_mark (moo, (moo_oop_t)moo->unwindto_return_sym);
+	gc_ms_mark (moo, (moo_oop_t)moo->sysdic);
+	gc_ms_mark (moo, (moo_oop_t)moo->processor);
+	gc_ms_mark (moo, (moo_oop_t)moo->nil_process);
+	gc_ms_mark (moo, (moo_oop_t)moo->dicnewsym);
+	gc_ms_mark (moo, (moo_oop_t)moo->dicputassocsym);
+	gc_ms_mark (moo, (moo_oop_t)moo->does_not_understand_sym);
+	gc_ms_mark (moo, (moo_oop_t)moo->primitive_failed_sym);
+	gc_ms_mark (moo, (moo_oop_t)moo->unwindto_return_sym);
 
 	for (i = 0; i < moo->sem_list_count; i++)
 	{
-		gc_mark (moo, (moo_oop_t)moo->sem_list[i]);
+		gc_ms_mark (moo, (moo_oop_t)moo->sem_list[i]);
 	}
 
 	for (i = 0; i < moo->sem_heap_count; i++)
 	{
-		gc_mark (moo, (moo_oop_t)moo->sem_heap[i]);
+		gc_ms_mark (moo, (moo_oop_t)moo->sem_heap[i]);
 	}
 
 	for (i = 0; i < moo->sem_io_tuple_count; i++)
 	{
 		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
-			gc_mark (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
+			gc_ms_mark (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
 		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
-			gc_mark (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+			gc_ms_mark (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
 	}
 
-	gc_mark (moo, (moo_oop_t)moo->sem_gcfin);
+	gc_ms_mark (moo, (moo_oop_t)moo->sem_gcfin);
 
 	for (i = 0; i < moo->proc_map_capa; i++)
 	{
-		gc_mark (moo, moo->proc_map[i]);
+		gc_ms_mark (moo, moo->proc_map[i]);
 	}
 
 	for (i = 0; i < moo->volat_count; i++)
 	{
-		gc_mark (moo, *moo->volat_stack[i]);
+		gc_ms_mark (moo, *moo->volat_stack[i]);
 	}
 
-	if (moo->initial_context) gc_mark (moo, (moo_oop_t)moo->initial_context);
-	if (moo->active_context) gc_mark (moo, (moo_oop_t)moo->active_context);
-	if (moo->active_method) gc_mark (moo, (moo_oop_t)moo->active_method);
+	if (moo->initial_context) gc_ms_mark (moo, (moo_oop_t)moo->initial_context);
+	if (moo->active_context) gc_ms_mark (moo, (moo_oop_t)moo->active_context);
+	if (moo->active_method) gc_ms_mark (moo, (moo_oop_t)moo->active_method);
 
 	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
 
@@ -978,7 +978,7 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 	{
 		compact_symbol_table (moo, moo->_nil); /* delete symbol table entries that are not marked */
 	#if 0
-		gc_mark (moo, (moo_oop_t)moo->symtab); /* mark the symbol table */
+		gc_ms_mark (moo, (moo_oop_t)moo->symtab); /* mark the symbol table */
 	#else
 		MOO_OBJ_SET_FLAGS_MOVED(moo->symtab, 1); /* mark */
 		MOO_OBJ_SET_FLAGS_MOVED(moo->symtab->bucket, 1); /* mark */
@@ -993,7 +993,60 @@ static MOO_INLINE void gc_mark_root (moo_t* moo)
 	moo_clearmethodcache (moo);
 }
 
-static MOO_INLINE void gc_sweep (moo_t* moo)
+void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
+{
+	moo_gchdr_t* curr, * next, * prev;
+	moo_oop_t obj;
+	moo_oow_t freed_size;
+
+	if (!moo->gci.ls.curr) return;
+
+	freed_size = 0;
+
+//printf ("starting lazy sweep...gci.ls.curr [%p]\n", moo->gci.ls.curr);
+	prev = moo->gci.ls.prev;
+	curr = moo->gci.ls.curr;
+
+	while (curr)
+	{
+		next = curr->next;
+		obj = (moo_oop_t)(curr + 1);
+
+		if (MOO_OBJ_GET_FLAGS_MOVED(obj)) /* if marked */
+		{
+			MOO_OBJ_SET_FLAGS_MOVED (obj, 0); /* unmark */
+			prev = curr;
+		}
+		else
+		{
+			moo_oow_t objsize;
+
+			if (prev) prev->next = next;
+			else moo->gci.b = next;
+
+			objsize = MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, obj);
+			freed_size += objsize;
+			moo->gci.bsz -= objsize;
+			moo_freeheapmem (moo, moo->heap, curr); /* destroy */
+
+			if (freed_size > allocsize)  /* TODO: can it secure large enough space? */
+			{
+//printf ("stopping lazy sweeping after %lu free, allocsize %lu\n", (unsigned long int)freed_size, (unsigned long int)allocsize);
+				moo->gci.ls.curr = next; /* let the next lazy sweeping begin at this point */
+				moo->gci.ls.prev = prev;
+//printf ("finished lazy sweep...\n");
+				return;
+			}
+		}
+
+		curr = next;
+	}
+
+	moo->gci.ls.curr = MOO_NULL;
+//printf ("finished lazy sweep...\n");
+}
+
+static MOO_INLINE void gc_ms_sweep (moo_t* moo)
 {
 	moo_gchdr_t* curr, * next, * prev;
 	moo_oop_t obj;
@@ -1005,30 +1058,31 @@ static MOO_INLINE void gc_sweep (moo_t* moo)
 		next = curr->next;
 		obj = (moo_oop_t)(curr + 1);
 
-		if (MOO_OBJ_GET_FLAGS_MOVED(obj))
+		if (MOO_OBJ_GET_FLAGS_MOVED(obj)) /* if marked */
 		{
-			/* unmark */
-			MOO_OBJ_SET_FLAGS_MOVED (obj, 0);
+			MOO_OBJ_SET_FLAGS_MOVED (obj, 0); 	/* unmark */
 			prev = curr;
 		}
 		else
 		{
-			/* destroy */
 			if (prev) prev->next = next;
 			else moo->gci.b = next;
 
 			moo->gci.bsz -= MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, obj);
-			moo_freeheapmem (moo, moo->heap, curr);
+			moo_freeheapmem (moo, moo->heap, curr); /* destroy */
 		}
 
 		curr = next;
 	}
+
+printf ("finised full sweep...\n");
+	moo->gci.ls.curr = MOO_NULL;
 }
 #endif
 
 /* ----------------------------------------------------------------------- */
 
-static moo_oop_t move_oop_in_heap_space (moo_t* moo, moo_oop_t oop)
+static moo_oop_t gc_ss_move_oop (moo_t* moo, moo_oop_t oop)
 {
 #if defined(MOO_SUPPORT_GC_DURING_IGNITION)
 	if (!oop) return oop;
@@ -1095,7 +1149,7 @@ static moo_oop_t move_oop_in_heap_space (moo_t* moo, moo_oop_t oop)
 	}
 }
 
-static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t** end)
+static moo_uint8_t* gc_ss_scan_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t** end)
 {
 	while (ptr < *end) /* the end pointer may get changed, especially the new space. so it's moo_int8_t** */
 	{
@@ -1108,7 +1162,7 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 
 		nbytes_aligned = moo_getobjpayloadbytes(moo, oop);
 
-		tmp = moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
+		tmp = moo_updateoopforgc(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
 		MOO_OBJ_SET_CLASS (oop, tmp);
 
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
@@ -1137,7 +1191,7 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 				{
 					/* i must not use MOO_STORE_OOP() as this operation is 
 					 * part of garbage collection. */
-					tmp = moo_moveoop(moo, tmp);
+					tmp = moo_updateoopforgc(moo, tmp);
 					MOO_OBJ_SET_OOP_VAL (oop, i, tmp);
 				}
 			}
@@ -1170,7 +1224,7 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 }
 
 
-static void scan_roots (moo_t* moo)
+static void gc_ss_scan_roots (moo_t* moo)
 {
 	/* 
 	 * move a referenced object to the new heap.
@@ -1206,63 +1260,63 @@ static void scan_roots (moo_t* moo)
 	old_nil = moo->_nil;
 
 	/* move _nil and the root object table */
-	moo->_nil = moo_moveoop(moo, moo->_nil);
-	moo->_true = moo_moveoop(moo, moo->_true);
-	moo->_false = moo_moveoop(moo, moo->_false);
+	moo->_nil = moo_updateoopforgc(moo, moo->_nil);
+	moo->_true = moo_updateoopforgc(moo, moo->_true);
+	moo->_false = moo_updateoopforgc(moo, moo->_false);
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
 	{
 		moo_oop_t tmp;
 		tmp = *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
-		tmp = moo_moveoop(moo, tmp);
+		tmp = moo_updateoopforgc(moo, tmp);
 		*(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset) = tmp;
 	}
 
-	moo->sysdic = (moo_oop_nsdic_t)moo_moveoop(moo, (moo_oop_t)moo->sysdic);
-	moo->processor = (moo_oop_process_scheduler_t)moo_moveoop(moo, (moo_oop_t)moo->processor);
-	moo->nil_process = (moo_oop_process_t)moo_moveoop(moo, (moo_oop_t)moo->nil_process);
-	moo->dicnewsym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->dicnewsym);
-	moo->dicputassocsym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->dicputassocsym);
-	moo->does_not_understand_sym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->does_not_understand_sym);
-	moo->primitive_failed_sym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->primitive_failed_sym);
-	moo->unwindto_return_sym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->unwindto_return_sym);
+	moo->sysdic = (moo_oop_nsdic_t)moo_updateoopforgc(moo, (moo_oop_t)moo->sysdic);
+	moo->processor = (moo_oop_process_scheduler_t)moo_updateoopforgc(moo, (moo_oop_t)moo->processor);
+	moo->nil_process = (moo_oop_process_t)moo_updateoopforgc(moo, (moo_oop_t)moo->nil_process);
+	moo->dicnewsym = (moo_oop_char_t)moo_updateoopforgc(moo, (moo_oop_t)moo->dicnewsym);
+	moo->dicputassocsym = (moo_oop_char_t)moo_updateoopforgc(moo, (moo_oop_t)moo->dicputassocsym);
+	moo->does_not_understand_sym = (moo_oop_char_t)moo_updateoopforgc(moo, (moo_oop_t)moo->does_not_understand_sym);
+	moo->primitive_failed_sym = (moo_oop_char_t)moo_updateoopforgc(moo, (moo_oop_t)moo->primitive_failed_sym);
+	moo->unwindto_return_sym = (moo_oop_char_t)moo_updateoopforgc(moo, (moo_oop_t)moo->unwindto_return_sym);
 
 	for (i = 0; i < moo->sem_list_count; i++)
 	{
-		moo->sem_list[i] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_list[i]);
+		moo->sem_list[i] = (moo_oop_semaphore_t)moo_updateoopforgc(moo, (moo_oop_t)moo->sem_list[i]);
 	}
 
 	for (i = 0; i < moo->sem_heap_count; i++)
 	{
-		moo->sem_heap[i] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_heap[i]);
+		moo->sem_heap[i] = (moo_oop_semaphore_t)moo_updateoopforgc(moo, (moo_oop_t)moo->sem_heap[i]);
 	}
 
 	for (i = 0; i < moo->sem_io_tuple_count; i++)
 	{
 		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
-			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
+			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] = (moo_oop_semaphore_t)moo_updateoopforgc(moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
 		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
-			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT] = (moo_oop_semaphore_t)moo_updateoopforgc(moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
 	}
 
-	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_gcfin);
+	moo->sem_gcfin = (moo_oop_semaphore_t)moo_updateoopforgc(moo, (moo_oop_t)moo->sem_gcfin);
 
 	for (i = 0; i < moo->proc_map_capa; i++)
 	{
-		moo->proc_map[i] = moo_moveoop(moo, moo->proc_map[i]);
+		moo->proc_map[i] = moo_updateoopforgc(moo, moo->proc_map[i]);
 	}
 
 	for (i = 0; i < moo->volat_count; i++)
 	{
-		*moo->volat_stack[i] = moo_moveoop(moo, *moo->volat_stack[i]);
+		*moo->volat_stack[i] = moo_updateoopforgc(moo, *moo->volat_stack[i]);
 	}
 
 	if (moo->initial_context)
-		moo->initial_context = (moo_oop_context_t)moo_moveoop(moo, (moo_oop_t)moo->initial_context);
+		moo->initial_context = (moo_oop_context_t)moo_updateoopforgc(moo, (moo_oop_t)moo->initial_context);
 	if (moo->active_context)
-		moo->active_context = (moo_oop_context_t)moo_moveoop(moo, (moo_oop_t)moo->active_context);
+		moo->active_context = (moo_oop_context_t)moo_updateoopforgc(moo, (moo_oop_t)moo->active_context);
 	if (moo->active_method)
-		moo->active_method = (moo_oop_method_t)moo_moveoop(moo, (moo_oop_t)moo->active_method);
+		moo->active_method = (moo_oop_method_t)moo_updateoopforgc(moo, (moo_oop_t)moo->active_method);
 
 	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
 
@@ -1272,16 +1326,16 @@ static void scan_roots (moo_t* moo)
 	}
 
 	/* scan the objects in the permspace in case an object there points to an object outside the permspace */
-	scan_heap_space (moo, (moo_uint8_t*)MOO_ALIGN((moo_uintptr_t)moo->heap->permspace.base, MOO_SIZEOF(moo_oop_t)), &moo->heap->permspace.ptr);
+	gc_ss_scan_space (moo, (moo_uint8_t*)MOO_ALIGN((moo_uintptr_t)moo->heap->permspace.base, MOO_SIZEOF(moo_oop_t)), &moo->heap->permspace.ptr);
 
 	/* scan the new heap to move referenced objects */
-	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
+	newspace_scan_ptr = gc_ss_scan_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
 	/* check finalizable objects registered and scan the heap again. 
 	 * symbol table compation is placed after this phase assuming that
 	 * no symbol is added to be finalized. */
 	gcfin_count = move_finalizable_objects(moo);
-	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
+	newspace_scan_ptr = gc_ss_scan_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
 	/* traverse the symbol table for unreferenced symbols.
 	 * if the symbol has not moved to the new heap, the symbol
@@ -1290,12 +1344,12 @@ static void scan_roots (moo_t* moo)
 	/*if (!moo->igniting) */ compact_symbol_table (moo, old_nil);
 
 	/* move the symbol table itself */
-	moo->symtab = (moo_oop_dic_t)moo_moveoop(moo, (moo_oop_t)moo->symtab);
+	moo->symtab = (moo_oop_dic_t)moo_updateoopforgc(moo, (moo_oop_t)moo->symtab);
 
 	/* scan the new heap again from the end position of
 	 * the previous scan to move referenced objects by 
 	 * the symbol table. */
-	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
+	newspace_scan_ptr = gc_ss_scan_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
 	/* the contents of the current heap is not needed any more.
 	 * reset the upper bound to the base. don't forget to align the heap
@@ -1338,37 +1392,48 @@ static void scan_roots (moo_t* moo)
 }
 
 
-void moo_gc (moo_t* moo)
+void moo_gc (moo_t* moo, int full)
 {
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
 	{
 		MOO_LOG1 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Starting GC (mark-sweep) - gci.bsz = %zu\n", moo->gci.bsz);
+
 		moo->gci.stack.len = 0;
 		/*moo->gci.stack.max = 0;*/
-		gc_mark_root (moo);
-		gc_sweep (moo);
+		gc_ms_mark_roots (moo);
+
+		if (!full && moo->gci.lazy_sweep) 
+		{
+			moo->gci.ls.prev = MOO_NULL;
+			moo->gci.ls.curr = moo->gci.b;
+		}
+		else
+		{
+			gc_ms_sweep (moo);
+		}
+
 		MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Finished GC (mark-sweep) - gci.bsz = %zu, gci.stack.max %zu\n", moo->gci.bsz, moo->gci.stack.max);
 	}
 	else
 #endif
 	{
-		scan_roots (moo);
+		gc_ss_scan_roots (moo);
 	}
 }
 
-moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
+moo_oop_t moo_updateoopforgc (moo_t* moo, moo_oop_t oop)
 {
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
 	{
-		gc_mark (moo, oop);
+		gc_ms_mark (moo, oop);
 		return oop;
 	}
 	else
 #endif
 	{
-		return move_oop_in_heap_space(moo, oop);
+		return gc_ss_move_oop(moo, oop);
 	}
 }
 
@@ -1502,7 +1567,7 @@ static moo_oow_t move_finalizable_objects (moo_t* moo)
 	for (x = moo->collectable.first; x; x = x->next)
 	{
 		MOO_ASSERT (moo, (MOO_OBJ_GET_FLAGS_GCFIN(x->oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) == MOO_GCFIN_FINALIZABLE);
-		x->oop = moo_moveoop(moo, x->oop);
+		x->oop = moo_updateoopforgc(moo, x->oop);
 	}
 
 	for (x = moo->finalizable.first; x; )
@@ -1522,7 +1587,7 @@ static moo_oow_t move_finalizable_objects (moo_t* moo)
 			 * however this is quite unlikely because some key objects for VM execution 
 			 * like context objects doesn't require finalization. */
 
-			x->oop = moo_moveoop(moo, x->oop);
+			x->oop = moo_updateoopforgc(moo, x->oop);
 
 			/* remove it from the finalizable list */
 			MOO_DELETE_FROM_LIST (&moo->finalizable, x);
@@ -1534,7 +1599,7 @@ static moo_oow_t move_finalizable_objects (moo_t* moo)
 		}
 		else
 		{
-			x->oop = moo_moveoop(moo, x->oop);
+			x->oop = moo_updateoopforgc(moo, x->oop);
 		}
 
 		x = y;
