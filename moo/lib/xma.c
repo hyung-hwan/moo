@@ -236,6 +236,12 @@ int moo_xma_init (moo_xma_t* xma, moo_mmgr_t* mmgr, void* zoneptr, moo_oow_t zon
 
 		internal = 1; /* internally created. must be freed upon moo_xma_fini() */
 	}
+	else if (zonesize < FBLKMINSIZE) 
+	{
+		/* the zone size is too small for an externally allocated zone. */
+/* TODO: difference error code from memory allocation failure.. this is not really memory shortage */
+		return -1;
+	}
 
 	first = (moo_xma_fblk_t*)zoneptr;
 

@@ -6355,9 +6355,11 @@ int moo_execute (moo_t* moo)
 
 	moo->proc_switched = 0;
 	moo->abort_req = 0;
+	moo->gci.lazy_sweep = 1; /* TODO: make it configurable?? */
 
-//moo->gci.lazy_sweep = 1;
 	n = __execute (moo);
+
+	moo->gci.lazy_sweep = 0;
 
 	vm_cleanup (moo);
 

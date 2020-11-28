@@ -79,6 +79,14 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 			}
 		}
 
+		if (moo->gci.lazy_sweep && moo->gci.ls.curr == moo->gci.b) 
+		{
+			/* if the lazy sweeping point is at the beginning of the allocation block,
+			 * moo->gc.ls.prev must get updated */
+			MOO_ASSERT (moo, moo->gci.ls.prev == MOO_NULL);
+			moo->gci.ls.prev = gch;
+		}
+
 		gch->next = moo->gci.b;
 		moo->gci.b = gch;
 		moo->gci.bsz += size;

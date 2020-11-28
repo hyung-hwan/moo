@@ -1003,7 +1003,6 @@ void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
 
 	freed_size = 0;
 
-//printf ("starting lazy sweep...gci.ls.curr [%p]\n", moo->gci.ls.curr);
 	prev = moo->gci.ls.prev;
 	curr = moo->gci.ls.curr;
 
@@ -1031,10 +1030,8 @@ void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
 
 			if (freed_size > allocsize)  /* TODO: can it secure large enough space? */
 			{
-//printf ("stopping lazy sweeping after %lu free, allocsize %lu\n", (unsigned long int)freed_size, (unsigned long int)allocsize);
-				moo->gci.ls.curr = next; /* let the next lazy sweeping begin at this point */
 				moo->gci.ls.prev = prev;
-//printf ("finished lazy sweep...\n");
+				moo->gci.ls.curr = next; /* let the next lazy sweeping begin at this point */
 				return;
 			}
 		}
@@ -1043,7 +1040,6 @@ void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
 	}
 
 	moo->gci.ls.curr = MOO_NULL;
-//printf ("finished lazy sweep...\n");
 }
 
 static MOO_INLINE void gc_ms_sweep (moo_t* moo)
@@ -1075,7 +1071,6 @@ static MOO_INLINE void gc_ms_sweep (moo_t* moo)
 		curr = next;
 	}
 
-printf ("finised full sweep...\n");
 	moo->gci.ls.curr = MOO_NULL;
 }
 #endif
@@ -1397,6 +1392,8 @@ void moo_gc (moo_t* moo, int full)
 #if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
 	{
+if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, MOO_TYPE_MAX(moo_oow_t));
+
 		MOO_LOG1 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Starting GC (mark-sweep) - gci.bsz = %zu\n", moo->gci.bsz);
 
 		moo->gci.stack.len = 0;
@@ -1405,6 +1402,9 @@ void moo_gc (moo_t* moo, int full)
 
 		if (!full && moo->gci.lazy_sweep) 
 		{
+			/* set the lazy sweeping point to the head of the allocated blocks.
+			 * hawk_allocbytes() updates moo->gci.ls.prev if it is called while
+			 * moo->gci.ls.curr stays at moo->gci.b */
 			moo->gci.ls.prev = MOO_NULL;
 			moo->gci.ls.curr = moo->gci.b;
 		}
