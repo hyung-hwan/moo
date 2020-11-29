@@ -1120,17 +1120,17 @@ void* moo_allocheapspace (
 	moo_oow_t    size
 );
 
-
 /** 
- * The moo_allocheapmem(0 function allocates  \a size bytes from the given heap.
+ * The moo_allocheapmem() function allocates \a size bytes from the given heap
+ * and clears it with zeros.
  */
-void* moo_allocheapmem (
+void* moo_callocheapmem (
 	moo_t*       moo,
 	moo_heap_t*  heap,
 	moo_oow_t    size
 );
 
-void* moo_callocheapmem (
+void* moo_callocheapmem_noerr (
 	moo_t*       moo,
 	moo_heap_t*  heap,
 	moo_oow_t    size
@@ -1141,6 +1141,7 @@ void moo_freeheapmem (
 	moo_heap_t*  heap,
 	void*        ptr
 );
+
 /* ========================================================================= */
 /* obj.c                                                                     */
 /* ========================================================================= */
@@ -1277,6 +1278,9 @@ void moo_deregallfinalizables (moo_t* moo);
 
 moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop);
 
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize);
+#endif
 /* ========================================================================= */
 /* bigint.c                                                                  */
 /* ========================================================================= */

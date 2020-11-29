@@ -1832,6 +1832,13 @@ struct moo_t
 			moo_oow_t len;
 			moo_oow_t max;
 		} stack;
+
+		struct
+		{
+			moo_ntime_t alloc;
+			moo_ntime_t mark;
+			moo_ntime_t sweep;
+		} stat;
 	} gci;
 #endif
 

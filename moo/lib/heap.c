@@ -145,20 +145,6 @@ void* moo_allocheapspace (moo_t* moo, moo_space_t* space, moo_oow_t size)
 	return ptr;
 }
 
-void* moo_allocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
-{
-	void* ptr;
-
-	MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_MARK_SWEEP);
-	ptr = MOO_MMGR_ALLOC(&heap->xmmgr, size);
-	if (MOO_UNLIKELY(!ptr)) 
-	{
-		MOO_DEBUG2 (moo, "Cannot allocate %zd bytes from heap - ptr %p\n", size, heap);
-		moo_seterrnum (moo, MOO_EOOMEM);
-	}
-	return ptr;
-}
-
 void* moo_callocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
 {
 	void* ptr;
@@ -174,6 +160,15 @@ void* moo_callocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
 	{
 		MOO_MEMSET (ptr, 0, size);
 	}
+	return ptr;
+}
+
+void* moo_callocheapmem_noerr (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
+{
+	void* ptr;
+	MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_MARK_SWEEP);
+	ptr = MOO_MMGR_ALLOC(&heap->xmmgr, size);
+	if (MOO_LIKELY(ptr)) MOO_MEMSET (ptr, 0, size);
 	return ptr;
 }
 

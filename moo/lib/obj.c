@@ -26,6 +26,11 @@
 
 #include "moo-prv.h"
 
+#if defined(MOO_PROFILE_VM)
+#include <sys/time.h>
+#include <sys/resource.h> /* getrusage */
+#endif
+
 void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 {
 #if defined(MOO_BUILD_DEBUG)
@@ -38,6 +43,13 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	{
 		moo_gchdr_t* gch;
 
+#if defined(MOO_PROFILE_VM)
+		struct rusage ru;
+		moo_ntime_t rut;
+		getrusage(RUSAGE_SELF, &ru);
+		MOO_INIT_NTIME (&rut,  ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+#endif
+
 		if (MOO_UNLIKELY(moo->igniting))
 		{
 			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size); 
@@ -46,25 +58,32 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 		else
 		{
 			moo_oow_t allocsize;
+			int gc_called = 0;
+
+			allocsize = MOO_SIZEOF(*gch) + size;
 
 			if (moo->gci.bsz >= moo->gci.threshold) 
 			{
 				moo_gc (moo, 0);
 				moo->gci.threshold = moo->gci.bsz + 100000; /* TODO: change this fomula */
+				gc_called = 1;
 			}
 
-			allocsize = MOO_SIZEOF(*gch) + size;
 			if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, allocsize);
 
-			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, allocsize); 
-			if (!gch && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
+			gch = (moo_gchdr_t*)moo_callocheapmem_noerr(moo, moo->heap, allocsize); 
+			if (!gch)
 			{
+				if (MOO_UNLIKELY(moo->option.trait & MOO_TRAIT_NOGC)) goto calloc_heapmem_fail;
+				if (gc_called) goto sweep_the_rest;
+
 				moo_gc (moo, 0);
 				if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, allocsize);
 
-				gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, allocsize); 
+				gch = (moo_gchdr_t*)moo_callocheapmem_noerr(moo, moo->heap, allocsize); 
 				if (MOO_UNLIKELY(!gch)) 
 				{
+				sweep_the_rest:
 					if (moo->gci.lazy_sweep)
 					{
 						moo_gc_ms_sweep_lazy (moo, MOO_TYPE_MAX(moo_oow_t)); /* sweep the rest */
@@ -73,6 +92,8 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 					}
 					else
 					{
+					calloc_heapmem_fail:
+						moo_seterrnum (moo, MOO_EOOMEM);
 						return MOO_NULL;
 					}
 				}
@@ -91,6 +112,12 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 		moo->gci.b = gch;
 		moo->gci.bsz += size;
 
+
+#if defined(MOO_PROFILE_VM)
+		getrusage(RUSAGE_SELF, &ru);
+		MOO_SUB_NTIME_SNS (&rut, &rut, ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+		MOO_SUB_NTIME (&moo->gci.stat.alloc, &moo->gci.stat.alloc, &rut); /* do subtraction because rut is negative */
+#endif
 		return (moo_uint8_t*)(gch + 1);
 	}
 	else

@@ -6355,11 +6355,19 @@ int moo_execute (moo_t* moo)
 
 	moo->proc_switched = 0;
 	moo->abort_req = 0;
+
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	moo->gci.lazy_sweep = 1; /* TODO: make it configurable?? */
+	MOO_INIT_NTIME (&moo->gci.stat.alloc, 0, 0);
+	MOO_INIT_NTIME (&moo->gci.stat.mark, 0, 0);
+	MOO_INIT_NTIME (&moo->gci.stat.sweep, 0, 0);
+#endif
 
 	n = __execute (moo);
 
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
 	moo->gci.lazy_sweep = 0;
+#endif
 
 	vm_cleanup (moo);
 
@@ -6446,6 +6454,9 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "GC - gci.bsz: %zu, gci.stack.max: %zu\n", moo->gci.bsz, moo->gci.stack.max);
 		if (moo->heap->xma) moo_xma_dump (moo->heap->xma, xma_dumper, moo);
 	}
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "GC - gci.stat.alloc: %ld.%09u\n", (unsigned long int)moo->gci.stat.alloc.sec, (unsigned int)moo->gci.stat.alloc.nsec);
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "GC - gci.stat.mark: %ld.%09u\n", (unsigned long int)moo->gci.stat.mark.sec, (unsigned int)moo->gci.stat.mark.nsec);
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "GC - gci.stat.sweep: %ld.%09u\n", (unsigned long int)moo->gci.stat.sweep.sec, (unsigned int)moo->gci.stat.sweep.nsec);
 #endif
 #endif
 

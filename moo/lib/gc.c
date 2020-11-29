@@ -26,6 +26,10 @@
 
 #include "moo-prv.h"
 
+#if defined(MOO_PROFILE_VM)
+#include <sys/time.h>
+#include <sys/resource.h> /* getrusage */
+#endif
 
 /*
  *    Apex......................
@@ -903,6 +907,13 @@ static MOO_INLINE void gc_ms_mark_roots (moo_t* moo)
 	moo_oow_t i, gcfin_count;
 	moo_evtcb_t* cb;
 
+#if defined(MOO_PROFILE_VM)
+	struct rusage ru;
+	moo_ntime_t rut;
+	getrusage(RUSAGE_SELF, &ru);
+	MOO_INIT_NTIME (&rut,  ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+#endif
+
 	if (moo->processor && moo->processor->active)
 	{
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor != moo->_nil);
@@ -991,6 +1002,13 @@ static MOO_INLINE void gc_ms_mark_roots (moo_t* moo)
 
 	/* invalidate method cache. TODO: GCing entries on the method cache is also one way instead of full invalidation */
 	moo_clearmethodcache (moo);
+
+
+#if defined(MOO_PROFILE_VM)
+	getrusage(RUSAGE_SELF, &ru);
+	MOO_SUB_NTIME_SNS (&rut, &rut, ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+	MOO_SUB_NTIME (&moo->gci.stat.mark, &moo->gci.stat.mark, &rut); /* do subtraction because rut is negative */
+#endif
 }
 
 void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
@@ -999,7 +1017,14 @@ void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
 	moo_oop_t obj;
 	moo_oow_t freed_size;
 
-	if (!moo->gci.ls.curr) return;
+#if defined(MOO_PROFILE_VM)
+	struct rusage ru;
+	moo_ntime_t rut;
+	getrusage(RUSAGE_SELF, &ru);
+	MOO_INIT_NTIME (&rut,  ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+#endif
+
+	if (!moo->gci.ls.curr) goto done;
 
 	freed_size = 0;
 
@@ -1028,11 +1053,12 @@ void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
 			moo->gci.bsz -= objsize;
 			moo_freeheapmem (moo, moo->heap, curr); /* destroy */
 
-			if (freed_size > allocsize)  /* TODO: can it secure large enough space? */
+			/*if (freed_size > allocsize)*/  /* TODO: can it secure large enough space? */
+			if (objsize == allocsize)
 			{
 				moo->gci.ls.prev = prev;
 				moo->gci.ls.curr = next; /* let the next lazy sweeping begin at this point */
-				return;
+				goto done;
 			}
 		}
 
@@ -1040,12 +1066,27 @@ void moo_gc_ms_sweep_lazy (moo_t* moo, moo_oow_t allocsize)
 	}
 
 	moo->gci.ls.curr = MOO_NULL;
+
+done:
+#if defined(MOO_PROFILE_VM)
+	getrusage(RUSAGE_SELF, &ru);
+	MOO_SUB_NTIME_SNS (&rut, &rut, ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+	MOO_SUB_NTIME (&moo->gci.stat.sweep, &moo->gci.stat.sweep, &rut); /* do subtraction because rut is negative */
+#endif
+	return;
 }
 
 static MOO_INLINE void gc_ms_sweep (moo_t* moo)
 {
 	moo_gchdr_t* curr, * next, * prev;
 	moo_oop_t obj;
+
+#if defined(MOO_PROFILE_VM)
+	struct rusage ru;
+	moo_ntime_t rut;
+	getrusage(RUSAGE_SELF, &ru);
+	MOO_INIT_NTIME (&rut,  ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+#endif
 
 	prev = MOO_NULL;
 	curr = moo->gci.b;
@@ -1072,6 +1113,12 @@ static MOO_INLINE void gc_ms_sweep (moo_t* moo)
 	}
 
 	moo->gci.ls.curr = MOO_NULL;
+
+#if defined(MOO_PROFILE_VM)
+	getrusage(RUSAGE_SELF, &ru);
+	MOO_SUB_NTIME_SNS (&rut, &rut, ru.ru_utime.tv_sec, MOO_USEC_TO_NSEC(ru.ru_utime.tv_usec));
+	MOO_SUB_NTIME (&moo->gci.stat.sweep, &moo->gci.stat.sweep, &rut); /* do subtraction because rut is negative */
+#endif
 }
 #endif
 
