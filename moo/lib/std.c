@@ -4207,7 +4207,7 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* er
 	vmprim.vm_getsig = vm_getsig;
 	vmprim.vm_setsig = vm_setsig;
 
-	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, cfg->gc_type, errinfo);
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, (cfg? cfg->gc_type: MOO_GC_TYPE_DEFAULT), errinfo);
 	if (MOO_UNLIKELY(!moo)) return MOO_NULL;
 
 	/* adjust the object size by the sizeof xtn_t so that moo_getxtn() returns the right pointer. */

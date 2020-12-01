@@ -79,7 +79,7 @@ EMSCRIPTEN_KEEPALIVE int open_moo (void)
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, (cfg? cfg->gc_type: MOO_GC_TYPE_DEFAULT), errinfo);
 	if (!moo) return MOO_NULL;
 
 	/* adjust the object size by the sizeof xtn_t so that qse_getxtn() returns the right pointer. */

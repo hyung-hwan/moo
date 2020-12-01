@@ -219,7 +219,12 @@ struct moo_gchdr_t
 enum moo_gc_type_t
 {
 	MOO_GC_TYPE_SEMISPACE,
-	MOO_GC_TYPE_MARK_SWEEP
+#if defined(MOO_ENABLE_GC_MARK_SWEEP)
+	MOO_GC_TYPE_MARK_SWEEP,
+	MOO_GC_TYPE_DEFAULT = MOO_GC_TYPE_MARK_SWEEP
+#else
+	MOO_GC_TYPE_DEFAULT = MOO_GC_TYPE_SEMISPACE
+#endif
 };
 typedef enum moo_gc_type_t moo_gc_type_t;
 
