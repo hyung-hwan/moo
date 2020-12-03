@@ -24,7 +24,7 @@ jobs:
       compiler: clang
       env: 
         - OPTIONS="--enable-static=yes --enable-shared=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=no --enable-mod-sck=yes --enable-mod-ffi=no --enable-mod-x11=no --enable-pthread-flags=yes"
-        - CPPFLAGS="-D__BEGIN_DECLS -D__END_DECLS"
+        - CPPFLAGS="-D__BEGIN_DECLS= -D__END_DECLS="
 
 script:
   - touch -r moo/configure moo/* moo/*/* && cd moo && ./configure $OPTIONS && make && make check
