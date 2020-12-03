@@ -1,5 +1,4 @@
 language: c
-sudo: false
 
 os:
   - linux
@@ -9,7 +8,7 @@ compiler:
   - clang
 
 env:
-  matrix:
+  jobs:
     - OPTIONS="--enable-static=yes --enable-shared=no --enable-debug=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
     - OPTIONS="--enable-static=yes --enable-shared=no --enable-debug=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:4 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
     - OPTIONS="--enable-static=no --enable-shared=yes --enable-debug=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
@@ -19,11 +18,13 @@ env:
     - OPTIONS="--enable-static=no --enable-shared=yes --enable-debug=yes --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
     - OPTIONS="--enable-static=no --enable-shared=yes --enable-debug=yes --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:4 --enable-full-liw=no --enable-mod-con=yes --enable-mod-sck=yes --enable-mod-ffi=yes --enable-mod-x11=yes --enable-pthread-flags=yes"
 
-matrix:
+jobs:
   include:
     - os: osx
       compiler: clang
-      env: OPTIONS="--enable-static=yes --enable-shared=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=no --enable-mod-sck=yes --enable-mod-ffi=no --enable-mod-x11=no --enable-pthread-flags=yes CPPFLAGS='-D__BEGIN_DECLS -D__END_DECLS'"
+      env: 
+        - OPTIONS="--enable-static=yes --enable-shared=no --enable-dynamic-module=yes --enable-static-module=yes --enable-wide-char=yes:2 --enable-full-liw=no --enable-mod-con=no --enable-mod-sck=yes --enable-mod-ffi=no --enable-mod-x11=no --enable-pthread-flags=yes"
+        - CPPFLAGS="-D__BEGIN_DECLS -D__END_DECLS"
 
 script:
   - touch -r moo/configure moo/* moo/*/* && cd moo && ./configure $OPTIONS && make && make check
