@@ -37,8 +37,16 @@
  * See the example below. Note it omits error handling.
  *
  * @code
- * #include <qse/cmn/xma.h>
- * #include <qse/cmn/stdio.h>
+ * #include <moo-xma.h>
+ * #include <stdio.h>
+ * #include <stdarg.h>
+ * void dumper (void* ctx, const char* fmt, ...)
+ * {
+ * 	va_list ap;
+ * 	va_start (ap, fmt);
+ * 	vfprintf (fmt, ap);
+ * 	va_end (ap);
+ * }
  * int main ()
  * {
  *   moo_xma_t* xma;
@@ -52,7 +60,7 @@
  *   ptr2 = moo_xma_alloc(xma, 1000); // allocate a 1K block from the zone
  *   ptr1 = moo_xma_realloc(xma, ptr1, 6000); // resize the 5K block to 6K.
  *
- *   moo_xma_dump (xma, moo_fprintf, MOO_STDOUT); // dump memory blocks 
+ *   moo_xma_dump (xma, dumper, MOO_NULL); // dump memory blocks 
  *
  *   // the following two lines are not actually needed as the allocator
  *   // is closed after them.
