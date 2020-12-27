@@ -328,14 +328,16 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 		newmax = ffi->arg_max + 16; /* TODO: adjust this? */
 		ttmp = moo_reallocmem(moo, ffi->arg_types, MOO_SIZEOF(*ttmp) * newmax);
 		if (!ttmp) goto oops;
+		ffi->arg_types = ttmp;
+
 		vtmp = moo_reallocmem(moo, ffi->arg_values, MOO_SIZEOF(*vtmp) * newmax);
 		if (!vtmp) goto oops;
+		ffi->arg_values = vtmp;
+
 		stmp = moo_reallocmem(moo, ffi->arg_svs, MOO_SIZEOF(*stmp) * newmax);
 		if (!stmp) goto oops;
-
-		ffi->arg_types = ttmp;
-		ffi->arg_values = vtmp;
 		ffi->arg_svs = stmp;
+
 		ffi->arg_max = newmax;
 	}
 #endif
