@@ -784,9 +784,22 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 
 	while (i < MOO_OBJ_GET_SIZE(sig) && MOO_OBJ_GET_CHAR_VAL(sig, i) == ' ') i++; /* skip all spaces after > */
-
 	fmtc = (i >= MOO_OBJ_GET_SIZE(sig)? FMTC_NULL: MOO_OBJ_GET_CHAR_VAL(sig, i));
+	if (fmtc == 'u') 
+	{
+		_unsigned = 1;
+		i++;
+		fmtc = (i >= MOO_OBJ_GET_SIZE(sig)? FMTC_NULL: MOO_OBJ_GET_CHAR_VAL(sig, i));
+	}
+	else
+	{
+		_unsigned = 0;
+	}
+
+
 #if defined(USE_LIBFFI)
+	if (!ffi->fmtc_to_type[0][fmtc]) goto inval; /* invalid return value signature */
+
 	fs = (nfixedargs == j)? ffi_prep_cif(&ffi->cif, FFI_DEFAULT_ABI, j, ffi->fmtc_to_type[0][fmtc], ffi->arg_types):
 	                        ffi_prep_cif_var(&ffi->cif, FFI_DEFAULT_ABI, nfixedargs, j, ffi->fmtc_to_type[0][fmtc], ffi->arg_types);
 	if (fs != FFI_OK)
@@ -798,15 +811,6 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	ffi_call (&ffi->cif, FFI_FN(f), &ffi->ret_sv, ffi->arg_values);
 #endif
 
-	if (fmtc == 'u') 
-	{
-		_unsigned = 1;
-		fmtc++;
-	}
-	else
-	{
-		_unsigned = 0;
-	}
 
 	/* check the return value type in signature */
 	switch (fmtc)
