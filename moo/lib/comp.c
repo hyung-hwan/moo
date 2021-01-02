@@ -979,6 +979,7 @@ static MOO_INLINE moo_oop_t get_cunit_self_oop (moo_t* moo)
 	return *(moo_oop_t*)((moo_uint8_t*)moo->c->cunit + offset[moo->c->cunit->cunit_type]);
 }
 
+#if 0
 static MOO_INLINE moo_oow_t get_cunit_dbgi_offset (moo_t* moo)
 {
 	static moo_oow_t offset[] = /* [NOTE] this is dependent on the order of moo_cunit_type_t enumerators */
@@ -992,6 +993,7 @@ static MOO_INLINE moo_oow_t get_cunit_dbgi_offset (moo_t* moo)
 	MOO_ASSERT (moo, moo->c->cunit && (moo->c->cunit->cunit_type == MOO_CUNIT_CLASS || moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE));
 	return *(moo_oow_t*)((moo_uint8_t*)moo->c->cunit + offset[moo->c->cunit->cunit_type]);
 }
+#endif
 
 static MOO_INLINE moo_oocs_t* get_cunit_fqn (moo_t* moo)
 {
