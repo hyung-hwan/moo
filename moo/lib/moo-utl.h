@@ -363,6 +363,8 @@ MOO_EXPORT int moo_equal_bchars (
 	moo_oow_t        len
 );
 
+/* ------------------------------ */
+
 MOO_EXPORT int moo_comp_uchars (
 	const moo_uch_t* str1,
 	moo_oow_t        len1,
@@ -416,6 +418,8 @@ MOO_EXPORT int moo_comp_bchars_ucstr (
 	const moo_uch_t* str2
 );
 
+/* ------------------------------ */
+
 MOO_EXPORT void moo_copy_uchars (
 	moo_uch_t*       dst,
 	const moo_uch_t* src,
@@ -433,6 +437,7 @@ MOO_EXPORT void moo_copy_bchars_to_uchars (
 	const moo_bch_t* src,
 	moo_oow_t        len
 );
+
 MOO_EXPORT void moo_copy_uchars_to_bchars (
 	moo_bch_t*       dst,
 	const moo_uch_t* src,
@@ -486,6 +491,8 @@ MOO_EXPORT moo_oow_t moo_copy_bcstr_unlimited (
 	moo_bch_t*       dst,
 	const moo_bch_t* src
 );
+
+/* ------------------------------ */
 
 MOO_EXPORT void moo_fill_uchars (
 	moo_uch_t*       dst,
