@@ -958,11 +958,13 @@ enum moo_bcode_t
 	BCODE_PUSH_NEGINTLIT           = 0xB3, /* 179 */
 	BCODE_PUSH_CHARLIT             = 0xB4, /* 180 */
 
+	/* UNUSED - 0xB5 - 0xB7 */
+
 	BCODE_STORE_INTO_OBJECT_X      = 0xB8, /* 184 ## */
 	BCODE_POP_INTO_OBJECT_X        = 0xBC, /* 188 ## */
 	BCODE_PUSH_OBJECT_X            = 0xC0, /* 192 ## */
 
-	/* UNUSED - 0xC0 - 0xC3 */
+	/* UNUSED - 0xC1 - 0xC3 */
 
 	BCODE_JUMP_FORWARD             = 0xC4, /* 196 ## */
 	BCODE_JUMP2_FORWARD            = 0xC5, /* 197 ## */
