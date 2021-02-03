@@ -2303,12 +2303,12 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 
 	/* remove the selector from the stack */
-	ssp = MOO_STACK_GETARGSP (moo, nargs, 0);
-	esp = MOO_STACK_GETARGSP (moo, nargs, nargs - 1);
+	ssp = MOO_STACK_GETARGSP(moo, nargs, 0);
+	esp = MOO_STACK_GETARGSP(moo, nargs, nargs - 1);
 	for (i = ssp; i < esp; i++)
 	{
 		moo_oop_t t;
-		t = MOO_STACK_GET (moo, i + 1);
+		t = MOO_STACK_GET(moo, i + 1);
 		MOO_STACK_SET(moo, i, t);
 	}
 	MOO_STACK_POP (moo);
@@ -3169,7 +3169,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mo
 	rcv = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
 
-	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
+	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	if (sem->group == rcv)
@@ -4232,7 +4232,7 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	for (k = 1; k < nargs; k++)
 	{
-		msg = MOO_STACK_GETARG (moo, nargs, k);
+		msg = MOO_STACK_GETARG(moo, nargs, k);
 
 		if (msg == moo->_nil || msg == moo->_true || msg == moo->_false) 
 		{
