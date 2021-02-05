@@ -2825,67 +2825,24 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_oop_t rcv;
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
-
-	/* signal_semaphore() may change the active process though the 
-	 * implementation as of this writing makes runnable the process waiting
-	 * on the signal to be processed. it is safer to set the return value
-	 * before calling signal_sempahore() */
-	MOO_STACK_SETRETTORCV (moo, nargs);
-
-	signal_semaphore (moo, (moo_oop_semaphore_t)rcv);
-
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_oop_t rcv;
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
-
-	if (!can_await_semaphore(moo, (moo_oop_semaphore_t)rcv))
-	{
-		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to wait on a semaphore that belongs to a semaphore group");
-		return MOO_PF_FAILURE;
-	}
-	
-	/* i must set the return value before calling await_semaphore().
-	 * await_semaphore() may switch the active process and the stack
-	 * manipulation macros target at the active process. i'm not supposed
-	 * to change the return value of a new active process. */
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	await_semaphore (moo, (moo_oop_semaphore_t)rcv);
-
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_semaphore_signal_on_gcfin (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_oop_semaphore_t sem;
-
-	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
-
-/* TODO: should i prevent overwriting? */
-	moo->sem_gcfin = sem;
-
-	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_semaphore_signal_timed (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
 	moo_oop_semaphore_t sem;
 	moo_oop_t sec, nsec;
 	moo_ntime_t now, ft;
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
+
+	if (nargs <= 0)
+	{
+		/* signal_semaphore() may change the active process though the 
+		 * implementation as of this writing makes runnable the process waiting
+		 * on the signal to be processed. it is safer to set the return value
+		 * before calling signal_sempahore() */
+		MOO_STACK_SETRETTORCV (moo, nargs);
+
+		signal_semaphore (moo, sem);
+		return MOO_PF_SUCCESS;
+	}
 
 	sec = MOO_STACK_GETARG(moo, nargs, 0);
 	nsec = (nargs == 2? MOO_STACK_GETARG(moo, nargs, 1): MOO_SMOOI_TO_OOP(0));
@@ -2964,6 +2921,20 @@ static moo_pfrc_t pf_semaphore_signal_timed (moo_t* moo, moo_mod_t* mod, moo_ooi
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_semaphore_signal_on_gcfin (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_semaphore_t sem;
+
+	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
+
+/* TODO: should i prevent overwriting? */
+	moo->sem_gcfin = sem;
+
+	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t __semaphore_signal_on_io (moo_t* moo, moo_ooi_t nargs, moo_semaphore_io_type_t io_type)
 {
 	moo_oop_semaphore_t sem;
@@ -3020,6 +2991,29 @@ static moo_pfrc_t pf_semaphore_signal_on_input (moo_t* moo, moo_mod_t* mod, moo_
 static moo_pfrc_t pf_semaphore_signal_on_output (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return __semaphore_signal_on_io(moo, nargs, MOO_SEMAPHORE_IO_TYPE_OUTPUT);
+}
+
+static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
+
+	if (!can_await_semaphore(moo, (moo_oop_semaphore_t)rcv))
+	{
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to wait on a semaphore that belongs to a semaphore group");
+		return MOO_PF_FAILURE;
+	}
+	
+	/* i must set the return value before calling await_semaphore().
+	 * await_semaphore() may switch the active process and the stack
+	 * manipulation macros target at the active process. i'm not supposed
+	 * to change the return value of a new active process. */
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	await_semaphore (moo, (moo_oop_semaphore_t)rcv);
+
+	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_semaphore_unsignal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
@@ -4379,8 +4373,8 @@ static pf_t pftab[] =
 	{ "SemaphoreGroup_wait",                   { pf_semaphore_group_wait,                 0, 0 } },
 
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
-	{ "Semaphore_signalAfterSecs:",            { pf_semaphore_signal_timed,               1, 1 } },
-	{ "Semaphore_signalAfterSecs:nanosecs:",   { pf_semaphore_signal_timed,               2, 2 } },
+	{ "Semaphore_signalAfterSecs:",            { pf_semaphore_signal,                     1, 1 } },
+	{ "Semaphore_signalAfterSecs:nanosecs:",   { pf_semaphore_signal,                     2, 2 } },
 	{ "Semaphore_signalOnGCFin",               { pf_semaphore_signal_on_gcfin,            0, 0 } },
 	{ "Semaphore_signalOnInput:",              { pf_semaphore_signal_on_input,            1, 1 } },
 	{ "Semaphore_signalOnOutput:",             { pf_semaphore_signal_on_output,           1, 1 } },
