@@ -2018,12 +2018,15 @@ TODO: overcome this problem - accept parameters....
 	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 	moo_pushvolat (moo, (moo_oop_t*)&ass); tmp_count++;
 #else
+	/* invoke System startup(class_name, method_name) intead of
+	 * sending the method to the class directly */
+
 	sym_startup = moo_findsymbol(moo, str_startup, MOO_COUNTOF(str_startup));
 	if (!sym_startup)
 	{
 		/* the method name should exist as a symbol in the system.
 		 * otherwise, a method of such a name also doesn't exist */
-		MOO_LOG0 (moo, MOO_LOG_DEBUG, "Cannot find the startup method name symbol in the system class");
+		MOO_LOG0 (moo, MOO_LOG_DEBUG, "Cannot find the symbol #startup");
 		goto oops;
 	}
 
@@ -2044,18 +2047,18 @@ TODO: overcome this problem - accept parameters....
 
 	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 	s1 = moo_makesymbol(moo, objname->ptr, objname->len);
-	if (!s1) goto oops;
+	if (MOO_UNLIKELY(!s1)) goto oops;
 
 	moo_pushvolat (moo, (moo_oop_t*)&s1); tmp_count++;
 	s2 = moo_makesymbol(moo, mthname->ptr, mthname->len);
-	if (!s2) goto oops;
+	if (MOO_UNLIKELY(!s2)) goto oops;
 
 	moo_pushvolat (moo, (moo_oop_t*)&s2); tmp_count++;
 #endif
 
 	/* create a fake initial context. */
 	ctx = (moo_oop_context_t)moo_instantiate(moo, moo->_method_context, MOO_NULL, MOO_OOP_TO_SMOOI(mth->tmpr_nargs));
-	if (!ctx) goto oops;
+	if (MOO_UNLIKELY(!ctx)) goto oops;
 
 	moo_pushvolat (moo, (moo_oop_t*)&ctx); tmp_count++;
 
@@ -2095,7 +2098,7 @@ TODO: overcome this problem - accept parameters....
 
 	proc = start_initial_process(moo, ctx); 
 	moo_popvolats (moo, tmp_count); tmp_count = 0;
-	if (!proc) goto oops;
+	if (MOO_UNLIKELY(!proc)) goto oops;
 
 #if defined(INVOKE_DIRECTLY)
 	MOO_STACK_PUSH (moo, ass->value); /* push the receiver - the object referenced by 'objname' */
