@@ -86,9 +86,9 @@ static void fill_bigint_tables (moo_t* moo)
 	}
 }
 
-static MOO_INLINE void* alloc_heap (moo_t* moo, moo_oow_t size)
+static MOO_INLINE void* alloc_heap (moo_t* moo, moo_oow_t* size)
 {
-	return moo_allocmem(moo, size);
+	return moo_allocmem(moo, *size);
 }
 
 static MOO_INLINE void free_heap (moo_t* moo, void* ptr)

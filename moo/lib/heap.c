@@ -47,11 +47,12 @@ static void xma_free (moo_mmgr_t* mmgr, void* ptr)
 moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {
 	moo_heap_t* heap;
-	moo_oow_t space_size;
+	moo_oow_t space_size, alloc_size;
 
 	if (size < MIN_HEAP_SIZE && moo->gc_type != MOO_GC_TYPE_MARK_SWEEP) size = MIN_HEAP_SIZE;
 
-	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, MOO_SIZEOF(*heap) + size);
+	alloc_size = MOO_SIZEOF(*heap) + size;
+	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, &alloc_size);
 	if (MOO_UNLIKELY(!heap)) 
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
@@ -59,9 +60,12 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 		return MOO_NULL;
 	}
 
-	MOO_MEMSET (heap, 0, MOO_SIZEOF(*heap) + size);
+	/* the vmprim.alloc_heap() function is allowed to create a bigger heap than the requested size.
+	 * if the created heap is bigger than requested, the heap will be utilized in full. */
+	MOO_ASSERT (moo, alloc_size >= MOO_SIZEOF(*heap) + size);
+	MOO_MEMSET (heap, 0, alloc_size);
 	heap->base = (moo_uint8_t*)(heap + 1);
-	heap->size = size;
+	heap->size = alloc_size;
 
 	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
 	{
@@ -77,7 +81,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 			if (MOO_UNLIKELY(!heap->xma))
 			{
 				moo->vmprim.free_heap (moo, heap);
-				moo_seterrbfmt (moo, MOO_ESYSMEM, "unable to allocate xma");
+				moo_seterrbfmt (moo, MOO_ESYSMEM, "unable to allocate a memory manager over a heap");
 				return MOO_NULL;
 			}
 
@@ -91,7 +95,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	{
 		MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_SEMISPACE);
 
-		space_size = (size - PERM_SPACE_SIZE) / 2;
+		space_size = (alloc_size - PERM_SPACE_SIZE) / 2;
 
 		/* TODO: consider placing permspace in a separate memory chunk in case we have to grow
 		 *       other spaces. we may be able to realloc() the entire heap region without affecting the separately

@@ -1175,8 +1175,8 @@ typedef enum moo_log_mask_t moo_log_mask_t;
  * ========================================================================= */
 
 typedef void* (*moo_alloc_heap_t) (
-	moo_t*    moo, 
-	moo_oow_t size
+	moo_t*     moo, 
+	moo_oow_t* size
 );
 
 typedef void (*moo_free_heap_t) (

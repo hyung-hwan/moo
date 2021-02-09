@@ -681,11 +681,42 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 }
 
 /* ========================================================================= */
-static void* alloc_heap (moo_t* moo, moo_oow_t size)
+
+
+static int get_huge_page_size (moo_t* moo, moo_oow_t* page_size)
+{
+	FILE* fp;
+	char buf[256];
+
+	fp = fopen("/proc/meminfo", "r");
+	if (!fp) return -1;
+
+	while (!feof(fp))
+	{
+		if (fgets(buf, sizeof(buf) - 1, fp) == NULL) goto oops;
+
+		if (strncmp(buf, "Hugepagesize: ", 13) == 0)
+		{
+			unsigned long int tmp;
+			tmp = strtoul(&buf[13], NULL, 10);
+			if (tmp == MOO_TYPE_MAX(unsigned long int) && errno == ERANGE) goto oops;
+
+			*page_size = tmp * 1024; /* KBytes to Bytes */
+			fclose (fp);
+			return 0;
+		}
+	}
+
+oops:
+	fclose (fp);
+	return -1;
+}
+
+static void* alloc_heap (moo_t* moo, moo_oow_t* size)
 {
 #if defined(_WIN32)
 	moo_oow_t* ptr;
-	moo_oow_t actual_size, align_size;
+	moo_oow_t req_size, align, aligned_size;
 	HINSTANCE k32;
 	SIZE_T (*k32_GetLargePageMinimum) (void);
 	HANDLE token = MOO_NULL;
@@ -694,13 +725,13 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	DWORD prev_state_reqsize = 0;
 	int token_adjusted = 0;
 
-	align_size = 2 * 1024 * 1024;
+	align = 2 * 1024 * 1024; /* default 2MB */
 
 	k32 = LoadLibrary(TEXT("kernel32.dll"));
 	if (k32)
 	{
 		k32_GetLargePageMinimum = (SIZE_T(*)(void))GetProcAddress (k32, "GetLargePageMinimum");
-		if (k32_GetLargePageMinimum) align_size = k32_GetLargePageMinimum();
+		if (k32_GetLargePageMinimum) align = k32_GetLargePageMinimum();
 		FreeLibrary (k32);
 	}
 	/* the standard page size shouldn't help. so let me comment out this part.
@@ -708,11 +739,11 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	{
 		SYSTEM_INFO si;
 		GetSystemInfo (&si);
-		align_size = si.dwPageSize;
+		align = si.dwPageSize;
 	}*/
 
-	actual_size = MOO_SIZEOF(moo_oow_t) + size;
-	actual_size = MOO_ALIGN(actual_size, align_size);
+	req_size = MOO_SIZEOF(moo_oow_t) + size;
+	aligned_size = MOO_ALIGN(req_size, align);
 
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) goto oops;
 	if (!LookupPrivilegeValue(MOO_NULL, TEXT("SeLockMemoryPrivilege"), &new_state.Privileges[0].Luid)) goto oops;
@@ -736,12 +767,22 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 #if !defined(MEM_LARGE_PAGES)
 #	define MEM_LARGE_PAGES (0x20000000)
 #endif
-	ptr = VirtualAlloc(MOO_NULL, actual_size, MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
-	if (!ptr) goto oops;
+	ptr = VirtualAlloc(MOO_NULL, aligned_size, MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
+	if (!ptr) 
+	{
+		SYSTEM_INFO si;
+		GetSystemInfo (&si);
+		align = si.dwPageSize;
+		aligned_size = MOO_ALIGN(req_size, align);
+		ptr = VirtualAlloc(MOO_NULL, aligned_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		if (!ptr) goto oops;
+	}
 
 	AdjustTokenPrivileges (token, FALSE, prev_state_ptr, 0, MOO_NULL, 0);
 	CloseHandle (token);
 	if (prev_state_ptr && prev_state_ptr != &prev_state) HeapFree (GetProcessHeap(), 0, prev_state_ptr);
+
+	*size = aligned_size;
 	return ptr;
 
 oops:
@@ -767,42 +808,59 @@ oops:
 
 	moo_oow_t* ptr;
 	int flags;
-	moo_oow_t actual_size;
+	moo_oow_t req_size, align, aligned_size;
 
+	req_size = MOO_SIZEOF(moo_oow_t) + *size;
 	flags = MAP_PRIVATE | MAP_ANONYMOUS;
-
-	#if defined(MAP_HUGETLB)
-	flags |= MAP_HUGETLB;
-	#endif
 
 	#if defined(MAP_UNINITIALIZED)
 	flags |= MAP_UNINITIALIZED;
 	#endif
 
-	actual_size = MOO_SIZEOF(moo_oow_t) + size;
-	actual_size = MOO_ALIGN_POW2(actual_size, 2 * 1024 * 1024);
-	ptr = (moo_oow_t*)mmap(MOO_NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
-	if (ptr == MAP_FAILED) 
-	{
 	#if defined(MAP_HUGETLB)
+	if (get_huge_page_size(moo, &align) <= -1) align = 2 * 1024 * 1024; /* default to 2MB */
+	if (req_size > align / 2)
+	{
+		/* if the requested size is large enough, attempt HUGETLB */
+		flags |= MAP_HUGETLB;
+	}
+	else
+	{
+		align = sysconf(_SC_PAGESIZE);
+	}
+	#else
+	align = sysconf(_SC_PAGESIZE);
+	#endif
+
+	aligned_size = MOO_ALIGN_POW2(req_size, align);
+	ptr = (moo_oow_t*)mmap(NULL, aligned_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+	#if defined(MAP_HUGETLB)
+	if (ptr == MAP_FAILED && (flags & MAP_HUGETLB)) 
+	{
 		flags &= ~MAP_HUGETLB;
-		ptr = (moo_oow_t*)mmap(MOO_NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+		align = sysconf(_SC_PAGESIZE);
+		aligned_size = MOO_ALIGN_POW2(req_size, align);
+		ptr = (moo_oow_t*)mmap(NULL, aligned_size, PROT_READ | PROT_WRITE, flags, -1, 0);
 		if (ptr == MAP_FAILED) 
 		{
 			moo_seterrwithsyserr (moo, 0, errno);
 			return MOO_NULL;
 		}
+	}
 	#else
+	if (ptr == MAP_FAILED) 
+	{
 		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_NULL;
-	#endif
 	}
-	*ptr = actual_size;
+	#endif
 
+	*ptr = aligned_size;
+	*size = aligned_size - MOO_SIZEOF(moo_oow_t);
 	return (void*)(ptr + 1);
 
 #else
-	return MOO_MMGR_ALLOC(moo->_mmgr, size);
+	return MOO_MMGR_ALLOC(moo->_mmgr, *size);
 #endif
 }
 
@@ -3843,7 +3901,7 @@ static struct
 
 static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen, moo_bitmask_t* xlogmask)
 {
-	xtn_t* xtn = GET_XTN(moo);
+	/*xtn_t* xtn = GET_XTN(moo);*/
 	const moo_bch_t* cm, * flt;
 	moo_bitmask_t logmask;
 	moo_oow_t i, len, pathlen;
@@ -3901,7 +3959,7 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 
 static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen, moo_bitmask_t* xlogmask)
 {
-	xtn_t* xtn = GET_XTN(moo);
+	/*xtn_t* xtn = GET_XTN(moo);*/
 	const moo_uch_t* cm, * flt;
 	moo_bitmask_t logmask;
 	moo_oow_t i, len, pathlen;
