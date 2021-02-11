@@ -1396,7 +1396,7 @@ static void backtrace_stack_frames (moo_t* moo)
 		}
 
 		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, 
-			"#%02d ip=0x%*p sp=0x%*p %s+0x%zu\n", 
+			"#%02d ip=0x%*p sp=0x%*p %hs+0x%zu\n", 
 			n, MOO_SIZEOF(void*) * 2, (void*)ip, MOO_SIZEOF(void*) * 2, (void*)sp, symbol, (moo_oow_t)off);
 	}
 }
@@ -1417,7 +1417,7 @@ static void backtrace_stack_frames (moo_t* moo)
 
 		for (i = 0; i < btsize; i++)
 		{
-			moo_logbfmt(moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "  %s\n", btsyms[i]);
+			moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "  %hs\n", btsyms[i]);
 		}
 		free (btsyms);
 	}
@@ -1431,7 +1431,7 @@ static void backtrace_stack_frames (moo_t* moo)
 
 static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
 {
-	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
+	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %hs at %hs:%zu\n", expr, file, line);
 	backtrace_stack_frames (moo);
 
 #if defined(_WIN32)
@@ -3087,7 +3087,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	if (n <= -1)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
-		MOO_DEBUG2 (moo, "Warning: multiplexer wait failure - %d, %s\n", errno, moo_geterrmsg(moo));
+		MOO_DEBUG2 (moo, "Warning: multiplexer wait failure - %d, %js\n", errno, moo_geterrmsg(moo));
 	}
 	else
 	{
