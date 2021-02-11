@@ -47,12 +47,26 @@ static void xma_free (moo_mmgr_t* mmgr, void* ptr)
 moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {
 	moo_heap_t* heap;
-	moo_oow_t space_size, alloc_size;
+	moo_oow_t alloc_size;
 
 	if (size < MIN_HEAP_SIZE && moo->gc_type != MOO_GC_TYPE_MARK_SWEEP) size = MIN_HEAP_SIZE;
 
-	alloc_size = MOO_SIZEOF(*heap) + size;
-	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, &alloc_size);
+	if (size <= MOO_SIZEOF(*heap)) /* 0 or smaller than the heap header */
+	{
+		/* make a zero-sized heap using the default memory manager.
+		 * this zero-sized heap contains only the heap header */
+		size = 0;
+		alloc_size = MOO_SIZEOF(*heap);
+		heap = (moo_heap_t*)moo_allocmem(moo, alloc_size);
+	}
+	else
+	{
+		/* if a non-zero heap size is given, create the heap with
+		 * the dedicated heap allocator which is allowed to create
+		 * a bigger heap than requested  */
+		alloc_size = size;
+		heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, &alloc_size);
+	}
 	if (MOO_UNLIKELY(!heap)) 
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
@@ -62,16 +76,19 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 
 	/* the vmprim.alloc_heap() function is allowed to create a bigger heap than the requested size.
 	 * if the created heap is bigger than requested, the heap will be utilized in full. */
-	MOO_ASSERT (moo, alloc_size >= MOO_SIZEOF(*heap) + size);
+	MOO_ASSERT (moo, alloc_size >= MOO_SIZEOF(*heap));
 	MOO_MEMSET (heap, 0, alloc_size);
+
+	alloc_size -= MOO_SIZEOF(*heap); /* exclude the header size */
 	heap->base = (moo_uint8_t*)(heap + 1);
 	heap->size = alloc_size;
 
 	if (moo->gc_type == MOO_GC_TYPE_MARK_SWEEP)
 	{
-		if (size <= 0)
+		if (size == 0)
 		{
 			/* use the existing memory allocator */
+			MOO_ASSERT (moo, alloc_size == 0);
 			heap->xmmgr = *moo_getmmgr(moo);
 		}
 		else
@@ -93,6 +110,8 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	}
 	else
 	{
+		moo_oow_t space_size;
+
 		MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_SEMISPACE);
 
 		space_size = (alloc_size - PERM_SPACE_SIZE) / 2;
@@ -123,8 +142,15 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 
 void moo_killheap (moo_t* moo, moo_heap_t* heap)
 {
-	if (heap->xma) moo_xma_close (heap->xma);
-	moo->vmprim.free_heap (moo, heap);
+	if (heap->size == 0)
+	{
+		moo_freemem (moo, heap);
+	}
+	else
+	{
+		if (heap->xma) moo_xma_close (heap->xma);
+		moo->vmprim.free_heap (moo, heap);
+	}
 }
 
 void* moo_allocheapspace (moo_t* moo, moo_space_t* space, moo_oow_t size)
