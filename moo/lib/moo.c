@@ -116,8 +116,8 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 	if (!moo->vmprim.alloc_heap) moo->vmprim.alloc_heap = alloc_heap;
 	if (!moo->vmprim.free_heap) moo->vmprim.free_heap = free_heap;
 
-	/*moo->option.log_mask = ~0u;*/
-	moo->option.log_mask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+	/*moo->option.log_mask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;*/
+	moo->option.log_mask = (moo_bitmask_t)0; /* log nothing by default  */
 	moo->option.log_maxcapa = MOO_DFL_LOG_MAXCAPA;
 	moo->option.dfl_symtab_size = MOO_DFL_SYMTAB_SIZE;
 	moo->option.dfl_sysdic_size = MOO_DFL_SYSDIC_SIZE;
