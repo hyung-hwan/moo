@@ -41,7 +41,7 @@ static void* xma_realloc (moo_mmgr_t* mmgr, void* ptr, moo_oow_t size)
 
 static void xma_free (moo_mmgr_t* mmgr, void* ptr)
 {
-	return moo_xma_free (mmgr->ctx, ptr);
+	moo_xma_free (mmgr->ctx, ptr);
 }
 
 moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
