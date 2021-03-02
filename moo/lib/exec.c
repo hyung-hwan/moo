@@ -5215,10 +5215,6 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 	 */
 	moo->ip--; 
 #else
-	int unwind_protect;
-	moo_oop_context_t unwind_start;
-	moo_oop_context_t unwind_stop;
-
 	if (MOO_UNLIKELY(moo->active_context->origin == moo->processor->active->initial_context->origin))
 	{
 		/* method return from a processified block
@@ -5257,8 +5253,11 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 	}
 	else 
 	{
-		unwind_protect = 0;
+		int unwind_protect;
+		moo_oop_context_t unwind_start;
+		moo_oop_context_t unwind_stop;
 
+		unwind_protect = 0;
 
 		if (moo->active_context->origin == moo->active_context)
 		{
