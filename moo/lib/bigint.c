@@ -882,6 +882,11 @@ moo_oop_t moo_ooitoint (moo_t* moo, moo_ooi_t i)
 	}
 }
 
+#if (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T)
+
+	/* do nothing. required macros are defined in moo.h */
+
+#else
 moo_oop_t moo_intmaxtoint (moo_t* moo, moo_intmax_t i)
 {
 	if (MOO_IN_SMOOI_RANGE(i))
@@ -905,6 +910,7 @@ moo_oop_t moo_uintmaxtoint (moo_t* moo, moo_uintmax_t i)
 		return make_bigint_with_uintmax(moo, i);
 	}
 }
+#endif
 
 static MOO_INLINE moo_oop_t expand_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t inc)
 {
