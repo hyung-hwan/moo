@@ -84,6 +84,21 @@
 #	include <io.h>
 #	include <errno.h>
 
+#	include <types.h> /* some types for socket.h */
+#	include <sys/socket.h> /* for socketpair */
+#	include <sys/time.h>
+#	include <sys/ioctl.h> /* FIONBIO */
+#   include <nerrno.h> /* for SOCEXXX error codes */
+
+#	define BSD_SELECT
+#	if defined(TCPV40HDRS)
+#	include <sys/select.h>
+#	include <sys/un.h> /* for sockaddr_un */
+#	else
+#	include <unistd.h>
+#	endif
+
+#	define USE_SELECT
 	/* fake XPOLLXXX values */
 #	define XPOLLIN  (1 << 0)
 #	define XPOLLOUT (1 << 1)
@@ -1288,7 +1303,23 @@ static moo_errnum_t os2err_to_errnum (APIRET errcode)
 			return MOO_ESYSERR;
 	}
 }
-#endif
+#if !defined(TCPV40HDRS)
+static moo_errnum_t os2sockerr_to_errnum (int errcode)
+{
+	switch (errcode)
+	{
+		case SOCEPERM:  return MOO_EPERM;
+		case SOCENOENT: return MOO_ENOENT;
+		case SOCEINTR:  return MOO_EINTR;
+		case SOCEACCES: return MOO_EACCES;
+		case SOCEINVAL: return MOO_EINVAL;
+		case SOCENOMEM: return MOO_ESYSMEM;
+		case SOCEPIPE:  return MOO_EPIPE;
+		default: return MOO_ESYSERR;
+	}
+}
+#endif /* TCPV40HDRS */
+#endif /* __OS2__ */
 
 #if defined(macintosh)
 static moo_errnum_t macerr_to_errnum (int errcode)
@@ -1319,6 +1350,24 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 {
 	switch (syserr_type)
 	{
+		case 2:
+		#if defined(__OS2__)
+			#if defined(TCPV40HDRS)
+			if (buf) 
+			{
+				char tmp[64];
+				sprintf (tmp, "socket error %d", (int)syserr_code);
+				moo_copy_bcstr (buf, len, tmp);
+			}
+			return MOO_ESYSERR;
+			#else
+			/* sock_strerror() available in tcpip32.dll only */
+			if (buf) moo_copy_bcstr (buf, len, sock_strerror(syserr_code));
+			return os2sockerr_to_errnum(syserr_code);
+			#endif
+		#endif
+			/* fall thru for other platforms */
+			
 		case 1: 
 		#if defined(_WIN32)
 			if (buf)
@@ -1333,8 +1382,12 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 			}
 			return winerr_to_errnum(syserr_code);
 		#elif defined(__OS2__)
-			/* TODO: convert code to string */
-			if (buf) moo_copy_bcstr (buf, len, "system error");
+			if (buf)
+			{
+				char tmp[64];
+				sprintf (tmp, "system error %d", (int)syserr_code);
+				hcl_copy_bcstr (buf, len, tmp);
+			}
 			return os2err_to_errnum(syserr_code);
 		#elif defined(macintosh)
 			/* TODO: convert code to string */
@@ -2331,21 +2384,53 @@ kqueue_syserr:
 
 static int open_pipes (moo_t* moo, int p[2])
 {
+#if defined(_WIN32)
+	u_long flags;
+#else
 	int flags;
+#endif
 
 #if defined(_WIN32)
 	if (_pipe(p, 256, _O_BINARY | _O_NOINHERIT) == -1)
-#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
-	if (pipe2(p, O_CLOEXEC | O_NONBLOCK) == -1)
-#else
-	if (pipe(p) == -1)
-#endif
 	{
-		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes for iothr management");
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
 		return -1;
 	}
+#elif defined(__OS2__)
+	#if defined(TCPV40HDRS)
+	/* neither pipe nor socketpair available */
+	if (os2_socket_pair(p) == -1)
+	#else
+	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, p) == -1)
+	#endif
+	{
+		moo_seterrbfmtwithsyserr (moo, 2, sock_errno(), "unable to create pipes");
+		return -1;
+	}
+#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+	if (pipe2(p, O_CLOEXEC | O_NONBLOCK) == -1)
+	{
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
+		return -1;
+	}
+#else
+	if (pipe(p) == -1)
+	{
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
+		return -1;
+	}
+#endif
+	
 
-#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+#if defined(_WIN32)
+	flags = 1;
+	ioctl (p[0], FIONBIO, &flags);
+	ioctl (p[1], FIONBIO, &flags);
+#elif defined(__OS2__)
+	flags = 1; /* don't block */
+	ioctl (p[0], FIONBIO, (char*)&flags, moo_SIZEOF(flags));
+	ioctl (p[1], FIONBIO, (char*)&flags, moo_SIZEOF(flags));
+#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
 		/* do nothing */
 #else
 	#if defined(FD_CLOEXEC)
@@ -2364,11 +2449,15 @@ static int open_pipes (moo_t* moo, int p[2])
 
 	return 0;
 }
+
 static void close_pipes (moo_t* moo, int p[2])
 {
 #if defined(_WIN32)
 	_close (p[0]);
 	_close (p[1]);
+#elif defined(__OS2__)
+	soclose (p[0]);
+	soclose (p[1]);
 #else
 	close (p[0]);
 	close (p[1]);
@@ -3086,8 +3175,13 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 	if (n <= -1)
 	{
+	#if defined(__OS2__)
+		moo_seterrwithsyserr (moo, 2, sock_errno());
+		MOO_DEBUG2 (moo, "Warning: multiplexer wait failure - %d, %js\n", sock_errno(), moo_geterrmsg(moo));
+	#else
 		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Warning: multiplexer wait failure - %d, %js\n", errno, moo_geterrmsg(moo));
+	#endif
 	}
 	else
 	{
