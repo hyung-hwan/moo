@@ -10872,7 +10872,7 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 
 	/* Some IO names could have been stored in earlier calls to this function.
 	 * I clear such names before i begin this function. i don't clear it
-	 * at the end of this function because i may be referenced as an error
+	 * at the end of this function because it may be referenced as an error
 	 * location */
 	moo_clearcionames (moo);
 

@@ -2942,3 +2942,188 @@ int moo_strfmtcallstack (moo_t* moo, moo_ooi_t nargs, int rcv_is_fmtstr)
 	moo->sprintf.xbuf.len = 0;
 	return format_stack_args(&fo, nargs, rcv_is_fmtstr);
 }
+
+
+/* --------------------------------------------------------------------------
+ * DYNAMIC STRING FORMATTING
+ * -------------------------------------------------------------------------- */
+
+struct fmt_uch_buf_t
+{
+	moo_t* moo;
+	moo_uch_t* ptr;
+	moo_oow_t len;
+	moo_oow_t capa;
+};
+typedef struct fmt_uch_buf_t fmt_uch_buf_t;
+
+static int fmt_put_bchars_to_uch_buf (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
+{
+	fmt_uch_buf_t* b = (fmt_uch_buf_t*)fmtout->ctx;
+	moo_oow_t bcslen, ucslen;
+	int n;
+
+	bcslen = len;
+	ucslen = b->capa - b->len;
+	n = moo_conv_bchars_to_uchars_with_cmgr(ptr, &bcslen, &b->ptr[b->len], &ucslen, b->moo->_cmgr, 1);
+	b->len += ucslen;
+	if (n <= -1) 
+	{
+		if (n == -2) 
+		{
+			return 0; /* buffer full. stop */
+		}
+		else
+		{
+			moo_seterrnum (b->moo, MOO_EECERR);
+			return -1;
+		}
+	}
+
+	return 1; /* success. carry on */
+}
+
+static int fmt_put_uchars_to_uch_buf (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
+{
+	fmt_uch_buf_t* b = (fmt_uch_buf_t*)fmtout->ctx;
+	moo_oow_t n;
+
+	/* this function null-terminates the destination. so give the restored buffer size */
+	n = moo_copy_uchars_to_ucstr(&b->ptr[b->len], b->capa - b->len + 1, ptr, len);
+	b->len += n;
+	if (n < len)
+	{
+		moo_seterrnum (b->moo, MOO_EBUFFULL);
+		return 0; /* stop. insufficient buffer */
+	}
+
+	return 1; /* success */
+}
+
+moo_oow_t moo_vfmttoucstr (moo_t* moo, moo_uch_t* buf, moo_oow_t bufsz, const moo_uch_t* fmt, va_list ap)
+{
+	moo_fmtout_t fo;
+	fmt_uch_buf_t fb;
+
+	if (bufsz <= 0) return 0;
+
+	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.mmgr = moo->_mmgr;
+	fo.putbchars = fmt_put_bchars_to_uch_buf;
+	fo.putuchars = fmt_put_uchars_to_uch_buf;
+	fo.ctx = &fb;
+
+	MOO_MEMSET (&fb, 0, MOO_SIZEOF(fb));
+	fb.moo = moo;
+	fb.ptr = buf;
+	fb.capa = bufsz - 1;
+
+	if (moo_ufmt_outv(&fo, fmt, ap) <= -1) return -1;
+
+	buf[fb.len] = '\0';
+	return fb.len;
+}
+
+moo_oow_t moo_fmttoucstr (moo_t* moo, moo_uch_t* buf, moo_oow_t bufsz, const moo_uch_t* fmt, ...)
+{
+	moo_oow_t x;
+	va_list ap;
+
+	va_start (ap, fmt);
+	x = moo_vfmttoucstr(moo, buf, bufsz, fmt, ap);
+	va_end (ap);
+
+	return x;
+}
+
+/* ------------------------------------------------------------------------ */
+
+struct fmt_bch_buf_t
+{
+	moo_t* moo;
+	moo_bch_t* ptr;
+	moo_oow_t len;
+	moo_oow_t capa;
+};
+typedef struct fmt_bch_buf_t fmt_bch_buf_t;
+
+
+static int fmt_put_bchars_to_bch_buf (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
+{
+	fmt_bch_buf_t* b = (fmt_bch_buf_t*)fmtout->ctx;
+	moo_oow_t n;
+
+	/* this function null-terminates the destination. so give the restored buffer size */
+	n = moo_copy_bchars_to_bcstr(&b->ptr[b->len], b->capa - b->len + 1, ptr, len);
+	b->len += n;
+	if (n < len)
+	{
+		moo_seterrnum (b->moo, MOO_EBUFFULL);
+		return 0; /* stop. insufficient buffer */
+	}
+
+	return 1; /* success */
+}
+
+
+static int fmt_put_uchars_to_bch_buf (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
+{
+	fmt_bch_buf_t* b = (fmt_bch_buf_t*)fmtout->ctx;
+	moo_oow_t bcslen, ucslen;
+	int n;
+
+	bcslen = b->capa - b->len;
+	ucslen = len;
+	n = moo_conv_uchars_to_bchars_with_cmgr(ptr, &ucslen, &b->ptr[b->len], &bcslen, b->moo->_cmgr);
+	b->len += bcslen;
+	if (n <= -1)
+	{
+		if (n == -2)
+		{
+			return 0; /* buffer full. stop */
+		}
+		else
+		{
+			moo_seterrnum (b->moo, MOO_EECERR);
+			return -1;
+		}
+	}
+
+	return 1; /* success. carry on */
+}
+
+moo_oow_t moo_vfmttobcstr (moo_t* moo, moo_bch_t* buf, moo_oow_t bufsz, const moo_bch_t* fmt, va_list ap)
+{
+	moo_fmtout_t fo;
+	fmt_bch_buf_t fb;
+
+	if (bufsz <= 0) return 0;
+
+	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.mmgr = moo->_mmgr;
+	fo.putbchars = fmt_put_bchars_to_bch_buf;
+	fo.putuchars = fmt_put_uchars_to_bch_buf;
+	fo.ctx = &fb;
+
+	MOO_MEMSET (&fb, 0, MOO_SIZEOF(fb));
+	fb.moo = moo;
+	fb.ptr = buf;
+	fb.capa = bufsz - 1;
+
+	if (moo_bfmt_outv(&fo, fmt, ap) <= -1) return -1;
+
+	buf[fb.len] = '\0';
+	return fb.len;
+}
+
+moo_oow_t moo_fmttobcstr (moo_t* moo, moo_bch_t* buf, moo_oow_t bufsz, const moo_bch_t* fmt, ...)
+{
+	moo_oow_t x;
+	va_list ap;
+
+	va_start (ap, fmt);
+	x = moo_vfmttobcstr(moo, buf, bufsz, fmt, ap);
+	va_end (ap);
+
+	return x;
+}

@@ -2827,6 +2827,50 @@ MOO_EXPORT moo_ooi_t moo_logufmtv (
 #endif
 
 /* =========================================================================
+ * STRING FORMATTING
+ * ========================================================================= */
+
+MOO_EXPORT moo_oow_t moo_vfmttoucstr (
+	moo_t*           moo,
+	moo_uch_t*       buf,
+	moo_oow_t        bufsz,
+	const moo_uch_t* fmt,
+	va_list           ap
+);
+
+MOO_EXPORT moo_oow_t moo_fmttoucstr (
+	moo_t*           moo,
+	moo_uch_t*       buf,
+	moo_oow_t        bufsz,
+	const moo_uch_t* fmt,
+	...
+);
+
+MOO_EXPORT moo_oow_t moo_vfmttobcstr (
+	moo_t*           moo,
+	moo_bch_t*       buf,
+	moo_oow_t        bufsz,
+	const moo_bch_t* fmt,
+	va_list           ap
+);
+
+MOO_EXPORT moo_oow_t moo_fmttobcstr (
+	moo_t*           moo,
+	moo_bch_t*       buf,
+	moo_oow_t        bufsz,
+	const moo_bch_t* fmt,
+	...
+);
+
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_vfmttooocstr moo_vfmttoucstr
+#	define moo_fmttooocstr moo_fmttoucstr
+#else
+#	define moo_vfmttooocstr moo_vfmttobcstr
+#	define moo_fmttooocstr moo_fmttobcstr
+#endif
+
+/* =========================================================================
  * MISCELLANEOUS HELPER FUNCTIONS
  * ========================================================================= */
 
