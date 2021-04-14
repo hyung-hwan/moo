@@ -135,6 +135,7 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 
 static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, int force);
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask);
+static void terminate_all_processes (moo_t* moo);
 static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, int to_super);
 
 /* ------------------------------------------------------------------------- */
@@ -164,6 +165,24 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 
 /* TODO: clean up semaphores being waited on 
 	MOO_ASSERT (moo, moo->sem_io_wait_count == 0); */
+
+	if (moo->processor->total_count != MOO_SMOOI_TO_OOP(0))
+	{
+		/* the stock kernel code is supposed to stop all processes.
+		 * if the code reaches here, the kernel code must be buggy */
+		MOO_LOG3 (moo, MOO_LOG_WARN, "Warning - non-zero number of processes upon VM clean-up - total: %zd runnable: %zd suspended: %zd\n", 
+			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->total_count),
+			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
+			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
+		
+		MOO_LOG0 (moo, MOO_LOG_WARN, "Warning - Terminating all residue processes\n");
+		terminate_all_processes (moo);
+	}
+
+	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
+	MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(moo->processor->total_count) == 0);
+	MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(moo->processor->runnable.count) == 0);
+	MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(moo->processor->suspended.count) == 0);
 
 	for (i = 0; i < moo->sem_io_map_capa;)
 	{
@@ -776,6 +795,22 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 		/* TODO: */
 	}
 #endif
+}
+
+static void terminate_all_processes (moo_t* moo)
+{
+	while (MOO_OOP_TO_SMOOI(moo->processor->suspended.count) > 0)
+	{
+		terminate_process (moo, moo->processor->suspended.first);
+	}
+
+	while (MOO_OOP_TO_SMOOI(moo->processor->runnable.count) > 0)
+	{
+		terminate_process (moo, moo->processor->runnable.first);
+	}
+
+	MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(moo->processor->total_count) == 0);
+	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 }
 
 static void resume_process (moo_t* moo, moo_oop_process_t proc)
