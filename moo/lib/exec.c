@@ -175,7 +175,7 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
 			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
 		
-		MOO_LOG0 (moo, MOO_LOG_WARN, "Warning - Terminating all residue processes\n");
+		MOO_LOG0 (moo, MOO_LOG_WARN, "Warning - terminating all residue processes\n");
 		terminate_all_processes (moo);
 	}
 
