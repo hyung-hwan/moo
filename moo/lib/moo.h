@@ -1105,26 +1105,26 @@ struct moo_dbgi_method_t
 
 enum moo_log_mask_t
 {
-	MOO_LOG_DEBUG      = (1u << 0),
-	MOO_LOG_INFO       = (1u << 1),
-	MOO_LOG_WARN       = (1u << 2),
-	MOO_LOG_ERROR      = (1u << 3),
-	MOO_LOG_FATAL      = (1u << 4),
+	MOO_LOG_DEBUG      = ((moo_bitmask_t)1 << 0),
+	MOO_LOG_INFO       = ((moo_bitmask_t)1 << 1),
+	MOO_LOG_WARN       = ((moo_bitmask_t)1 << 2),
+	MOO_LOG_ERROR      = ((moo_bitmask_t)1 << 3),
+	MOO_LOG_FATAL      = ((moo_bitmask_t)1 << 4),
 
-	MOO_LOG_UNTYPED    = (1u << 6), /* only to be used by MOO_DEBUGx() and MOO_INFOx() */
-	MOO_LOG_COMPILER   = (1u << 7),
-	MOO_LOG_VM         = (1u << 8),
-	MOO_LOG_MNEMONIC   = (1u << 9), /* bytecode mnemonic */
-	MOO_LOG_GC         = (1u << 10),
-	MOO_LOG_IC         = (1u << 11), /* instruction cycle, fetch-decode-execute */
-	MOO_LOG_PRIMITIVE  = (1u << 12),
-	MOO_LOG_APP        = (1u << 13), /* moo applications, set by moo logging primitive */
+	MOO_LOG_UNTYPED    = ((moo_bitmask_t)1 << 6), /* only to be used by MOO_DEBUGx() and MOO_INFOx() */
+	MOO_LOG_COMPILER   = ((moo_bitmask_t)1 << 7),
+	MOO_LOG_VM         = ((moo_bitmask_t)1 << 8),
+	MOO_LOG_MNEMONIC   = ((moo_bitmask_t)1 << 9), /* bytecode mnemonic */
+	MOO_LOG_GC         = ((moo_bitmask_t)1 << 10),
+	MOO_LOG_IC         = ((moo_bitmask_t)1 << 11), /* instruction cycle, fetch-decode-execute */
+	MOO_LOG_PRIMITIVE  = ((moo_bitmask_t)1 << 12),
+	MOO_LOG_APP        = ((moo_bitmask_t)1 << 13), /* moo applications, set by moo logging primitive */
 
 	MOO_LOG_ALL_LEVELS = (MOO_LOG_DEBUG  | MOO_LOG_INFO | MOO_LOG_WARN | MOO_LOG_ERROR | MOO_LOG_FATAL),
 	MOO_LOG_ALL_TYPES  = (MOO_LOG_UNTYPED | MOO_LOG_COMPILER | MOO_LOG_VM | MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
 
-	MOO_LOG_STDOUT     = (1u << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
-	MOO_LOG_STDERR     = (1u << 15)  /* write log messages to stderr without timestamp. */
+	MOO_LOG_STDOUT     = ((moo_bitmask_t)1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
+	MOO_LOG_STDERR     = ((moo_bitmask_t)1 << 15)  /* write log messages to stderr without timestamp. */
 };
 typedef enum moo_log_mask_t moo_log_mask_t;
 

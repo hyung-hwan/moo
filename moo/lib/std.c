@@ -3958,29 +3958,42 @@ static LONG WINAPI msw_exception_filter (struct _EXCEPTION_POINTERS* exinfo)
 static struct 
 {
 	const char* name;
+	int op;
 	moo_bitmask_t mask;
 } log_mask_table[] =
 {
-	{ "app",         MOO_LOG_APP },
-	{ "compiler",    MOO_LOG_COMPILER },
-	{ "vm",          MOO_LOG_VM },
-	{ "mnemonic",    MOO_LOG_MNEMONIC },
-	{ "gc",          MOO_LOG_GC },
-	{ "ic",          MOO_LOG_IC },
-	{ "primitive",   MOO_LOG_PRIMITIVE },
-	{ "all",         MOO_LOG_ALL_TYPES },
+	{ "app",         0, MOO_LOG_APP },
+	{ "compiler",    0, MOO_LOG_COMPILER },
+	{ "vm",          0, MOO_LOG_VM },
+	{ "mnemonic",    0, MOO_LOG_MNEMONIC },
+	{ "gc",          0, MOO_LOG_GC },
+	{ "ic",          0, MOO_LOG_IC },
+	{ "primitive",   0, MOO_LOG_PRIMITIVE },
+	{ "all",         0, MOO_LOG_ALL_TYPES },
 
-	{ "fatal",       MOO_LOG_FATAL },
-	{ "error",       MOO_LOG_ERROR },
-	{ "warn",        MOO_LOG_WARN },
-	{ "info",        MOO_LOG_INFO },
-	{ "debug",       MOO_LOG_DEBUG },
+	{ "fatal",       0, MOO_LOG_FATAL },
+	{ "error",       0, MOO_LOG_ERROR },
+	{ "warn",        0, MOO_LOG_WARN },
+	{ "info",        0, MOO_LOG_INFO },
+	{ "debug",       0, MOO_LOG_DEBUG },
 
-	{ "fatal+",      MOO_LOG_FATAL },
-	{ "error+",      MOO_LOG_FATAL | MOO_LOG_ERROR },
-	{ "warn+",       MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN },
-	{ "info+",       MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO },
-	{ "debug+",      MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG }
+	{ "fatal+",      0, MOO_LOG_FATAL },
+	{ "error+",      0, MOO_LOG_FATAL | MOO_LOG_ERROR },
+	{ "warn+",       0, MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN },
+	{ "info+",       0, MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO },
+	{ "debug+",      0, MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG },
+
+	{ "fatal-",      0, MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG },
+	{ "error-",      0, MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG },
+	{ "warn-",       0, MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG },
+	{ "info-",       0, MOO_LOG_INFO | MOO_LOG_DEBUG },
+	{ "debug-",      0, MOO_LOG_DEBUG },
+
+	{ "-fatal",      1, ~MOO_LOG_FATAL },
+	{ "-error",      1, ~MOO_LOG_ERROR },
+	{ "-warn",       1, ~MOO_LOG_WARN },
+	{ "-info",       1, ~MOO_LOG_INFO },
+	{ "-debug",      1, ~MOO_LOG_DEBUG },
 };
 
 static struct 
@@ -4021,7 +4034,10 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 			{
 				if (moo_comp_bchars_bcstr(flt, len, log_mask_table[i].name) == 0) 
 				{
-					logmask |= log_mask_table[i].mask;
+					if (log_mask_table[i].op)
+						logmask &= log_mask_table[i].mask;
+					else
+						logmask |= log_mask_table[i].mask;
 					break;
 				}
 			}
@@ -4076,7 +4092,10 @@ static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen,
 			{
 				if (moo_comp_uchars_bcstr(flt, len, log_mask_table[i].name) == 0) 
 				{
-					logmask |= log_mask_table[i].mask;
+					if (log_mask_table[i].op)
+						logmask &= log_mask_table[i].mask;
+					else
+						logmask |= log_mask_table[i].mask;
 					break;
 				}
 			}
