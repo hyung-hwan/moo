@@ -168,33 +168,33 @@ class System(Apex)
 
 					System logNl: "Interrupt detected - signal no - " & signo asString.
 
-System logNl: "WWWWWWWWWWWWWWWWWWWWWWWWW ".
+//System logNl: "WWWWWWWWWWWWWWWWWWWWWWWWW ".
 					// user-defined signal handler is not allowed for 16rFF
 					if (signo == 16rFF) { goto done }. 
-System logNl: "OHHHHHHHHHHHHHH ".
+//System logNl: "OHHHHHHHHHHHHHH ".
 
 					ifnot (self.shr isEmpty)
 					{
-System logNl: "About to execute handler for the signal detected - " & signo asString.
+//System logNl: "About to execute handler for the signal detected - " & signo asString.
 						self.shr do: [ :handler | handler value: signo ].
 					}
 					else
 					{
-System logNl: "Jumping to done detected - signal no - " & signo asString.
+//System logNl: "Jumping to done detected - signal no - " & signo asString.
 						if (signo == 2) { goto done }.
 					}.
 				}.
-System logNl: "Waiting for signal on os_intr_sem...".
+//System logNl: "Waiting for signal on os_intr_sem...".
 				os_intr_sem wait.
 			}.
 		done:
-System logNl: "Jumped to done detected - signal no - " & signo asString.
+//System logNl: "Jumped to done detected - signal no - " & signo asString.
 			nil.
 		]
 		ensure: [
 			| pid proc oldps |
 
-System logNl: "Aborting signal handler......".
+//System logNl: "Aborting signal handler......".
 			// stop subscribing to signals.
 			os_intr_sem signal.
 			os_intr_sem unsignal.
