@@ -26,6 +26,8 @@
 
 #include "moo-prv.h"
 
+/*#define RETAIN_RFC2279 1*/
+
 /*
  * from RFC 2279 UTF-8, a transformation format of ISO 10646
  *
@@ -36,6 +38,12 @@
  * 4:4 00010000-001FFFFF  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
  * inv 00200000-03FFFFFF  111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
  * inv 04000000-7FFFFFFF  1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+ *
+ * RFC3629 limits the ranges like this:
+ * 1:2 00000000-0000007F  0xxxxxxx
+ * 2:2 00000080-000007FF  110xxxxx 10xxxxxx
+ * 3:2 00000800-0000FFFF  1110xxxx 10xxxxxx 10xxxxxx
+ * 4:4 00010000-0010FFFF  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
  */
 
 struct __utf8_t
@@ -55,9 +63,13 @@ static __utf8_t utf8_table[] =
 	{0x00000000ul, 0x0000007Ful, 0x00, 0x80, 0x7F, 1},
 	{0x00000080ul, 0x000007FFul, 0xC0, 0xE0, 0x1F, 2},
 	{0x00000800ul, 0x0000FFFFul, 0xE0, 0xF0, 0x0F, 3},
+#if defined(RETAIN_RFC2279)
 	{0x00010000ul, 0x001FFFFFul, 0xF0, 0xF8, 0x07, 4},
 	{0x00200000ul, 0x03FFFFFFul, 0xF8, 0xFC, 0x03, 5},
 	{0x04000000ul, 0x7FFFFFFFul, 0xFC, 0xFE, 0x01, 6}
+#else
+	{0x00010000ul, 0x0010FFFFul, 0xF0, 0xF8, 0x07, 4}
+#endif
 };
 
 static MOO_INLINE __utf8_t* get_utf8_slot (moo_uch_t uc)
@@ -81,7 +93,7 @@ static MOO_INLINE __utf8_t* get_utf8_slot (moo_uch_t uc)
 
 moo_oow_t moo_uc_to_utf8 (moo_uch_t uc, moo_bch_t* utf8, moo_oow_t size)
 {
-	__utf8_t* cur = get_utf8_slot (uc);
+	__utf8_t* cur = get_utf8_slot(uc);
 
 	if (cur == MOO_NULL) return 0; /* illegal character */
 
