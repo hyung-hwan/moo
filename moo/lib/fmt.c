@@ -839,7 +839,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			/* zeropad must not take effect for 's' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
 			if (lm_flag & LF_H) goto lowercase_s;
-		#if defined(MOO_OOCH_IS_UCH)
+		#if defined(MOO_OOCH_IS_BCH)
 			if (lm_flag & LF_J) goto lowercase_s;
 		#endif
 		uppercase_s:
