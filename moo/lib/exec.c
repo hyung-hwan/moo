@@ -1994,11 +1994,11 @@ void moo_clearmethodcache (moo_t* moo)
 
 static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
 {
-	/* the initial context is a fake context. if objname is 'Stix' and
-	 * mthname is 'main', this function emulates message sending 'Stix main'.
+	/* the initial context is a fake context. if objname is 'Moo' and
+	 * mthname is 'main', this function emulates message sending 'Moo main'.
 	 * it should emulate the following logical byte-code sequences:
 	 *
-	 *    push Stix
+	 *    push Moo
 	 *    send #main
 	 */
 	moo_oop_context_t ctx;
@@ -4903,7 +4903,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 	MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(selector) == MOO_OBJ_TYPE_CHAR);
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, selector) == moo->_symbol);
 
-	receiver = MOO_STACK_GET(moo, moo->sp - nargs);
+	receiver = MOO_STACK_GETRCV(moo, nargs);
 
 #if defined(MOO_PROFILE_VM)
 	moo->stat.message_sends++;
