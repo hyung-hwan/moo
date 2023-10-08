@@ -339,6 +339,12 @@
 /* build release/debug */
 #undef MOO_BUILD_RELEASE
 
+/* configure arguments */
+#undef MOO_CONFIGURE_ARGS
+
+/* configure command */
+#undef MOO_CONFIGURE_CMD
+
 /* enable dynamic module capability */
 #undef MOO_ENABLE_DYNAMIC_MODULE
 

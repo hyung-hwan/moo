@@ -842,6 +842,16 @@ dnl ====  subsititution of some key items ====
 AC_SUBST(MOO_PROJECT_AUTHOR, "${PACKAGE_BUGREPORT}")
 AC_SUBST(MOO_PROJECT_URL, "${PACKAGE_URL}")
 
+dnl === configure arguments
+if test `expr " [$]0" : " '.*"` = 0; then
+	moo_configure_cmd="'[$]0'"
+else
+	moo_configure_cmd="[$]0"
+fi
+
+AC_DEFINE_UNQUOTED(MOO_CONFIGURE_ARGS, ["$ac_configure_args"], [configure arguments])
+AC_DEFINE_UNQUOTED(MOO_CONFIGURE_CMD, ["$moo_configure_cmd"], [configure command])
+
 AC_CONFIG_FILES([
 	Makefile 
 	tools/Makefile 
