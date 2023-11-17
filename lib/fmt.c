@@ -1223,7 +1223,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 			sign = 0;
 			if (lm_flag & LF_J)
 			{
-			#if 0 && defined(__GNUC__) && \
+			#if 1 && !defined(__clang__) && defined(__GNUC__) && \
 			    (MOO_SIZEOF_UINTMAX_T > MOO_SIZEOF_OOW_T) && \
 			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG_LONG) && \
 			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG)
@@ -1265,7 +1265,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 		handle_sign:
 			if (lm_flag & LF_J)
 			{
-			#if 0 && defined(__GNUC__) && \
+			#if 1 && !defined(__clang__) && defined(__GNUC__) && \
 			    (MOO_SIZEOF_INTMAX_T > MOO_SIZEOF_OOI_T) && \
 			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG_LONG) && \
 			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG)
