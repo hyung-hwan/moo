@@ -663,12 +663,6 @@ moo_oow_t moo_byte_to_bcstr (
 
 /* ------------------------------------------------------------------------- */
 
-MOO_EXPORT int moo_get_ucwidth (
-	moo_uch_t uc
-);
-
-/* ------------------------------------------------------------------------- */
-
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_conv_oocstr_to_bcstr_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucstr_to_bcstr_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
 #	define moo_conv_oochars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_uchars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)

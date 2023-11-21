@@ -24,6 +24,10 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if !defined(_GNU_SOURCE)
+#	define _GNU_SOURCE
+#endif
+
 #include <moo-std.h>
 #include "moo-prv.h"
 
