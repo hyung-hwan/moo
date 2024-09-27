@@ -274,8 +274,8 @@
 #else
 #	define MUTEX_INIT(x)
 #	define MUTEX_DESTROY(x)
-#	define MUTEX_LOCK(x) 
-#	define MUTEX_UNLOCK(x) 
+#	define MUTEX_LOCK(x)
+#	define MUTEX_UNLOCK(x)
 #endif
 
 typedef struct bb_t bb_t;
@@ -297,12 +297,6 @@ struct select_fd_t
 	int events;
 };
 #endif
-
-enum logfd_flag_t
-{
-	LOGFD_TTY = (1 << 0),
-	LOGFD_OPENED_HERE = (1 << 1)
-};
 
 typedef struct xtn_t xtn_t;
 struct xtn_t
@@ -381,8 +375,8 @@ struct xtn_t
 			moo_oow_t* ptr;
 			moo_oow_t capa;
 		} reg;
-		struct kevent buf[64]; 
-	#elif defined(USE_EPOLL) 
+		struct kevent buf[64];
+	#elif defined(USE_EPOLL)
 		/*TODO: make it dynamically changeable depending on the number of
 		 *      file descriptors added */
 		struct epoll_event buf[64]; /* buffer for reading events */
@@ -538,7 +532,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 				MOO_ASSERT (moo, &xtn->in->u.fileu.path == &xtn->in->u.file.path);
 		#endif
 			case MOO_IOSTD_FILEU:
-				if (moo_convutobcstr(moo, xtn->in->u.fileu.path, &ucslen, MOO_NULL, &bcslen) <= -1) 
+				if (moo_convutobcstr(moo, xtn->in->u.fileu.path, &ucslen, MOO_NULL, &bcslen) <= -1)
 				{
 					moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to convert encoding of path %ls", xtn->in->u.fileu.path);
 					goto oops;
@@ -608,7 +602,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	return 0;
 
 oops:
-	if (bb) 
+	if (bb)
 	{
 		if (bb->fp) fclose (bb->fp);
 		moo_freemem (moo, bb);
@@ -660,7 +654,7 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 	ucslen = MOO_COUNTOF(arg->buf);
 	/*x = moo_convbtooochars(moo, bb->buf, &bcslen, arg->buf, &ucslen);*/
 	x = moo_conv_bchars_to_uchars_with_cmgr(bb->buf, &bcslen, arg->buf, &ucslen, bb->cmgr, 0);
-	if (x <= -1 /*&& ucslen <= 0 */) 
+	if (x <= -1 /*&& ucslen <= 0 */)
 	{
 		moo_seterrbfmt (moo, (x == -2)? MOO_EBUFFULL: MOO_EECERR, "unable to convert source input - %.*hs", bcslen, bb->buf);
 		return -1;
@@ -686,7 +680,7 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 	{
 		case MOO_IO_OPEN:
 			return open_input(moo, arg);
-			
+
 		case MOO_IO_CLOSE:
 			return close_input(moo, arg);
 
@@ -770,7 +764,7 @@ static void* alloc_heap (moo_t* moo, moo_oow_t* size)
 	new_state.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
 	prev_state_ptr = &prev_state;
-	if (!AdjustTokenPrivileges(token, FALSE, &new_state, MOO_SIZEOF(prev_state), prev_state_ptr, &prev_state_reqsize) || GetLastError() != ERROR_SUCCESS) 
+	if (!AdjustTokenPrivileges(token, FALSE, &new_state, MOO_SIZEOF(prev_state), prev_state_ptr, &prev_state_reqsize) || GetLastError() != ERROR_SUCCESS)
 	{
 		if (prev_state_reqsize >= MOO_SIZEOF(prev_state))
 		{
@@ -787,7 +781,7 @@ static void* alloc_heap (moo_t* moo, moo_oow_t* size)
 #	define MEM_LARGE_PAGES (0x20000000)
 #endif
 	ptr = VirtualAlloc(MOO_NULL, aligned_size, MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
-	if (!ptr) 
+	if (!ptr)
 	{
 		SYSTEM_INFO si;
 		GetSystemInfo (&si);
@@ -854,20 +848,20 @@ oops:
 	aligned_size = MOO_ALIGN_POW2(req_size, align);
 	ptr = (moo_oow_t*)mmap(NULL, aligned_size, PROT_READ | PROT_WRITE, flags, -1, 0);
 	#if defined(MAP_HUGETLB)
-	if (ptr == MAP_FAILED && (flags & MAP_HUGETLB)) 
+	if (ptr == MAP_FAILED && (flags & MAP_HUGETLB))
 	{
 		flags &= ~MAP_HUGETLB;
 		align = sysconf(_SC_PAGESIZE);
 		aligned_size = MOO_ALIGN_POW2(req_size, align);
 		ptr = (moo_oow_t*)mmap(NULL, aligned_size, PROT_READ | PROT_WRITE, flags, -1, 0);
-		if (ptr == MAP_FAILED) 
+		if (ptr == MAP_FAILED)
 		{
 			moo_seterrwithsyserr (moo, 0, errno);
 			return MOO_NULL;
 		}
 	}
 	#else
-	if (ptr == MAP_FAILED) 
+	if (ptr == MAP_FAILED)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_NULL;
@@ -897,13 +891,21 @@ static void free_heap (moo_t* moo, void* ptr)
 #endif
 }
 
+/* ========================================================================= */
+
+enum logfd_flag_t
+{
+	LOGFD_TTY = (1 << 0),
+	LOGFD_OPENED_HERE = (1 << 1)
+};
+
 #if defined(EMSCRIPTEN)
 EM_JS(int, write_all, (int, const moo_bch_t* ptr, moo_oow_t len), {
 	// UTF8ToString() doesn't handle a null byte in the middle of an array.
 	// Use the heap memory and pass the right portion to UTF8Decoder.
 	//console.log ("%s", UTF8ToString(ptr, len));
 	console.log ("%s", UTF8Decoder.decode(HEAPU8.subarray(ptr, ptr + len)));
-	return 0;	
+	return 0;
 });
 
 #else
@@ -1051,18 +1053,18 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		/* %z for strftime() in win32 seems to produce a long non-numeric timezone name.
 		 * i don't use strftime() for time formatting. */
 		GetLocalTime (&now);
-		if (GetTimeZoneInformation(&tzi) != TIME_ZONE_ID_INVALID) 
+		if (GetTimeZoneInformation(&tzi) != TIME_ZONE_ID_INVALID)
 		{
 			tzi.Bias = -tzi.Bias;
-			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d %+02.2d%02.2d ", 
-				(int)now.wYear, (int)now.wMonth, (int)now.wDay, 
+			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d %+02.2d%02.2d ",
+				(int)now.wYear, (int)now.wMonth, (int)now.wDay,
 				(int)now.wHour, (int)now.wMinute, (int)now.wSecond,
 				(int)(tzi.Bias / 60), (int)(tzi.Bias % 60));
 		}
 		else
 		{
 			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ",
-				(int)now.wYear, (int)now.wMonth, (int)now.wDay, 
+				(int)now.wYear, (int)now.wMonth, (int)now.wDay,
 				(int)now.wHour, (int)now.wMinute, (int)now.wSecond);
 		}
 	#elif defined(__OS2__)
@@ -1080,7 +1082,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		#else
 		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		#endif
-		if (tslen == 0) 
+		if (tslen == 0)
 		{
 			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 		}
@@ -1101,9 +1103,9 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		#if defined(HAVE_STRFTIME_SMALL_Z)
 		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		#else
-		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp);
 		#endif
-		if (tslen == 0) 
+		if (tslen == 0)
 		{
 			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 		}
@@ -1116,7 +1118,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 			moo_oow_t tsulen;
 
 			/* the timestamp is likely to contain simple ascii characters only.
-			 * conversion is not likely to fail regardless of encodings. 
+			 * conversion is not likely to fail regardless of encodings.
 			 * so i don't check errors here */
 			tsulen = MOO_COUNTOF(tsu);
 			moo_convbtooochars (moo, ts, &tslen, tsu, &tsulen);
@@ -1146,9 +1148,9 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		n = moo_conv_uchars_to_bchars_with_cmgr(&msg[msgidx], &ucslen, buf, &bcslen, xtn->log_cmgr);
 		if (n == 0 || n == -2)
 		{
-			/* n = 0: 
-			 *   converted all successfully 
-			 * n == -2: 
+			/* n = 0:
+			 *   converted all successfully
+			 * n == -2:
 			 *    buffer not sufficient. not all got converted yet.
 			 *    write what have been converted this round. */
 
@@ -1182,6 +1184,8 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	flush_log (moo, logfd);
 }
 
+/* ========================================================================= */
+
 static moo_errnum_t errno_to_errnum (int errcode)
 {
 	switch (errcode)
@@ -1212,7 +1216,7 @@ static moo_errnum_t errno_to_errnum (int errcode)
 	#endif
 
 	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
-		case EAGAIN: 
+		case EAGAIN:
 		case EWOULDBLOCK: return MOO_EAGAIN;
 	#elif defined(EAGAIN)
 		case EAGAIN: return MOO_EAGAIN;
@@ -1284,14 +1288,14 @@ static moo_errnum_t os2err_to_errnum (APIRET errcode)
 		case ERROR_NOT_ENOUGH_MEMORY:
 			return MOO_ESYSMEM;
 
-		case ERROR_INVALID_PARAMETER: 
+		case ERROR_INVALID_PARAMETER:
 		case ERROR_INVALID_NAME:
 			return MOO_EINVAL;
 
-		case ERROR_INVALID_HANDLE: 
+		case ERROR_INVALID_HANDLE:
 			return MOO_EBADHND;
 
-		case ERROR_ACCESS_DENIED: 
+		case ERROR_ACCESS_DENIED:
 		case ERROR_SHARING_VIOLATION:
 			return MOO_EACCES;
 
@@ -1344,7 +1348,7 @@ static moo_errnum_t macerr_to_errnum (int errcode)
 			return MOO_ENOENT;
 
 		/*TODO: add more mappings */
-		default: 
+		default:
 			return MOO_ESYSERR;
 	}
 }
@@ -1357,7 +1361,7 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 		case 2:
 		#if defined(__OS2__)
 			#if defined(TCPV40HDRS)
-			if (buf) 
+			if (buf)
 			{
 				char tmp[64];
 				sprintf (tmp, "socket error %d", (int)syserr_code);
@@ -1371,15 +1375,15 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 			#endif
 		#endif
 			/* fall thru for other platforms */
-			
-		case 1: 
+
+		case 1:
 		#if defined(_WIN32)
 			if (buf)
 			{
 				DWORD rc;
 				rc = FormatMessageA (
 					FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-					NULL, syserr_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+					NULL, syserr_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 					buf, len, MOO_NULL
 				);
 				while (rc > 0 && buf[rc - 1] == '\r' || buf[rc - 1] == '\n') buf[--rc] = '\0';
@@ -1396,7 +1400,7 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 		#elif defined(macintosh)
 			/* TODO: convert code to string */
 			if (buf) moo_copy_bcstr (buf, len, "system error");
-			return os2err_to_errnum(syserr_code);
+			return macerr_to_errnum(syserr_code);
 		#else
 			/* in other systems, errno is still the native system error code.
 			 * fall thru */
@@ -1439,7 +1443,7 @@ static void backtrace_stack_frames (moo_t* moo)
 	unw_init_local(&cursor, &context);
 
 	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "[BACKTRACE]\n");
-	for (n = 0; unw_step(&cursor) > 0; n++) 
+	for (n = 0; unw_step(&cursor) > 0; n++)
 	{
 		unw_word_t ip, sp, off;
 		char symbol[256];
@@ -1447,13 +1451,13 @@ static void backtrace_stack_frames (moo_t* moo)
 		unw_get_reg (&cursor, UNW_REG_IP, &ip);
 		unw_get_reg (&cursor, UNW_REG_SP, &sp);
 
-		if (unw_get_proc_name(&cursor, symbol, MOO_COUNTOF(symbol), &off)) 
+		if (unw_get_proc_name(&cursor, symbol, MOO_COUNTOF(symbol), &off))
 		{
 			moo_copy_bcstr (symbol, MOO_COUNTOF(symbol), "<unknown>");
 		}
 
-		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, 
-			"#%02d ip=0x%*p sp=0x%*p %hs+0x%zu\n", 
+		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG,
+			"#%02d ip=0x%*p sp=0x%*p %hs+0x%zu\n",
 			n, MOO_SIZEOF(void*) * 2, (void*)ip, MOO_SIZEOF(void*) * 2, (void*)sp, symbol, (moo_oow_t)off);
 	}
 }
@@ -1522,375 +1526,100 @@ static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* fil
 
 /* ========================================================================= */
 
-#if defined(USE_LTDL)
-#	define sys_dl_error() lt_dlerror()
-#	define sys_dl_open(x) lt_dlopen(x)
-#	define sys_dl_openext(x) lt_dlopenext(x)
-#	define sys_dl_close(x) lt_dlclose(x)
-#	define sys_dl_getsym(x,n) lt_dlsym(x,n)
-
-#elif defined(USE_DLFCN)
-#	define sys_dl_error() dlerror()
-#	define sys_dl_open(x) dlopen(x,RTLD_NOW | RTLD_LOCAL)
-#	define sys_dl_openext(x) dlopen(x,RTLD_NOW | RTLD_LOCAL)
-#	define sys_dl_close(x) dlclose(x)
-#	define sys_dl_getsym(x,n) dlsym(x,n)
-
-#elif defined(USE_WIN_DLL)
-#	define sys_dl_error() msw_dlerror()
-#	define sys_dl_open(x) LoadLibraryExA(x, MOO_NULL, 0)
-#	define sys_dl_openext(x) LoadLibraryExA(x, MOO_NULL, 0)
-#	define sys_dl_close(x) FreeLibrary(x)
-#	define sys_dl_getsym(x,n) GetProcAddress(x,n)
-
-#elif defined(USE_MACH_O_DYLD)
-#	define sys_dl_error() mach_dlerror()
-#	define sys_dl_open(x) mach_dlopen(x)
-#	define sys_dl_openext(x) mach_dlopen(x)
-#	define sys_dl_close(x) mach_dlclose(x)
-#	define sys_dl_getsym(x,n) mach_dlsym(x,n)
-#endif
-
-#if defined(USE_WIN_DLL)
-
-static const char* msw_dlerror (void)
+static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 {
-	/* TODO: handle wchar_t, moo_ooch_t etc? */
-	static char buf[256];
-	DWORD rc;
+#if defined(_WIN32)
 
-	rc = FormatMessageA (
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-		NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-		buf, MOO_COUNTOF(buf), MOO_NULL
-	);
-	while (rc > 0 && buf[rc - 1] == '\r' || buf[rc - 1] == '\n') 
-	{
-		buf[--rc] = '\0';
-	}
-	return buf;
-}
-
-#elif defined(USE_MACH_O_DYLD)
-static const char* mach_dlerror_str = "";
-
-static void* mach_dlopen (const char* path)
-{
-	NSObjectFileImage image;
-	NSObjectFileImageReturnCode rc;
-	void* handle;
-
-	mach_dlerror_str = "";
-	if ((rc = NSCreateObjectFileImageFromFile(path, &image)) != NSObjectFileImageSuccess) 
-	{
-		switch (rc)
-		{
-			case NSObjectFileImageFailure:
-			case NSObjectFileImageFormat:
-				mach_dlerror_str = "unable to crate object file image";
-				break;
-
-			case NSObjectFileImageInappropriateFile:
-				mach_dlerror_str = "inappropriate file";
-				break;
-
-			case NSObjectFileImageArch:
-				mach_dlerror_str = "incompatible architecture";
-				break;
-
-			case NSObjectFileImageAccess:
-				mach_dlerror_str = "inaccessible file";
-				break;
-				
-			default:
-				mach_dlerror_str = "unknown error";
-				break;
-		}
-		return MOO_NULL;
-	}
-	handle = (void*)NSLinkModule(image, path, NSLINKMODULE_OPTION_PRIVATE | NSLINKMODULE_OPTION_RETURN_ON_ERROR);
-	NSDestroyObjectFileImage (image);
-	return handle;
-}
-
-static MOO_INLINE void mach_dlclose (void* handle)
-{
-	mach_dlerror_str = "";
-	NSUnLinkModule (handle, NSUNLINKMODULE_OPTION_NONE);
-}
-
-static MOO_INLINE void* mach_dlsym (void* handle, const char* name)
-{
-	mach_dlerror_str = "";
-	return (void*)NSAddressOfSymbol(NSLookupSymbolInModule(handle, name));
-}
-
-static const char* mach_dlerror (void)
-{
-	int err_no;
-	const char* err_file;
-	NSLinkEditErrors err;
-
-	if (mach_dlerror_str[0] == '\0')
-		NSLinkEditError (&err, &err_no, &err_file, &mach_dlerror_str);
-
-	return mach_dlerror_str;
-}
-#endif
-
-static void dl_startup (moo_t* moo)
-{
-#if defined(USE_LTDL)
-	lt_dlinit ();
-#endif
-}
-
-static void dl_cleanup (moo_t* moo)
-{
-#if defined(USE_LTDL)
-	lt_dlexit ();
-#endif
-}
-
-static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
-{
-#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
-	moo_bch_t stabuf[128], * bufptr;
-	moo_oow_t ucslen, bcslen, bufcapa;
-	void* handle;
-
-	#if defined(MOO_OOCH_IS_UCH)
-	if (moo_convootobcstr(moo, name, &ucslen, MOO_NULL, &bufcapa) <= -1) return MOO_NULL;
-	/* +1 for terminating null. but it's not needed because MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX)
-	 * and MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTIFX) include the terminating nulls. Never mind about
-	 * the extra 2 characters. */
+	#if defined(_WIN64) || (defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600))
+	moo_uint64_t bigsec, bigmsec;
+	bigmsec = GetTickCount64();
 	#else
-	bufcapa = moo_count_bcstr(name);
-	#endif
-	bufcapa += MOO_COUNTOF(MOO_DEFAULT_PFMODDIR) + MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX) + MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTFIX) + 1; 
+	xtn_t* xtn = GET_XTN(moo);
+	moo_uint64_t bigsec, bigmsec;
+	DWORD msec;
 
-	if (bufcapa <= MOO_COUNTOF(stabuf)) bufptr = stabuf;
-	else
+	msec = GetTickCount(); /* this can sustain for 49.7 days */
+	if (msec < xtn->tc_last)
 	{
-		bufptr = moo_allocmem(moo, bufcapa * MOO_SIZEOF(*bufptr));
-		if (!bufptr) return MOO_NULL;
+		/* i assume the difference is never bigger than 49.7 days */
+		/*diff = (MOO_TYPE_MAX(DWORD) - xtn->tc_last) + 1 + msec;*/
+		xtn->tc_overflow++;
+		bigmsec = ((moo_uint64_t)MOO_TYPE_MAX(DWORD) * xtn->tc_overflow) + msec;
 	}
-
-	if (flags & MOO_VMPRIM_DLOPEN_PFMOD)
-	{
-		moo_oow_t len, i, xlen, dlen;
-
-		/* opening a primitive function module - mostly libmoo-xxxx.
-		 * if PFMODPREFIX is absolute, never use PFMODDIR */
-		dlen = IS_PATH_ABSOLUTE(MOO_DEFAULT_PFMODPREFIX)? 
-			0: moo_copy_bcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODDIR);
-		len = moo_copy_bcstr(&bufptr[dlen], bufcapa - dlen, MOO_DEFAULT_PFMODPREFIX);
-		len += dlen;
-
-		bcslen = bufcapa - len;
-	#if defined(MOO_OOCH_IS_UCH)
-		moo_convootobcstr (moo, name, &ucslen, &bufptr[len], &bcslen);
-	#else
-		bcslen = moo_copy_bcstr(&bufptr[len], bcslen, name);
+	else bigmsec = msec;
+	xtn->tc_last = msec;
 	#endif
 
-		/* length including the directory, the prefix and the name. but excluding the postfix */
-		xlen = len + bcslen; 
+	bigsec = MOO_MSEC_TO_SEC(bigmsec);
+	bigmsec -= MOO_SEC_TO_MSEC(bigsec);
+	MOO_INIT_NTIME(now, bigsec, MOO_MSEC_TO_NSEC(bigmsec));
 
-		for (i = len; i < xlen; i++) 
-		{
-			/* convert a period(.) to a dash(-) */
-			if (bufptr[i] == '.') bufptr[i] = '-';
-		}
- 
-	retry:
-		moo_copy_bcstr (&bufptr[xlen], bufcapa - xlen, MOO_DEFAULT_PFMODPOSTFIX);
+#elif defined(__OS2__)
+	xtn_t* xtn = GET_XTN(moo);
+	ULONG msec, elapsed;
+	moo_ntime_t et;
 
-		/* both prefix and postfix attached. for instance, libmoo-xxx */
-		handle = sys_dl_openext(&bufptr[dlen]);
-		if (!handle) 
-		{
-			MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[dlen], name, sys_dl_error());
+/* TODO: use DosTmrQueryTime() and DosTmrQueryFreq()? */
+	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &msec, MOO_SIZEOF(msec)); /* milliseconds */
 
-			if (dlen > 0)
-			{
-				handle = sys_dl_openext(&bufptr[0]);
-				if (handle) goto pfmod_open_ok;
-				MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[0], name, sys_dl_error());
-			}
+	elapsed = (msec < xtn->tc_last)? (MOO_TYPE_MAX(ULONG) - xtn->tc_last + msec + 1): (msec - xtn->tc_last);
+	xtn->tc_last = msec;
 
-			/* try without prefix and postfix */
-			bufptr[xlen] = '\0';
-			handle = sys_dl_openext(&bufptr[len]);
-			if (!handle) 
-			{
-				moo_bch_t* dash;
-				const moo_bch_t* dl_errstr;
-				dl_errstr = sys_dl_error();
-				MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[len], name, dl_errstr);
-				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) PFMOD %js - %hs", name, dl_errstr);
-				dash = moo_rfind_bchar(bufptr, moo_count_bcstr(bufptr), '-');
-				if (dash) 
-				{
-					/* remove a segment at the back. 
-					 * [NOTE] a dash contained in the original name before
-					 *        period-to-dash transformation may cause extraneous/wrong
-					 *        loading reattempts. */
-					xlen = dash - bufptr;
-					goto retry;
-				}
-			}
-			else 
-			{
-				MOO_DEBUG3 (moo, "OPENED_HERE(ext) PFMOD %hs[%js] handle %p\n", &bufptr[len], name, handle);
-			}
-		}
-		else
-		{
-		pfmod_open_ok:
-			MOO_DEBUG3 (moo, "OPENED_HERE(ext) PFMOD %hs[%js] handle %p\n", &bufptr[dlen], name, handle);
-		}
-	}
-	else
-	{
-		/* opening a raw shared object without a prefix and/or a postfix */
-	#if defined(MOO_OOCH_IS_UCH)
-		bcslen = bufcapa;
-		moo_convootobcstr (moo, name, &ucslen, bufptr, &bcslen);
+	et.sec = MOO_MSEC_TO_SEC(elapsed);
+	msec = elapsed - MOO_SEC_TO_MSEC(et.sec);
+	et.nsec = MOO_MSEC_TO_NSEC(msec);
+
+	MOO_ADD_NTIME (&xtn->tc_last_ret , &xtn->tc_last_ret, &et);
+	*now = xtn->tc_last_ret;
+
+#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+	xtn_t* xtn = GET_XTN(moo);
+	clock_t c, elapsed;
+	moo_ntime_t et;
+
+	c = clock();
+	elapsed = (c < xtn->tc_last)? (MOO_TYPE_MAX(clock_t) - xtn->tc_last + c + 1): (c - xtn->tc_last);
+	xtn->tc_last = c;
+
+	et.sec = elapsed / CLOCKS_PER_SEC;
+	#if (CLOCKS_PER_SEC == 100)
+		et.nsec = MOO_MSEC_TO_NSEC((elapsed % CLOCKS_PER_SEC) * 10);
+	#elif (CLOCKS_PER_SEC == 1000)
+		et.nsec = MOO_MSEC_TO_NSEC(elapsed % CLOCKS_PER_SEC);
+	#elif (CLOCKS_PER_SEC == 1000000L)
+		et.nsec = MOO_USEC_TO_NSEC(elapsed % CLOCKS_PER_SEC);
+	#elif (CLOCKS_PER_SEC == 1000000000L)
+		et.nsec = (elapsed % CLOCKS_PER_SEC);
 	#else
-		bcslen = moo_copy_bcstr(bufptr, bufcapa, name);
+	#	error UNSUPPORTED CLOCKS_PER_SEC
 	#endif
 
-		if (moo_find_bchar(bufptr, bcslen, '.'))
-		{
-			handle = sys_dl_open(bufptr);
-			if (!handle) 
-			{
-				const moo_bch_t* dl_errstr;
-				dl_errstr = sys_dl_error();
-				MOO_DEBUG2 (moo, "Unable to open DL %hs - %hs\n", bufptr, dl_errstr);
-				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open DL %js - %hs", name, dl_errstr);
-			}
-			else MOO_DEBUG2 (moo, "OPENED_HERE DL %hs handle %p\n", bufptr, handle);
-		}
-		else
-		{
-			handle = sys_dl_openext(bufptr);
-			if (!handle) 
-			{
-				const moo_bch_t* dl_errstr;
-				dl_errstr = sys_dl_error();
-				MOO_DEBUG2 (moo, "Unable to open(ext) DL %hs - %hs\n", bufptr, dl_errstr);
-				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
-			}
-			else MOO_DEBUG2 (moo, "OPENED_HERE(ext) DL %hs handle %p\n", bufptr, handle);
-		}
-	}
+	MOO_ADD_NTIME (&xtn->tc_last_ret , &xtn->tc_last_ret, &et);
+	*now = xtn->tc_last_ret;
 
-	if (bufptr != stabuf) moo_freemem (moo, bufptr);
-	return handle;
-
+#elif defined(macintosh)
+	UnsignedWide tick;
+	moo_uint64_t tick64;
+	Microseconds (&tick);
+	tick64 = *(moo_uint64_t*)&tick;
+	MOO_INIT_NTIME (now, MOO_USEC_TO_SEC(tick64), MOO_USEC_TO_NSEC(tick64));
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+	struct timespec ts;
+	clock_gettime (CLOCK_MONOTONIC, &ts);
+	MOO_INIT_NTIME(now, ts.tv_sec, ts.tv_nsec);
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+	struct timespec ts;
+	clock_gettime (CLOCK_REALTIME, &ts);
+	MOO_INIT_NTIME(now, ts.tv_sec, ts.tv_nsec);
 #else
-
-/* TODO: support various platforms */
-	/* TODO: implemenent this */
-	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot open %js\n", name);
-	moo_seterrbfmt (moo, MOO_ENOIMPL, "dynamic loading not implemented - cannot open %js", name);
-	return MOO_NULL;
-#endif
-}
-
-static void dl_close (moo_t* moo, void* handle)
-{
-#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
-	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
-	sys_dl_close (handle);
-
-#else
-	/* TODO: implemenent this */
-	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot close handle %p\n", handle);
-#endif
-}
-
-static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
-{
-#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
-	moo_bch_t stabuf[64], * bufptr;
-	moo_oow_t bufcapa, ucslen, bcslen, i;
-	const moo_bch_t* symname;
-	void* sym;
-
-	#if defined(MOO_OOCH_IS_UCH)
-	if (moo_convootobcstr(moo, name, &ucslen, MOO_NULL, &bcslen) <= -1) return MOO_NULL;
-	#else
-	bcslen = moo_count_bcstr (name);
-	#endif
-
-	if (bcslen >= MOO_COUNTOF(stabuf) - 2)
-	{
-		bufcapa = bcslen + 3;
-		bufptr = moo_allocmem(moo, bufcapa * MOO_SIZEOF(*bufptr));
-		if (!bufptr) return MOO_NULL;
-	}
-	else
-	{
-		bufcapa = MOO_COUNTOF(stabuf);
-		bufptr = stabuf;
-	}
-
-	bcslen = bufcapa - 1;
-	#if defined(MOO_OOCH_IS_UCH)
-	moo_convootobcstr (moo, name, &ucslen, &bufptr[1], &bcslen);
-	#else
-	bcslen = moo_copy_bcstr(&bufptr[1], bcslen, name);
-	#endif
-
-	/* convert a period(.) to an underscore(_) */
-	for (i = 1; i <= bcslen; i++) if (bufptr[i] == '.') bufptr[i] = '_';
-
-	symname = &bufptr[1]; /* try the name as it is */
-	sym = sys_dl_getsym(handle, symname);
-	if (!sym)
-	{
-		bufptr[0] = '_';
-		symname = &bufptr[0]; /* try _name */
-		sym = sys_dl_getsym(handle, symname);
-		if (!sym)
-		{
-			bufptr[bcslen + 1] = '_'; 
-			bufptr[bcslen + 2] = '\0';
-
-			symname = &bufptr[1]; /* try name_ */
-			sym = sys_dl_getsym(handle, symname);
-
-			if (!sym)
-			{
-				symname = &bufptr[0]; /* try _name_ */
-				sym = sys_dl_getsym(handle, symname);
-				if (!sym)
-				{
-					const moo_bch_t* dl_errstr;
-					dl_errstr = sys_dl_error();
-					MOO_DEBUG3 (moo, "Unable to get module symbol %js from handle %p - %hs\n", name, handle, dl_errstr);
-					moo_seterrbfmt (moo, MOO_ENOENT, "unable to get module symbol %hs - %hs", symname, dl_errstr);
-				}
-			}
-		}
-	}
-
-	if (sym) MOO_DEBUG3 (moo, "Loaded module symbol %js from handle %p - %hs\n", name, handle, symname);
-	if (bufptr != stabuf) moo_freemem (moo, bufptr);
-	return sym;
-
-#else
-	/* TODO: IMPLEMENT THIS */
-	MOO_DEBUG2 (moo, "Dynamic loading not implemented - Cannot load module symbol %js from handle %p\n", name, handle);
-	moo_seterrbfmt (moo, MOO_ENOIMPL, "dynamic loading not implemented - Cannot load module symbol %js from handle %p", name, handle);
-	return MOO_NULL;
+	struct timeval tv;
+	gettimeofday (&tv, MOO_NULL);
+	MOO_INIT_NTIME(now, tv.tv_sec, MOO_USEC_TO_NSEC(tv.tv_usec));
 #endif
 }
 
 /* ========================================================================= */
+
 static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 {
 #if defined(USE_DEVPOLL)
@@ -1943,7 +1672,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 		xtn->ev.reg.capa = newcapa;
 	}
 
-	if (event_mask & XPOLLIN) 
+	if (event_mask & XPOLLIN)
 	{
 		/*EV_SET (&ev, fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, 0);*/
 		MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
@@ -2055,12 +1784,12 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	xtn_t* xtn = GET_XTN(moo);
 
 	MUTEX_LOCK (&xtn->ev.reg.smtx);
-	if (event_mask & XPOLLIN) 
+	if (event_mask & XPOLLIN)
 	{
 		FD_SET (fd, &xtn->ev.reg.rfds);
 		if (fd > xtn->ev.reg.maxfd) xtn->ev.reg.maxfd = fd;
 	}
-	if (event_mask & XPOLLOUT) 
+	if (event_mask & XPOLLOUT)
 	{
 		FD_SET (fd, &xtn->ev.reg.wfds);
 		if (fd > xtn->ev.reg.maxfd) xtn->ev.reg.maxfd = fd;
@@ -2213,7 +1942,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 	if (_del_poll_fd (moo, fd) <= -1) return -1;
 
-	if (_add_poll_fd (moo, fd, event_mask) <= -1) 
+	if (_add_poll_fd (moo, fd, event_mask) <= -1)
 	{
 		/* TODO: any good way to rollback successful deletion? */
 		return -1;
@@ -2366,12 +2095,12 @@ kqueue_syserr:
 	MUTEX_LOCK (&xtn->ev.reg.smtx);
 	MOO_ASSERT (moo, fd <= xtn->ev.reg.maxfd);
 
-	if (event_mask & XPOLLIN) 
+	if (event_mask & XPOLLIN)
 		FD_SET (fd, &xtn->ev.reg.rfds);
-	else 
+	else
 		FD_CLR (fd, &xtn->ev.reg.rfds);
 
-	if (event_mask & XPOLLOUT) 
+	if (event_mask & XPOLLOUT)
 		FD_SET (fd, &xtn->ev.reg.wfds);
 	else
 		FD_CLR (fd, &xtn->ev.reg.wfds);
@@ -2386,385 +2115,12 @@ kqueue_syserr:
 #endif
 }
 
-static int open_pipes (moo_t* moo, int p[2])
-{
-#if defined(_WIN32)
-	u_long flags;
-#else
-	int flags;
-#endif
-
-#if defined(_WIN32)
-	if (_pipe(p, 256, _O_BINARY | _O_NOINHERIT) == -1)
-	{
-		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
-		return -1;
-	}
-#elif defined(__OS2__)
-	#if defined(TCPV40HDRS)
-	/* neither pipe nor socketpair available */
-	if (os2_socket_pair(p) == -1)
-	#else
-	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, p) == -1)
-	#endif
-	{
-		moo_seterrbfmtwithsyserr (moo, 2, sock_errno(), "unable to create pipes");
-		return -1;
-	}
-#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
-	if (pipe2(p, O_CLOEXEC | O_NONBLOCK) == -1)
-	{
-		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
-		return -1;
-	}
-#else
-	if (pipe(p) == -1)
-	{
-		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
-		return -1;
-	}
-#endif
-	
-
-#if defined(_WIN32)
-	flags = 1;
-	ioctl (p[0], FIONBIO, &flags);
-	ioctl (p[1], FIONBIO, &flags);
-#elif defined(__OS2__)
-	flags = 1; /* don't block */
-	ioctl (p[0], FIONBIO, (char*)&flags, moo_SIZEOF(flags));
-	ioctl (p[1], FIONBIO, (char*)&flags, moo_SIZEOF(flags));
-#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
-		/* do nothing */
-#else
-	#if defined(FD_CLOEXEC)
-	flags = fcntl(p[0], F_GETFD);
-	if (flags >= 0) fcntl (p[0], F_SETFD, flags | FD_CLOEXEC);
-	flags = fcntl(p[1], F_GETFD);
-	if (flags >= 0) fcntl (p[1], F_SETFD, flags | FD_CLOEXEC);
-	#endif
-	#if defined(O_NONBLOCK)
-	flags = fcntl(p[0], F_GETFL);
-	if (flags >= 0) fcntl (p[0], F_SETFL, flags | O_NONBLOCK);
-	flags = fcntl(p[1], F_GETFL);
-	if (flags >= 0) fcntl (p[1], F_SETFL, flags | O_NONBLOCK);
-	#endif
-#endif
-
-	return 0;
-}
-
-static void close_pipes (moo_t* moo, int p[2])
-{
-#if defined(_WIN32)
-	_close (p[0]);
-	_close (p[1]);
-#elif defined(__OS2__)
-	soclose (p[0]);
-	soclose (p[1]);
-#else
-	close (p[0]);
-	close (p[1]);
-#endif
-	p[0] = -1;
-	p[1] = -1;
-}
-
-static int vm_startup (moo_t* moo)
-{
-	xtn_t* xtn = GET_XTN(moo);
-	int sigfd_pcount = 0;
-	int iothr_pcount = 0, flags;
-
-#if defined(_WIN32)
-	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-#endif
-
-#if defined(USE_DEVPOLL)
-	xtn->ep = open("/dev/poll", O_RDWR);
-	if (xtn->ep == -1) 
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		MOO_DEBUG1 (moo, "Cannot create devpoll - %hs\n", strerror(errno));
-		goto oops;
-	}
-
-	#if defined(FD_CLOEXEC)
-	flags = fcntl(xtn->ep, F_GETFD);
-	if (flags >= 0) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
-	#endif
-
-#elif defined(USE_KQUEUE)
-	#if defined(HAVE_KQUEUE1) && defined(O_CLOEXEC)
-	xtn->ep = kqueue1(O_CLOEXEC);
-	if (xtn->ep == -1) xtn->ep = kqueue();
-	#else
-	xtn->ep = kqueue();
-	#endif
-	if (xtn->ep == -1)
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		MOO_DEBUG1 (moo, "Cannot create kqueue - %hs\n", strerror(errno));
-		goto oops;
-	}
-
-	#if defined(FD_CLOEXEC)
-	flags = fcntl(xtn->ep, F_GETFD);
-	if (flags >= 0 && !(flags & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
-	#endif
-
-#elif defined(USE_EPOLL)
-	#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
-	xtn->ep = epoll_create1(EPOLL_CLOEXEC);
-	if (xtn->ep == -1) xtn->ep = epoll_create(1024); 
-	#else
-	xtn->ep = epoll_create(1024);
-	#endif
-	if (xtn->ep == -1) 
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		MOO_DEBUG1 (moo, "Cannot create epoll - %hs\n", strerror(errno));
-		goto oops;
-	}
-
-	#if defined(FD_CLOEXEC)
-	flags = fcntl(xtn->ep, F_GETFD);
-	if (flags >= 0 && !(flags & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
-	#endif
-
-#elif defined(USE_POLL)
-
-	MUTEX_INIT (&xtn->ev.reg.pmtx);
-
-#elif defined(USE_SELECT)
-	FD_ZERO (&xtn->ev.reg.rfds);
-	FD_ZERO (&xtn->ev.reg.wfds);
-	xtn->ev.reg.maxfd = -1;
-	MUTEX_INIT (&xtn->ev.reg.smtx);
-#endif /* USE_DEVPOLL */
-
-	if (open_pipes(moo, xtn->sigfd.p) <= -1) goto oops;
-	sigfd_pcount = 2;
-
-#if defined(USE_THREAD)
-	if (open_pipes(moo, xtn->iothr.p) <= -1) goto oops;
-	iothr_pcount = 2;
-
-	if (_add_poll_fd(moo, xtn->iothr.p[0], XPOLLIN) <= -1) goto oops;
-
-	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
-	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
-	pthread_cond_init (&xtn->ev.cnd2, MOO_NULL);
-	xtn->ev.halting = 0;
-
-	xtn->iothr.abort = 0;
-	xtn->iothr.up = 0;
-	/*pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo);*/
-
-#endif /* USE_THREAD */
-
-	xtn->vm_running = 1;
-	return 0;
-
-oops:
-#if defined(USE_THREAD)
-	if (iothr_pcount > 0)
-	{
-		close (xtn->iothr.p[0]);
-		close (xtn->iothr.p[1]);
-	}
-#endif
-
-	if (sigfd_pcount > 0)
-	{
-		close (xtn->sigfd.p[0]);
-		close (xtn->sigfd.p[1]);
-	}
-
-#if defined(USE_DEVPOLL) || defined(USE_EPOLL)
-	if (xtn->ep >= 0)
-	{
-		close (xtn->ep);
-		xtn->ep = -1;
-	}
-#endif
-
-	return -1;
-}
-
-static void vm_cleanup (moo_t* moo)
-{
-	xtn_t* xtn = GET_XTN(moo);
-
-	xtn->vm_running = 0;
-
-#if defined(_WIN32)
-	if (xtn->waitable_timer)
-	{
-		CloseHandle (xtn->waitable_timer);
-		xtn->waitable_timer = MOO_NULL;
-	}
-#endif
-
-#if defined(USE_THREAD)
-	if (xtn->iothr.up)
-	{
-		xtn->iothr.abort = 1;
-		write (xtn->iothr.p[1], "Q", 1);
-		pthread_cond_signal (&xtn->ev.cnd);
-		pthread_join (xtn->iothr.thr, MOO_NULL);
-		xtn->iothr.up = 0;
-	}
-	pthread_cond_destroy (&xtn->ev.cnd);
-	pthread_cond_destroy (&xtn->ev.cnd2);
-	pthread_mutex_destroy (&xtn->ev.mtx);
-
-	_del_poll_fd (moo, xtn->iothr.p[0]);
-	close_pipes (moo, xtn->iothr.p);
-#endif /* USE_THREAD */
-
-	close_pipes (moo, xtn->sigfd.p);
-
-#if defined(USE_DEVPOLL) 
-	if (xtn->ep >= 0)
-	{
-		close (xtn->ep);
-		xtn->ep = -1;
-	}
-	/*destroy_poll_data_space (moo);*/
-#elif defined(USE_KQUEUE)
-	if (xtn->ep >= 0)
-	{
-		close (xtn->ep);
-		xtn->ep = -1;
-	}
-#elif defined(USE_EPOLL)
-	if (xtn->ep >= 0)
-	{
-		close (xtn->ep);
-		xtn->ep = -1;
-	}
-#elif defined(USE_POLL)
-	if (xtn->ev.reg.ptr)
-	{
-		moo_freemem (moo, xtn->ev.reg.ptr);
-		xtn->ev.reg.ptr = MOO_NULL;
-		xtn->ev.reg.len = 0;
-		xtn->ev.reg.capa = 0;
-	}
-	if (xtn->ev.buf)
-	{
-		moo_freemem (moo, xtn->ev.buf);
-		xtn->ev.buf = MOO_NULL;
-	}
-	/*destroy_poll_data_space (moo);*/
-	MUTEX_DESTROY (&xtn->ev.reg.pmtx);
-#elif defined(USE_SELECT)
-	FD_ZERO (&xtn->ev.reg.rfds);
-	FD_ZERO (&xtn->ev.reg.wfds);
-	xtn->ev.reg.maxfd = -1;
-	MUTEX_DESTROY (&xtn->ev.reg.smtx);
-#endif
-}
-
-static void vm_gettime (moo_t* moo, moo_ntime_t* now)
-{
-#if defined(_WIN32)
-
-	#if defined(_WIN64) || (defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600))
-	moo_uint64_t bigsec, bigmsec;
-	bigmsec = GetTickCount64();
-	#else
-	xtn_t* xtn = GET_XTN(moo);
-	moo_uint64_t bigsec, bigmsec;
-	DWORD msec;
-
-	msec = GetTickCount(); /* this can sustain for 49.7 days */
-	if (msec < xtn->tc_last)
-	{
-		/* i assume the difference is never bigger than 49.7 days */
-		/*diff = (MOO_TYPE_MAX(DWORD) - xtn->tc_last) + 1 + msec;*/
-		xtn->tc_overflow++;
-		bigmsec = ((moo_uint64_t)MOO_TYPE_MAX(DWORD) * xtn->tc_overflow) + msec;
-	}
-	else bigmsec = msec;
-	xtn->tc_last = msec;
-	#endif
-
-	bigsec = MOO_MSEC_TO_SEC(bigmsec);
-	bigmsec -= MOO_SEC_TO_MSEC(bigsec);
-	MOO_INIT_NTIME(now, bigsec, MOO_MSEC_TO_NSEC(bigmsec));
-
-#elif defined(__OS2__)
-	xtn_t* xtn = GET_XTN(moo);
-	ULONG msec, elapsed;
-	moo_ntime_t et;
-
-/* TODO: use DosTmrQueryTime() and DosTmrQueryFreq()? */
-	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &msec, MOO_SIZEOF(msec)); /* milliseconds */
-
-	elapsed = (msec < xtn->tc_last)? (MOO_TYPE_MAX(ULONG) - xtn->tc_last + msec + 1): (msec - xtn->tc_last);
-	xtn->tc_last = msec;
-
-	et.sec = MOO_MSEC_TO_SEC(elapsed);
-	msec = elapsed - MOO_SEC_TO_MSEC(et.sec);
-	et.nsec = MOO_MSEC_TO_NSEC(msec);
-
-	MOO_ADD_NTIME (&xtn->tc_last_ret , &xtn->tc_last_ret, &et);
-	*now = xtn->tc_last_ret;
-
-#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
-	xtn_t* xtn = GET_XTN(moo);
-	clock_t c, elapsed;
-	moo_ntime_t et;
-
-	c = clock();
-	elapsed = (c < xtn->tc_last)? (MOO_TYPE_MAX(clock_t) - xtn->tc_last + c + 1): (c - xtn->tc_last);
-	xtn->tc_last = c;
-
-	et.sec = elapsed / CLOCKS_PER_SEC;
-	#if (CLOCKS_PER_SEC == 100)
-		et.nsec = MOO_MSEC_TO_NSEC((elapsed % CLOCKS_PER_SEC) * 10);
-	#elif (CLOCKS_PER_SEC == 1000)
-		et.nsec = MOO_MSEC_TO_NSEC(elapsed % CLOCKS_PER_SEC);
-	#elif (CLOCKS_PER_SEC == 1000000L)
-		et.nsec = MOO_USEC_TO_NSEC(elapsed % CLOCKS_PER_SEC);
-	#elif (CLOCKS_PER_SEC == 1000000000L)
-		et.nsec = (elapsed % CLOCKS_PER_SEC);
-	#else
-	#	error UNSUPPORTED CLOCKS_PER_SEC
-	#endif
-
-	MOO_ADD_NTIME (&xtn->tc_last_ret , &xtn->tc_last_ret, &et);
-	*now = xtn->tc_last_ret;
-
-#elif defined(macintosh)
-	UnsignedWide tick;
-	moo_uint64_t tick64;
-	Microseconds (&tick);
-	tick64 = *(moo_uint64_t*)&tick;
-	MOO_INIT_NTIME (now, MOO_USEC_TO_SEC(tick64), MOO_USEC_TO_NSEC(tick64));
-#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
-	struct timespec ts;
-	clock_gettime (CLOCK_MONOTONIC, &ts);
-	MOO_INIT_NTIME(now, ts.tv_sec, ts.tv_nsec);
-#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
-	struct timespec ts;
-	clock_gettime (CLOCK_REALTIME, &ts);
-	MOO_INIT_NTIME(now, ts.tv_sec, ts.tv_nsec);
-#else
-	struct timeval tv;
-	gettimeofday (&tv, MOO_NULL);
-	MOO_INIT_NTIME(now, tv.tv_sec, MOO_USEC_TO_NSEC(tv.tv_usec));
-#endif
-}
-
 static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
 	int event_mask;
 
 	event_mask = 0;
-	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN; 
+	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN;
 	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) event_mask |= XPOLLOUT;
 
 	if (event_mask == 0)
@@ -2782,7 +2138,7 @@ static int vm_muxmod (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 	int event_mask;
 
 	event_mask = 0;
-	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN; 
+	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN;
 	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) event_mask |= XPOLLOUT;
 
 	if (event_mask == 0)
@@ -2826,7 +2182,7 @@ static void* iothr_main (void* arg)
 		#endif
 
 		poll_for_event:
-		
+
 		#if defined(USE_DEVPOLL)
 			dvp.dp_timeout = 10000; /* milliseconds */
 			dvp.dp_fds = xtn->ev.buf;
@@ -2846,7 +2202,7 @@ static void* iothr_main (void* arg)
 			nfds = xtn->ev.reg.len;
 			MUTEX_UNLOCK (&xtn->ev.reg.pmtx);
 			n = poll(xtn->ev.buf, nfds, 10000);
-			if (n > 0) 
+			if (n > 0)
 			{
 				/* compact the return buffer as poll() doesn't */
 				moo_oow_t i, j;
@@ -2949,7 +2305,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	int n;
 
 	/* create a thread if mux wait is started at least once. */
-	if (!xtn->iothr.up) 
+	if (!xtn->iothr.up)
 	{
 		xtn->iothr.up = 1;
 		if (pthread_create(&xtn->iothr.thr, MOO_NULL, iothr_main, moo) != 0)
@@ -2962,7 +2318,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 	if (xtn->iothr.abort) return;
 
-	if (xtn->ev.len <= 0) 
+	if (xtn->ev.len <= 0)
 	{
 		struct timespec ts;
 		moo_ntime_t ns;
@@ -3018,7 +2374,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		#endif
 			{
 				moo_uint8_t u8;
-				while (read(xtn->iothr.p[0], &u8, MOO_SIZEOF(u8)) > 0) 
+				while (read(xtn->iothr.p[0], &u8, MOO_SIZEOF(u8)) > 0)
 				{
 					/* consume as much as possible */;
 					if (u8 == 'Q') xtn->iothr.abort = 1;
@@ -3101,11 +2457,11 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	n = ioctl(xtn->ep, DP_POLL, &dvp);
 
 	#elif defined(USE_KQUEUE)
-	
+
 	if (dur)
 	{
 		ts.tv_sec = dur->sec;
-		ts.tv_nsec = dur->nsec; 
+		ts.tv_nsec = dur->nsec;
 	}
 	else
 	{
@@ -3125,7 +2481,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	tmout = dur? MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec): 0;
 	MOO_MEMCPY (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 	n = poll(xtn->ev.buf, xtn->ev.reg.len, tmout);
-	if (n > 0) 
+	if (n > 0)
 	{
 		/* compact the return buffer as poll() doesn't */
 		moo_oow_t i, j;
@@ -3143,7 +2499,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	if (dur)
 	{
 		tv.tv_sec = dur->sec;
-		tv.tv_usec = MOO_NSEC_TO_USEC(dur->nsec); 
+		tv.tv_usec = MOO_NSEC_TO_USEC(dur->nsec);
 	}
 	else
 	{
@@ -3243,14 +2599,16 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 #endif  /* USE_THREAD */
 }
 
-#if defined(__DOS__) 
-#	if defined(_INTELC32_) 
+#if defined(__DOS__)
+#	if defined(_INTELC32_)
 	void _halt_cpu (void);
 #	elif defined(__WATCOMC__)
 	void _halt_cpu (void);
 #	pragma aux _halt_cpu = "hlt"
 #	endif
 #endif
+
+/* ========================================================================= */
 
 static int vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
@@ -3274,7 +2632,7 @@ static int vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	}
 #elif defined(__OS2__)
 
-	/* TODO: in gui mode, this is not a desirable method??? 
+	/* TODO: in gui mode, this is not a desirable method???
 	 *       this must be made event-driven coupled with the main event loop */
 	DosSleep (MOO_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
 
@@ -3304,13 +2662,13 @@ static int vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 	/* TODO: handle clock overvlow */
 	/* TODO: check if there is abortion request or interrupt */
-		while (c > clock()) 
+		while (c > clock())
 		{
 			_halt_cpu();
 		}
 	}
 #elif defined(USE_THREAD)
-	/* the sleep callback is called only if there is no IO semaphore 
+	/* the sleep callback is called only if there is no IO semaphore
 	 * waiting. so i can safely call vm_muxwait() without a muxwait callback
 	 * when USE_THREAD is true */
 	vm_muxwait (moo, dur, MOO_NULL);
@@ -3352,7 +2710,7 @@ static int vm_getsig (moo_t* moo, moo_uint8_t* u8)
 	}
 	if (navail <= 0) return 0;
 #endif
-	if (read(xtn->sigfd.p[0], u8, MOO_SIZEOF(*u8)) == -1) 
+	if (read(xtn->sigfd.p[0], u8, MOO_SIZEOF(*u8)) == -1)
 	{
 		if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) return 0;
 		moo_seterrwithsyserr (moo, 0, errno);
@@ -3365,7 +2723,7 @@ static int vm_getsig (moo_t* moo, moo_uint8_t* u8)
 static int vm_setsig (moo_t* moo, moo_uint8_t u8)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	if (write(xtn->sigfd.p[1], &u8, MOO_SIZEOF(u8)) == -1) 
+	if (write(xtn->sigfd.p[1], &u8, MOO_SIZEOF(u8)) == -1)
 	{
 		if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) return 0;
 		moo_seterrwithsyserr (moo, 0, errno);
@@ -3398,7 +2756,7 @@ static void dispatch_siginfo (int sig, siginfo_t* si, void* ctx)
 		((sig_handler_t)g_sig_state[sig].handler) (sig);
 	}
 
-	if (g_sig_state[sig].old_handler && 
+	if (g_sig_state[sig].old_handler &&
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_IGN &&
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_DFL)
 	{
@@ -3414,7 +2772,7 @@ static void dispatch_signal (int sig)
 		((sig_handler_t)g_sig_state[sig].handler) (sig);
 	}
 
-	if (g_sig_state[sig].old_handler && 
+	if (g_sig_state[sig].old_handler &&
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_IGN &&
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_DFL)
 	{
@@ -3574,7 +2932,7 @@ static DWORD WINAPI msw_wait_for_timer_event (LPVOID ctx)
 
 	/*#define MSW_TICKER_MANUAL_RESET */
 	#if defined(MSW_TICKER_MANUAL_RESET)
-		/* if manual resetting is enabled, the reset is done after 
+		/* if manual resetting is enabled, the reset is done after
 		 * swproc_all_moos has been called. so the interval is the
 		 * interval specified plus the time taken in swproc_all_moos. */
 		SetWaitableTimer (msw_tick_timer, &li, 0, MOO_NULL, MOO_NULL, FALSE);
@@ -3617,7 +2975,7 @@ static MOO_INLINE void start_ticker (void)
 	{
 		SetThreadPriority (thr, THREAD_PRIORITY_HIGHEST);
 
-		/* MSDN - The thread object remains in the system until the thread has terminated 
+		/* MSDN - The thread object remains in the system until the thread has terminated
 		 *        and all handles to it have been closed through a call to CloseHandle.
 		 * it is safe to close the handle here */
 		CloseHandle (thr);
@@ -3632,7 +2990,7 @@ static MOO_INLINE void stop_ticker (void)
 
 #elif defined(__OS2__)
 
-static HEV os2_tick_sem; 
+static HEV os2_tick_sem;
 static HTIMER os2_tick_timer;
 static int os2_tick_done = 0;
 
@@ -3703,7 +3061,7 @@ static void __interrupt dos_timer_intr_handler (void)
 {
 	/*
 	_XSTACK* stk = (_XSTACK *)_get_stk_frame();
-	r = (unsigned short)stk->eax;   
+	r = (unsigned short)stk->eax;
 	*/
 
 	/* The timer interrupt (normally) occurs 18.2 times per second. */
@@ -3856,7 +3214,7 @@ static MOO_INLINE void start_ticker (void)
 
 static MOO_INLINE void stop_ticker (void)
 {
-	if (ticker_pid >= 0) 
+	if (ticker_pid >= 0)
 	{
 		int wstatus;
 		kill (ticker_pid, SIGKILL);
@@ -3868,6 +3226,659 @@ static MOO_INLINE void stop_ticker (void)
 }
 
 #endif
+
+/* ========================================================================= */
+
+#if defined(USE_LTDL)
+#	define sys_dl_error() lt_dlerror()
+#	define sys_dl_open(x) lt_dlopen(x)
+#	define sys_dl_openext(x) lt_dlopenext(x)
+#	define sys_dl_close(x) lt_dlclose(x)
+#	define sys_dl_getsym(x,n) lt_dlsym(x,n)
+
+#elif defined(USE_DLFCN)
+#	define sys_dl_error() dlerror()
+#	define sys_dl_open(x) dlopen(x,RTLD_NOW | RTLD_LOCAL)
+#	define sys_dl_openext(x) dlopen(x,RTLD_NOW | RTLD_LOCAL)
+#	define sys_dl_close(x) dlclose(x)
+#	define sys_dl_getsym(x,n) dlsym(x,n)
+
+#elif defined(USE_WIN_DLL)
+#	define sys_dl_error() msw_dlerror()
+#	define sys_dl_open(x) LoadLibraryExA(x, MOO_NULL, 0)
+#	define sys_dl_openext(x) LoadLibraryExA(x, MOO_NULL, 0)
+#	define sys_dl_close(x) FreeLibrary(x)
+#	define sys_dl_getsym(x,n) GetProcAddress(x,n)
+
+#elif defined(USE_MACH_O_DYLD)
+#	define sys_dl_error() mach_dlerror()
+#	define sys_dl_open(x) mach_dlopen(x)
+#	define sys_dl_openext(x) mach_dlopen(x)
+#	define sys_dl_close(x) mach_dlclose(x)
+#	define sys_dl_getsym(x,n) mach_dlsym(x,n)
+#endif
+
+#if defined(USE_WIN_DLL)
+
+static const char* msw_dlerror (void)
+{
+	/* TODO: handle wchar_t, moo_ooch_t etc? */
+	static char buf[256];
+	DWORD rc;
+
+	rc = FormatMessageA (
+		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		buf, MOO_COUNTOF(buf), MOO_NULL
+	);
+	while (rc > 0 && buf[rc - 1] == '\r' || buf[rc - 1] == '\n')
+	{
+		buf[--rc] = '\0';
+	}
+	return buf;
+}
+
+#elif defined(USE_MACH_O_DYLD)
+static const char* mach_dlerror_str = "";
+
+static void* mach_dlopen (const char* path)
+{
+	NSObjectFileImage image;
+	NSObjectFileImageReturnCode rc;
+	void* handle;
+
+	mach_dlerror_str = "";
+	if ((rc = NSCreateObjectFileImageFromFile(path, &image)) != NSObjectFileImageSuccess)
+	{
+		switch (rc)
+		{
+			case NSObjectFileImageFailure:
+			case NSObjectFileImageFormat:
+				mach_dlerror_str = "unable to crate object file image";
+				break;
+
+			case NSObjectFileImageInappropriateFile:
+				mach_dlerror_str = "inappropriate file";
+				break;
+
+			case NSObjectFileImageArch:
+				mach_dlerror_str = "incompatible architecture";
+				break;
+
+			case NSObjectFileImageAccess:
+				mach_dlerror_str = "inaccessible file";
+				break;
+
+			default:
+				mach_dlerror_str = "unknown error";
+				break;
+		}
+		return MOO_NULL;
+	}
+	handle = (void*)NSLinkModule(image, path, NSLINKMODULE_OPTION_PRIVATE | NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+	NSDestroyObjectFileImage (image);
+	return handle;
+}
+
+static MOO_INLINE void mach_dlclose (void* handle)
+{
+	mach_dlerror_str = "";
+	NSUnLinkModule (handle, NSUNLINKMODULE_OPTION_NONE);
+}
+
+static MOO_INLINE void* mach_dlsym (void* handle, const char* name)
+{
+	mach_dlerror_str = "";
+	return (void*)NSAddressOfSymbol(NSLookupSymbolInModule(handle, name));
+}
+
+static const char* mach_dlerror (void)
+{
+	int err_no;
+	const char* err_file;
+	NSLinkEditErrors err;
+
+	if (mach_dlerror_str[0] == '\0')
+		NSLinkEditError (&err, &err_no, &err_file, &mach_dlerror_str);
+
+	return mach_dlerror_str;
+}
+#endif
+
+static void dl_startup (moo_t* moo)
+{
+#if defined(USE_LTDL)
+	lt_dlinit ();
+#endif
+}
+
+static void dl_cleanup (moo_t* moo)
+{
+#if defined(USE_LTDL)
+	lt_dlexit ();
+#endif
+}
+
+static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
+{
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
+	moo_bch_t stabuf[128], * bufptr;
+	moo_oow_t ucslen, bcslen, bufcapa;
+	void* handle;
+
+	#if defined(MOO_OOCH_IS_UCH)
+	if (moo_convootobcstr(moo, name, &ucslen, MOO_NULL, &bufcapa) <= -1) return MOO_NULL;
+	/* +1 for terminating null. but it's not needed because MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX)
+	 * and MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTIFX) include the terminating nulls. Never mind about
+	 * the extra 2 characters. */
+	#else
+	bufcapa = moo_count_bcstr(name);
+	#endif
+	bufcapa += MOO_COUNTOF(MOO_DEFAULT_PFMODDIR) + MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX) + MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTFIX) + 1;
+
+	if (bufcapa <= MOO_COUNTOF(stabuf)) bufptr = stabuf;
+	else
+	{
+		bufptr = moo_allocmem(moo, bufcapa * MOO_SIZEOF(*bufptr));
+		if (!bufptr) return MOO_NULL;
+	}
+
+	if (flags & MOO_VMPRIM_DLOPEN_PFMOD)
+	{
+		moo_oow_t len, i, xlen, dlen;
+
+		/* opening a primitive function module - mostly libmoo-xxxx.
+		 * if PFMODPREFIX is absolute, never use PFMODDIR */
+		dlen = IS_PATH_ABSOLUTE(MOO_DEFAULT_PFMODPREFIX)?
+			0: moo_copy_bcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODDIR);
+		len = moo_copy_bcstr(&bufptr[dlen], bufcapa - dlen, MOO_DEFAULT_PFMODPREFIX);
+		len += dlen;
+
+		bcslen = bufcapa - len;
+	#if defined(MOO_OOCH_IS_UCH)
+		moo_convootobcstr (moo, name, &ucslen, &bufptr[len], &bcslen);
+	#else
+		bcslen = moo_copy_bcstr(&bufptr[len], bcslen, name);
+	#endif
+
+		/* length including the directory, the prefix and the name. but excluding the postfix */
+		xlen = len + bcslen;
+
+		for (i = len; i < xlen; i++)
+		{
+			/* convert a period(.) to a dash(-) */
+			if (bufptr[i] == '.') bufptr[i] = '-';
+		}
+
+	retry:
+		moo_copy_bcstr (&bufptr[xlen], bufcapa - xlen, MOO_DEFAULT_PFMODPOSTFIX);
+
+		/* both prefix and postfix attached. for instance, libmoo-xxx */
+		handle = sys_dl_openext(&bufptr[dlen]);
+		if (!handle)
+		{
+			MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[dlen], name, sys_dl_error());
+
+			if (dlen > 0)
+			{
+				handle = sys_dl_openext(&bufptr[0]);
+				if (handle) goto pfmod_open_ok;
+				MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[0], name, sys_dl_error());
+			}
+
+			/* try without prefix and postfix */
+			bufptr[xlen] = '\0';
+			handle = sys_dl_openext(&bufptr[len]);
+			if (!handle)
+			{
+				moo_bch_t* dash;
+				const moo_bch_t* dl_errstr;
+				dl_errstr = sys_dl_error();
+				MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[len], name, dl_errstr);
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) PFMOD %js - %hs", name, dl_errstr);
+				dash = moo_rfind_bchar(bufptr, moo_count_bcstr(bufptr), '-');
+				if (dash)
+				{
+					/* remove a segment at the back.
+					 * [NOTE] a dash contained in the original name before
+					 *        period-to-dash transformation may cause extraneous/wrong
+					 *        loading reattempts. */
+					xlen = dash - bufptr;
+					goto retry;
+				}
+			}
+			else
+			{
+				MOO_DEBUG3 (moo, "OPENED_HERE(ext) PFMOD %hs[%js] handle %p\n", &bufptr[len], name, handle);
+			}
+		}
+		else
+		{
+		pfmod_open_ok:
+			MOO_DEBUG3 (moo, "OPENED_HERE(ext) PFMOD %hs[%js] handle %p\n", &bufptr[dlen], name, handle);
+		}
+	}
+	else
+	{
+		/* opening a raw shared object without a prefix and/or a postfix */
+	#if defined(MOO_OOCH_IS_UCH)
+		bcslen = bufcapa;
+		moo_convootobcstr (moo, name, &ucslen, bufptr, &bcslen);
+	#else
+		bcslen = moo_copy_bcstr(bufptr, bufcapa, name);
+	#endif
+
+		if (moo_find_bchar(bufptr, bcslen, '.'))
+		{
+			handle = sys_dl_open(bufptr);
+			if (!handle)
+			{
+				const moo_bch_t* dl_errstr;
+				dl_errstr = sys_dl_error();
+				MOO_DEBUG2 (moo, "Unable to open DL %hs - %hs\n", bufptr, dl_errstr);
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open DL %js - %hs", name, dl_errstr);
+			}
+			else MOO_DEBUG2 (moo, "OPENED_HERE DL %hs handle %p\n", bufptr, handle);
+		}
+		else
+		{
+			handle = sys_dl_openext(bufptr);
+			if (!handle)
+			{
+				const moo_bch_t* dl_errstr;
+				dl_errstr = sys_dl_error();
+				MOO_DEBUG2 (moo, "Unable to open(ext) DL %hs - %hs\n", bufptr, dl_errstr);
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
+			}
+			else MOO_DEBUG2 (moo, "OPENED_HERE(ext) DL %hs handle %p\n", bufptr, handle);
+		}
+	}
+
+	if (bufptr != stabuf) moo_freemem (moo, bufptr);
+	return handle;
+
+#else
+
+/* TODO: support various platforms */
+	/* TODO: implemenent this */
+	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot open %js\n", name);
+	moo_seterrbfmt (moo, MOO_ENOIMPL, "dynamic loading not implemented - cannot open %js", name);
+	return MOO_NULL;
+#endif
+}
+
+static void dl_close (moo_t* moo, void* handle)
+{
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
+	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
+	sys_dl_close (handle);
+
+#else
+	/* TODO: implemenent this */
+	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot close handle %p\n", handle);
+#endif
+}
+
+static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
+{
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
+	moo_bch_t stabuf[64], * bufptr;
+	moo_oow_t bufcapa, ucslen, bcslen, i;
+	const moo_bch_t* symname;
+	void* sym;
+
+	#if defined(MOO_OOCH_IS_UCH)
+	if (moo_convootobcstr(moo, name, &ucslen, MOO_NULL, &bcslen) <= -1) return MOO_NULL;
+	#else
+	bcslen = moo_count_bcstr (name);
+	#endif
+
+	if (bcslen >= MOO_COUNTOF(stabuf) - 2)
+	{
+		bufcapa = bcslen + 3;
+		bufptr = moo_allocmem(moo, bufcapa * MOO_SIZEOF(*bufptr));
+		if (!bufptr) return MOO_NULL;
+	}
+	else
+	{
+		bufcapa = MOO_COUNTOF(stabuf);
+		bufptr = stabuf;
+	}
+
+	bcslen = bufcapa - 1;
+	#if defined(MOO_OOCH_IS_UCH)
+	moo_convootobcstr (moo, name, &ucslen, &bufptr[1], &bcslen);
+	#else
+	bcslen = moo_copy_bcstr(&bufptr[1], bcslen, name);
+	#endif
+
+	/* convert a period(.) to an underscore(_) */
+	for (i = 1; i <= bcslen; i++) if (bufptr[i] == '.') bufptr[i] = '_';
+
+	symname = &bufptr[1]; /* try the name as it is */
+	sym = sys_dl_getsym(handle, symname);
+	if (!sym)
+	{
+		bufptr[0] = '_';
+		symname = &bufptr[0]; /* try _name */
+		sym = sys_dl_getsym(handle, symname);
+		if (!sym)
+		{
+			bufptr[bcslen + 1] = '_';
+			bufptr[bcslen + 2] = '\0';
+
+			symname = &bufptr[1]; /* try name_ */
+			sym = sys_dl_getsym(handle, symname);
+
+			if (!sym)
+			{
+				symname = &bufptr[0]; /* try _name_ */
+				sym = sys_dl_getsym(handle, symname);
+				if (!sym)
+				{
+					const moo_bch_t* dl_errstr;
+					dl_errstr = sys_dl_error();
+					MOO_DEBUG3 (moo, "Unable to get module symbol %js from handle %p - %hs\n", name, handle, dl_errstr);
+					moo_seterrbfmt (moo, MOO_ENOENT, "unable to get module symbol %hs - %hs", symname, dl_errstr);
+				}
+			}
+		}
+	}
+
+	if (sym) MOO_DEBUG3 (moo, "Loaded module symbol %js from handle %p - %hs\n", name, handle, symname);
+	if (bufptr != stabuf) moo_freemem (moo, bufptr);
+	return sym;
+
+#else
+	/* TODO: IMPLEMENT THIS */
+	MOO_DEBUG2 (moo, "Dynamic loading not implemented - Cannot load module symbol %js from handle %p\n", name, handle);
+	moo_seterrbfmt (moo, MOO_ENOIMPL, "dynamic loading not implemented - Cannot load module symbol %js from handle %p", name, handle);
+	return MOO_NULL;
+#endif
+}
+/* ========================================================================= */
+
+static int open_pipes (moo_t* moo, int p[2])
+{
+#if defined(_WIN32)
+	u_long flags;
+#else
+	int flags;
+#endif
+
+#if defined(_WIN32)
+	if (_pipe(p, 256, _O_BINARY | _O_NOINHERIT) == -1)
+	{
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
+		return -1;
+	}
+#elif defined(__OS2__)
+	#if defined(TCPV40HDRS)
+	/* neither pipe nor socketpair available */
+	if (os2_socket_pair(p) == -1)
+	#else
+	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, p) == -1)
+	#endif
+	{
+		moo_seterrbfmtwithsyserr (moo, 2, sock_errno(), "unable to create pipes");
+		return -1;
+	}
+#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+	if (pipe2(p, O_CLOEXEC | O_NONBLOCK) == -1)
+	{
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
+		return -1;
+	}
+#else
+	if (pipe(p) == -1)
+	{
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes");
+		return -1;
+	}
+#endif
+
+
+#if defined(_WIN32)
+	flags = 1;
+	ioctl (p[0], FIONBIO, &flags);
+	ioctl (p[1], FIONBIO, &flags);
+#elif defined(__OS2__)
+	flags = 1; /* don't block */
+	ioctl (p[0], FIONBIO, (char*)&flags, moo_SIZEOF(flags));
+	ioctl (p[1], FIONBIO, (char*)&flags, moo_SIZEOF(flags));
+#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+		/* do nothing */
+#else
+	#if defined(FD_CLOEXEC)
+	flags = fcntl(p[0], F_GETFD);
+	if (flags >= 0) fcntl (p[0], F_SETFD, flags | FD_CLOEXEC);
+	flags = fcntl(p[1], F_GETFD);
+	if (flags >= 0) fcntl (p[1], F_SETFD, flags | FD_CLOEXEC);
+	#endif
+	#if defined(O_NONBLOCK)
+	flags = fcntl(p[0], F_GETFL);
+	if (flags >= 0) fcntl (p[0], F_SETFL, flags | O_NONBLOCK);
+	flags = fcntl(p[1], F_GETFL);
+	if (flags >= 0) fcntl (p[1], F_SETFL, flags | O_NONBLOCK);
+	#endif
+#endif
+
+	return 0;
+}
+
+static void close_pipes (moo_t* moo, int p[2])
+{
+#if defined(_WIN32)
+	_close (p[0]);
+	_close (p[1]);
+#elif defined(__OS2__)
+	soclose (p[0]);
+	soclose (p[1]);
+#else
+	close (p[0]);
+	close (p[1]);
+#endif
+	p[0] = -1;
+	p[1] = -1;
+}
+
+static int vm_startup (moo_t* moo)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	int sigfd_pcount = 0;
+	int iothr_pcount = 0, flags;
+
+#if defined(_WIN32)
+	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+#endif
+
+#if defined(USE_DEVPOLL)
+	xtn->ep = open("/dev/poll", O_RDWR);
+	if (xtn->ep == -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		MOO_DEBUG1 (moo, "Cannot create devpoll - %hs\n", strerror(errno));
+		goto oops;
+	}
+
+	#if defined(FD_CLOEXEC)
+	flags = fcntl(xtn->ep, F_GETFD);
+	if (flags >= 0) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
+	#endif
+
+#elif defined(USE_KQUEUE)
+	#if defined(HAVE_KQUEUE1) && defined(O_CLOEXEC)
+	xtn->ep = kqueue1(O_CLOEXEC);
+	if (xtn->ep == -1) xtn->ep = kqueue();
+	#else
+	xtn->ep = kqueue();
+	#endif
+	if (xtn->ep == -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		MOO_DEBUG1 (moo, "Cannot create kqueue - %hs\n", strerror(errno));
+		goto oops;
+	}
+
+	#if defined(FD_CLOEXEC)
+	flags = fcntl(xtn->ep, F_GETFD);
+	if (flags >= 0 && !(flags & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
+	#endif
+
+#elif defined(USE_EPOLL)
+	#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
+	xtn->ep = epoll_create1(EPOLL_CLOEXEC);
+	if (xtn->ep == -1) xtn->ep = epoll_create(1024);
+	#else
+	xtn->ep = epoll_create(1024);
+	#endif
+	if (xtn->ep == -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		MOO_DEBUG1 (moo, "Cannot create epoll - %hs\n", strerror(errno));
+		goto oops;
+	}
+
+	#if defined(FD_CLOEXEC)
+	flags = fcntl(xtn->ep, F_GETFD);
+	if (flags >= 0 && !(flags & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
+	#endif
+
+#elif defined(USE_POLL)
+
+	MUTEX_INIT (&xtn->ev.reg.pmtx);
+
+#elif defined(USE_SELECT)
+	FD_ZERO (&xtn->ev.reg.rfds);
+	FD_ZERO (&xtn->ev.reg.wfds);
+	xtn->ev.reg.maxfd = -1;
+	MUTEX_INIT (&xtn->ev.reg.smtx);
+#endif /* USE_DEVPOLL */
+
+	if (open_pipes(moo, xtn->sigfd.p) <= -1) goto oops;
+	sigfd_pcount = 2;
+
+#if defined(USE_THREAD)
+	if (open_pipes(moo, xtn->iothr.p) <= -1) goto oops;
+	iothr_pcount = 2;
+
+	if (_add_poll_fd(moo, xtn->iothr.p[0], XPOLLIN) <= -1) goto oops;
+
+	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
+	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
+	pthread_cond_init (&xtn->ev.cnd2, MOO_NULL);
+	xtn->ev.halting = 0;
+
+	xtn->iothr.abort = 0;
+	xtn->iothr.up = 0;
+	/*pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo);*/
+
+#endif /* USE_THREAD */
+
+	xtn->vm_running = 1;
+	return 0;
+
+oops:
+#if defined(USE_THREAD)
+	if (iothr_pcount > 0)
+	{
+		close (xtn->iothr.p[0]);
+		close (xtn->iothr.p[1]);
+	}
+#endif
+
+	if (sigfd_pcount > 0)
+	{
+		close (xtn->sigfd.p[0]);
+		close (xtn->sigfd.p[1]);
+	}
+
+#if defined(USE_DEVPOLL) || defined(USE_EPOLL)
+	if (xtn->ep >= 0)
+	{
+		close (xtn->ep);
+		xtn->ep = -1;
+	}
+#endif
+
+	return -1;
+}
+
+static void vm_cleanup (moo_t* moo)
+{
+	xtn_t* xtn = GET_XTN(moo);
+
+	xtn->vm_running = 0;
+
+#if defined(_WIN32)
+	if (xtn->waitable_timer)
+	{
+		CloseHandle (xtn->waitable_timer);
+		xtn->waitable_timer = MOO_NULL;
+	}
+#endif
+
+#if defined(USE_THREAD)
+	if (xtn->iothr.up)
+	{
+		xtn->iothr.abort = 1;
+		write (xtn->iothr.p[1], "Q", 1);
+		pthread_cond_signal (&xtn->ev.cnd);
+		pthread_join (xtn->iothr.thr, MOO_NULL);
+		xtn->iothr.up = 0;
+	}
+	pthread_cond_destroy (&xtn->ev.cnd);
+	pthread_cond_destroy (&xtn->ev.cnd2);
+	pthread_mutex_destroy (&xtn->ev.mtx);
+
+	_del_poll_fd (moo, xtn->iothr.p[0]);
+	close_pipes (moo, xtn->iothr.p);
+#endif /* USE_THREAD */
+
+	close_pipes (moo, xtn->sigfd.p);
+
+#if defined(USE_DEVPOLL)
+	if (xtn->ep >= 0)
+	{
+		close (xtn->ep);
+		xtn->ep = -1;
+	}
+	/*destroy_poll_data_space (moo);*/
+#elif defined(USE_KQUEUE)
+	if (xtn->ep >= 0)
+	{
+		close (xtn->ep);
+		xtn->ep = -1;
+	}
+#elif defined(USE_EPOLL)
+	if (xtn->ep >= 0)
+	{
+		close (xtn->ep);
+		xtn->ep = -1;
+	}
+#elif defined(USE_POLL)
+	if (xtn->ev.reg.ptr)
+	{
+		moo_freemem (moo, xtn->ev.reg.ptr);
+		xtn->ev.reg.ptr = MOO_NULL;
+		xtn->ev.reg.len = 0;
+		xtn->ev.reg.capa = 0;
+	}
+	if (xtn->ev.buf)
+	{
+		moo_freemem (moo, xtn->ev.buf);
+		xtn->ev.buf = MOO_NULL;
+	}
+	/*destroy_poll_data_space (moo);*/
+	MUTEX_DESTROY (&xtn->ev.reg.pmtx);
+#elif defined(USE_SELECT)
+	FD_ZERO (&xtn->ev.reg.rfds);
+	FD_ZERO (&xtn->ev.reg.wfds);
+	xtn->ev.reg.maxfd = -1;
+	MUTEX_DESTROY (&xtn->ev.reg.smtx);
+#endif
+}
+
 
 /* ========================================================================= */
 #if defined(_WIN32)
@@ -3933,7 +3944,7 @@ static LONG WINAPI msw_exception_filter (struct _EXCEPTION_POINTERS* exinfo)
 
 	if (excode == EXCEPTION_ACCESS_VIOLATION || excode == EXCEPTION_IN_PAGE_ERROR)
 	{
-		_snwprintf (exmsg, MOO_COUNTOF(exmsg), L"Exception %s(%u) at 0x%p - Invalid operation at 0x%p - %s", 
+		_snwprintf (exmsg, MOO_COUNTOF(exmsg), L"Exception %s(%u) at 0x%p - Invalid operation at 0x%p - %s",
 			msw_exception_name(excode), (unsigned int)excode,
 			exinfo->ExceptionRecord->ExceptionAddress,
 			(PVOID)exinfo->ExceptionRecord->ExceptionInformation[1],
@@ -3942,8 +3953,8 @@ static LONG WINAPI msw_exception_filter (struct _EXCEPTION_POINTERS* exinfo)
 	}
 	else
 	{
-		_snwprintf (exmsg, MOO_COUNTOF(exmsg), L"Exception %s(%u) at 0x%p", 
-			msw_exception_name(excode), (unsigned int)excode, 
+		_snwprintf (exmsg, MOO_COUNTOF(exmsg), L"Exception %s(%u) at 0x%p",
+			msw_exception_name(excode), (unsigned int)excode,
 			exinfo->ExceptionRecord->ExceptionAddress
 		);
 	}
@@ -3959,7 +3970,7 @@ static LONG WINAPI msw_exception_filter (struct _EXCEPTION_POINTERS* exinfo)
 #endif
 /* ========================================================================= */
 
-static struct 
+static struct
 {
 	const char* name;
 	int op;
@@ -4000,7 +4011,7 @@ static struct
 	{ "-debug",      1, ~MOO_LOG_DEBUG },
 };
 
-static struct 
+static struct
 {
 	const char* name;
 	moo_bitmask_t mask;
@@ -4018,9 +4029,9 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 	moo_oow_t i, len, pathlen;
 
 	cm = moo_find_bchar_in_bcstr(str, ',');
-	if (cm) 
+	if (cm)
 	{
-		/* i duplicate this string for open() below as open() doesn't 
+		/* i duplicate this string for open() below as open() doesn't
 		 * accept a length-bounded string */
 		cm = moo_find_bchar_in_bcstr(str, ',');
 		pathlen = cm - str;
@@ -4036,7 +4047,7 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 
 			for (i = 0; i < MOO_COUNTOF(log_mask_table); i++)
 			{
-				if (moo_comp_bchars_bcstr(flt, len, log_mask_table[i].name) == 0) 
+				if (moo_comp_bchars_bcstr(flt, len, log_mask_table[i].name) == 0)
 				{
 					if (log_mask_table[i].op)
 						logmask &= log_mask_table[i].mask;
@@ -4079,7 +4090,7 @@ static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen,
 	moo_oow_t i, len, pathlen;
 
 	cm = moo_find_uchar_in_ucstr(str, ',');
-	if (cm) 
+	if (cm)
 	{
 		cm = moo_find_uchar_in_ucstr(str, ',');
 		pathlen = cm - str;
@@ -4094,7 +4105,7 @@ static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen,
 
 			for (i = 0; i < MOO_COUNTOF(log_mask_table); i++)
 			{
-				if (moo_comp_uchars_bcstr(flt, len, log_mask_table[i].name) == 0) 
+				if (moo_comp_uchars_bcstr(flt, len, log_mask_table[i].name) == 0)
 				{
 					if (log_mask_table[i].op)
 						logmask &= log_mask_table[i].mask;
@@ -4204,7 +4215,7 @@ static int handle_dbgoptb (moo_t* moo, const moo_bch_t* str)
 
 		for (i = 0; i < MOO_COUNTOF(dbg_mask_table); i++)
 		{
-			if (moo_comp_bchars_bcstr(flt, len, dbg_mask_table[i].name) == 0) 
+			if (moo_comp_bchars_bcstr(flt, len, dbg_mask_table[i].name) == 0)
 			{
 				dbgopt |= dbg_mask_table[i].mask;
 				break;
@@ -4241,7 +4252,7 @@ static int handle_dbgoptu (moo_t* moo, const moo_uch_t* str)
 
 		for (i = 0; i < MOO_COUNTOF(dbg_mask_table); i++)
 		{
-			if (moo_comp_uchars_bcstr(flt, len, dbg_mask_table[i].name) == 0) 
+			if (moo_comp_uchars_bcstr(flt, len, dbg_mask_table[i].name) == 0)
 			{
 				dbgopt |= dbg_mask_table[i].mask;
 				break;
@@ -4656,9 +4667,9 @@ static void __interrupt dos_int23_handler (void)
 	}
 	else
 	{
-		if (sc & 0x80) 
+		if (sc & 0x80)
 		{
-			/* key release */ 
+			/* key release */
 			sc = sc & 0x7F;
 			keyboard[sc] = 0;
 			/*printf ("%key released ... %x\n", sc);*/
