@@ -1,6 +1,4 @@
 /*
- * $Id$
- *
     Copyright (c) 2014-2019 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -52,15 +50,15 @@
  *   moo_xma_t* xma;
  *   void* ptr1, * ptr2;
  *
- *   // create a new memory allocator obtaining a 100K byte zone 
+ *   // create a new memory allocator obtaining a 100K byte zone
  *   // with the default memory allocator
- *   xma = moo_xma_open(MOO_NULL, 0, 100000L); 
+ *   xma = moo_xma_open(MOO_NULL, 0, 100000L);
  *
  *   ptr1 = moo_xma_alloc(xma, 5000); // allocate a 5K block from the zone
  *   ptr2 = moo_xma_alloc(xma, 1000); // allocate a 1K block from the zone
  *   ptr1 = moo_xma_realloc(xma, ptr1, 6000); // resize the 5K block to 6K.
  *
- *   moo_xma_dump (xma, dumper, MOO_NULL); // dump memory blocks 
+ *   moo_xma_dump (xma, dumper, MOO_NULL); // dump memory blocks
  *
  *   // the following two lines are not actually needed as the allocator
  *   // is closed after them.
@@ -74,9 +72,7 @@
  */
 #include <moo-cmn.h>
 
-#ifdef MOO_BUILD_DEBUG
-#	define MOO_XMA_ENABLE_STAT
-#endif
+#define MOO_XMA_ENABLE_STAT
 
 /** @struct moo_xma_t
  * The moo_xma_t type defines a simple memory allocator over a memory zone.
@@ -90,7 +86,7 @@ typedef struct moo_xma_t moo_xma_t;
 typedef struct moo_xma_fblk_t moo_xma_fblk_t;
 typedef struct moo_xma_mblk_t moo_xma_mblk_t;
 
-#define MOO_XMA_FIXED 32
+#define MOO_XMA_FIXED (32)
 #define MOO_XMA_SIZE_BITS ((MOO_SIZEOF_OOW_T*8)-1)
 
 struct moo_xma_t
@@ -102,19 +98,27 @@ struct moo_xma_t
 	int          internal;
 
 	/** pointer array to free memory blocks */
-	moo_xma_fblk_t* xfree[MOO_XMA_FIXED + MOO_XMA_SIZE_BITS + 1]; 
+	moo_xma_fblk_t* xfree[MOO_XMA_FIXED + MOO_XMA_SIZE_BITS + 1];
 
 	/** pre-computed value for fast xfree index calculation */
 	moo_oow_t     bdec;
 
-#ifdef MOO_XMA_ENABLE_STAT
+#if defined(MOO_XMA_ENABLE_STAT)
 	struct
 	{
 		moo_oow_t total;
-		moo_oow_t alloc;
-		moo_oow_t avail;
-		moo_oow_t nused;
-		moo_oow_t nfree;
+		moo_oow_t alloc; /* allocated size */
+		moo_oow_t avail; /* available size */
+		moo_oow_t nused; /* nubmer of used blocks */
+		moo_oow_t nfree; /* number of free blocks */
+		moo_oow_t alloc_hwmark; /* high watermark - highest total memory ever allocated */
+		moo_oow_t nallocops; /* number of alloc operations */
+		moo_oow_t nallocgoodops; /* number of successful alloc operations */
+		moo_oow_t nallocbadops; /* number of failed alloc operations */
+		moo_oow_t nreallocops; /* number of realloc operations */
+		moo_oow_t nreallocgoodops; /* number of good realloc operations */
+		moo_oow_t nreallocbadops; /* number of failed realloc operations - could fall back to normal alloc*/
+		moo_oow_t nfreeops; /* number of free operations */
 	} stat;
 #endif
 };
@@ -150,7 +154,7 @@ MOO_EXPORT moo_xma_t* moo_xma_open (
 
 /**
  * The moo_xma_close() function destroys a memory allocator. It also frees
- * the memory zone obtained, which invalidates the memory blocks within 
+ * the memory zone obtained, which invalidates the memory blocks within
  * the zone. Call this function to destroy a memory allocator created with
  * moo_xma_open().
  */
@@ -186,7 +190,7 @@ MOO_EXPORT int moo_xma_init (
 );
 
 /**
- * The moo_xma_fini() function finalizes a memory allocator. Call this 
+ * The moo_xma_fini() function finalizes a memory allocator. Call this
  * function to finalize a memory allocator initialized with moo_xma_init().
  */
 MOO_EXPORT void moo_xma_fini (
