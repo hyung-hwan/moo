@@ -35,7 +35,7 @@
 /* you can define this to either 1 or 2 */
 #define MOO_BCODE_LONG_PARAM_SIZE 2
 
-/* this is useful for debugging. moo_gc() can be called 
+/* this is useful for debugging. moo_gc() can be called
  * while moo has not been fully initialized when this is defined*/
 #define MOO_SUPPORT_GC_DURING_IGNITION
 
@@ -138,14 +138,14 @@
  * named instance variables. If the spec of a class is indexed, the object
  * of the class can be instantiated with the size of the indexed part.
  *
- * For example, on a platform where sizeof(moo_oow_t) is 4, 
+ * For example, on a platform where sizeof(moo_oow_t) is 4,
  * the layout of the spec field of a class as an OOP value looks like this:
- * 
- *  31                          12 11  10 9 8 7 6 5 4 3 2   1 0 
+ *
+ *  31                          12 11  10 9 8 7 6 5 4 3 2   1 0
  * |number of named instance variables|indexed-type|flags |oop-tag|
  *
  * the number of named instance variables is stored in high 21 bits.
- * the indexed type takes up bit 5 to bit 10 (assuming MOO_OBJ_TYPE_BITS is 6. 
+ * the indexed type takes up bit 5 to bit 10 (assuming MOO_OBJ_TYPE_BITS is 6.
  * MOO_OBJ_TYPE_XXX enumerators are used to represent actual values).
  * and the indexability is stored in the flag bits which span from bit 2 to 4.
  *
@@ -158,7 +158,7 @@
  * The number of named instance variables can be greater than 0 if the
  * class spec is not indexed or if it's a pointer indexed class
  * (indexed_type == MOO_OBJ_TYPE_OOP)
- * 
+ *
  * indexed_type is one of the #moo_obj_type_t enumerators.
  */
 
@@ -172,13 +172,13 @@
 	(((moo_oow_t)(named_instvar)) << (MOO_OBJ_FLAGS_TYPE_BITS + MOO_CLASS_SPEC_FLAG_BITS)) |  \
 	(((moo_oow_t)(indexed_type)) << (MOO_CLASS_SPEC_FLAG_BITS)) | (((moo_oow_t)flags) & MOO_LBMASK(moo_oow_t,MOO_CLASS_SPEC_FLAG_BITS)))
 
-/* what is the number of named instance variables? 
- *  MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec)) 
+/* what is the number of named instance variables?
+ *  MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec))
  * ensure to update Class<<specNumInstVars if you change this macro. */
 #define MOO_CLASS_SPEC_NAMED_INSTVARS(spec) \
 	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + MOO_CLASS_SPEC_FLAG_BITS))
 
-/* is it a user-indexable class? 
+/* is it a user-indexable class?
  * all objects can be indexed with basicAt:.
  * this indicates if an object can be instantiated with a dynamic size
  * (new: size) and and can be indexed with at:.
@@ -198,17 +198,17 @@
 #define MOO_CLASS_SPEC_IS_UNCOPYABLE(spec) (MOO_CLASS_SPEC_FLAGS(spec) & MOO_CLASS_SPEC_FLAG_UNCOPYABLE)
 
 /* What is the maximum number of named instance variables?
- * This limit is set this way because the number must be encoded into 
+ * This limit is set this way because the number must be encoded into
  * the spec field of the class with limited number of bits assigned to
  * the number of named instance variables.
  */
 #define MOO_MAX_NAMED_INSTVARS \
 	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + MOO_CLASS_SPEC_FLAG_BITS))
 
-/* Given the number of named instance variables, what is the maximum number 
+/* Given the number of named instance variables, what is the maximum number
  * of indexed instance variables? The number of indexed instance variables
  * is not stored in the spec field of the class. It only affects the actual
- * size of an object(obj->_size) selectively combined with the number of 
+ * size of an object(obj->_size) selectively combined with the number of
  * named instance variables. So it's the maximum value of obj->_size minus
  * the number of named instance variables.
  */
@@ -412,7 +412,7 @@ typedef struct moo_label_t moo_label_t;
 struct moo_label_t
 {
 	moo_oow_t blk_id; /* block id where this label belongs to */
-	moo_oow_t blk_depth; /* level of the block where thsi label belongs to */ 
+	moo_oow_t blk_depth; /* level of the block where thsi label belongs to */
 	moo_ioloc_t loc; /* location inside source */
 	moo_oow_t ip; /* instruction pointer where this label points to */
 	moo_label_t* next;
@@ -460,7 +460,7 @@ enum moo_pragma_flag_t
 
 enum moo_cunit_type_t
 {
-	/* [NOTE] get_cunit_method_data() in comp.c depends on the order of the 
+	/* [NOTE] get_cunit_method_data() in comp.c depends on the order of the
 	 *        following enumerators */
 	MOO_CUNIT_BLANK = 0,
 	MOO_CUNIT_POOLDIC,
@@ -540,7 +540,7 @@ struct moo_method_data_t
 	int variadic;
 
 	/* single string containing a space separated list of temporaries */
-	moo_oocs_t tmprs; 
+	moo_oocs_t tmprs;
 	moo_oow_t tmprs_capa;
 	moo_oow_t tmpr_count; /* total number of temporaries including arguments */
 	moo_oow_t tmpr_nargs;
@@ -551,7 +551,7 @@ struct moo_method_data_t
 	/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
 	int pftype;
 	/* primitive function number */
-	moo_ooi_t pfnum; 
+	moo_ooi_t pfnum;
 
 	/* block depth - [ ... ]*/
 	moo_oow_t blk_idseq;
@@ -579,7 +579,7 @@ struct moo_cunit_class_t
 	int indexed_type;
 
 	/* fixed instance size specified for a non-pointer class. class(#byte(N)), etc */
-	moo_oow_t non_pointer_instsize; 
+	moo_oow_t non_pointer_instsize;
 
 	moo_oop_class_t self_oop;
 	moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
@@ -606,7 +606,7 @@ struct moo_cunit_class_t
 	/* instance variable, class variable, class instance variable, constant
 	 *   var[0] - named instance variables
 	 *   var[1] - class instance variables
-	 *   var[2] - class variables 
+	 *   var[2] - class variables
 	 */
 	struct
 	{
@@ -618,7 +618,7 @@ struct moo_cunit_class_t
 
 		moo_initv_t* initv;
 		moo_oow_t initv_capa;
-		/* initv_count holds the index to the last variable with a 
+		/* initv_count holds the index to the last variable with a
 		 * default initial value defined in this class only plus one.
 		 * inheritance is handled by the compiler separately using
 		 * the reference to the superclass. so it doesn't include
@@ -627,7 +627,7 @@ struct moo_cunit_class_t
 		 * initv_count is set to 2 while count is 3. totoal_count
 		 * will be 3 too if there is no variabled defined in the
 		 * superclass chain. */
-		moo_oow_t initv_count;  
+		moo_oow_t initv_count;
 	} var[3];
 
 	moo_oow_t dbgi_class_offset;
@@ -672,7 +672,7 @@ struct moo_compiler_t
 	int          nungots;
 
 	/* static input data buffer */
-	moo_ioarg_t  arg;    
+	moo_ioarg_t  arg;
 
 	/* pointer to the current input data. initially, it points to &arg */
 	moo_ioarg_t* curinp;
@@ -725,7 +725,7 @@ struct moo_compiler_t
 SHORT INSTRUCTION CODE                                        LONG INSTRUCTION CODE
 ----------------------------------------------------------------------------------------------------------------
                                                                       v v
-0-3      0000 00XX STORE_INTO_INSTVAR                         128  1000 0000 XXXXXXXX STORE_INTO_INSTVAR_X                    (bit 4 off, bit 3 off) 
+0-3      0000 00XX STORE_INTO_INSTVAR                         128  1000 0000 XXXXXXXX STORE_INTO_INSTVAR_X                    (bit 4 off, bit 3 off)
 4-7      0000 01XX STORE_INTO_INSTVAR
 8-11     0000 10XX POP_INTO_INSTVAR                           136  1000 1000 XXXXXXXX POP_INTO_INSTVAR_X                      (bit 4 off, bit 3 on)
 12-15    0000 11XX POP_INTO_INSTVAR
@@ -939,7 +939,7 @@ enum moo_bcode_t
 	BCODE_PUSH_PROCESS             = 0x86, /* 134 */
 	BCODE_PUSH_RECEIVER_NS         = 0x87, /* 135 */
 
-	BCODE_POP_INTO_INSTVAR_X       = 0x88, /* 136 ## */ 
+	BCODE_POP_INTO_INSTVAR_X       = 0x88, /* 136 ## */
 
 	BCODE_PUSH_NEGONE              = 0x89, /* 137 */
 	BCODE_PUSH_ZERO                = 0x8A, /* 138 */
@@ -977,7 +977,7 @@ enum moo_bcode_t
 	BCODE_JMPOP2_FORWARD_IF_TRUE   = 0xCB, /* 203 ## */
 	BCODE_JMPOP_FORWARD_IF_FALSE   = 0xCC, /* 204 ## */
 	BCODE_JMPOP2_FORWARD_IF_FALSE  = 0xCD, /* 205 ## */
-	
+
 	BCODE_JUMP_BACKWARD            = 0xCE, /* 206 ## */
 	BCODE_JUMP2_BACKWARD           = 0xCF, /* 207 ## */
 	BCODE_JUMP_BACKWARD_IF_TRUE    = 0xD0, /* 208 ## */
@@ -1022,7 +1022,7 @@ enum moo_bcode_t
 	BCODE_NOOP                     = 0xFF
 };
 
-/* i don't want an error raised inside the callback to override 
+/* i don't want an error raised inside the callback to override
  * the existing error number and message. */
 #define vmprim_log_write(moo,mask,ptr,len) do { \
 		int shuterr = (moo)->shuterr; \
@@ -1098,7 +1098,7 @@ void moo_setsynerr (
  * \return heap pointer on success and #MOO_NULL on failure.
  */
 moo_heap_t* moo_makeheap (
-	moo_t*     moo, 
+	moo_t*     moo,
 	moo_oow_t  size
 );
 
@@ -1106,12 +1106,12 @@ moo_heap_t* moo_makeheap (
  * The moo_killheap() function destroys the heap pointed to by \a heap.
  */
 void moo_killheap (
-	moo_t*      moo, 
+	moo_t*      moo,
 	moo_heap_t* heap
 );
 
 /**
- * The moo_allocheapspace() function allocates \a size bytes in a semi-space 
+ * The moo_allocheapspace() function allocates \a size bytes in a semi-space
  * of the heap pointed to by \a heap.
  *
  * \return memory pointer on success and #MOO_NULL on failure.
@@ -1122,7 +1122,7 @@ void* moo_allocheapspace (
 	moo_oow_t    size
 );
 
-/** 
+/**
  * The moo_allocheapmem() function allocates \a size bytes from the given heap
  * and clears it with zeros.
  */

@@ -109,7 +109,7 @@ int moo_is_uch_blank (moo_uch_t c)
 moo_uch_t moo_to_uch_upper (moo_uch_t c)
 {
 	moo_uchu_t uc = (moo_uchu_t)c;
-	if (uc >= 0 && uc <= UCH_CASE_MAX) 
+	if (uc >= 0 && uc <= UCH_CASE_MAX)
 	{
 	 	uch_case_page_t* page;
 		page = uch_case_map[UCH_CASE_MAP_INDEX(uc)];
@@ -121,7 +121,7 @@ moo_uch_t moo_to_uch_upper (moo_uch_t c)
 moo_uch_t moo_to_uch_lower (moo_uch_t c)
 {
 	moo_uchu_t uc = (moo_uchu_t)c;
-	if (uc >= 0 && uc <= UCH_CASE_MAX) 
+	if (uc >= 0 && uc <= UCH_CASE_MAX)
 	{
 	 	uch_case_page_t* page;
 		page = uch_case_map[UCH_CASE_MAP_INDEX(uc)];
@@ -186,16 +186,16 @@ moo_bch_t moo_to_bch_lower (moo_bch_t c)
 /* ----------------------------------------------------------------------- */
 
 /*
- * See http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c 
+ * See http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c
  */
-struct interval 
+struct interval
 {
 	int first;
 	int last;
 };
 
 /* auxiliary function for binary search in interval table */
-static int bisearch(moo_uch_t ucs, const struct interval *table, int max) 
+static int bisearch(moo_uch_t ucs, const struct interval *table, int max)
 {
 	int min = 0;
 	int mid;
@@ -320,7 +320,7 @@ int moo_get_ucwidth (moo_uch_t uc)
 		    (uc >= 0xff00 && uc <= 0xff60) || /* Fullwidth Forms */
 		    (uc >= 0xffe0 && uc <= 0xffe6)
 		#if (MOO_SIZEOF_UCH_T  > 2)
-		    || 
+		    ||
 		    (uc >= 0x20000 && uc <= 0x2fffd) ||
 		    (uc >= 0x30000 && uc <= 0x3fffd)
 		#endif
@@ -330,5 +330,5 @@ int moo_get_ucwidth (moo_uch_t uc)
 		}
 	}
 
-	return 1; 
+	return 1;
 }

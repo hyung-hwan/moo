@@ -57,7 +57,7 @@
 #	define MOO_SIZEOF_OFF64_T     0
 #	define MOO_SIZEOF_OFF_T       8
 
-/* I don't know the exact mbstate size. 
+/* I don't know the exact mbstate size.
  * but this should be large enough */
 #	define MOO_SIZEOF_MBSTATE_T   MOO_SIZEOF_LONG
 /* TODO: check the exact value */

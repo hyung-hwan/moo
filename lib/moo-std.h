@@ -31,7 +31,7 @@ struct moo_cfgstd_t
 			const moo_ooch_t* dbg;
 		} opt;
 
-		struct 
+		struct
 		{
 			const moo_bch_t* log;
 			const moo_bch_t* dbg;
@@ -101,7 +101,7 @@ MOO_EXPORT void moo_uncatch_termreq (
 
 /* ----------------------------------------------------------------------- */
 MOO_EXPORT moo_t* moo_openstd (
-	moo_oow_t           xtnsize, 
+	moo_oow_t           xtnsize,
 	const moo_cfgstd_t* cfg,
 	moo_errinf_t*       errinfo
 );
@@ -118,12 +118,12 @@ MOO_EXPORT int moo_compilestd(
 );
 
 MOO_EXPORT int moo_compilefileb (
-	moo_t*           moo, 
+	moo_t*           moo,
 	const moo_bch_t* path
 );
 
 MOO_EXPORT int moo_compilefileu (
-	moo_t*           moo, 
+	moo_t*           moo,
 	const moo_uch_t* path
 );
 

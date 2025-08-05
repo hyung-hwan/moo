@@ -42,13 +42,13 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 	else if (oldsz < 400000) newsz = oldsz + (oldsz / 16);
 	else if (oldsz < 800000) newsz = oldsz + (oldsz / 32);
 	else if (oldsz < 1600000) newsz = oldsz + (oldsz / 64);
-	else 
+	else
 	{
 		moo_oow_t inc, inc_max;
 
 		inc = oldsz / 128;
 		inc_max = MOO_OBJ_SIZE_MAX - oldsz;
-		if (inc > inc_max) 
+		if (inc > inc_max)
 		{
 			if (inc_max > 0) inc = inc_max;
 			else
@@ -61,7 +61,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 	}
 
 	moo_pushvolat (moo, (moo_oop_t*)&oldbuc);
-	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz); 
+	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz);
 	moo_popvolat (moo);
 	if (!newbuc) return MOO_NULL;
 
@@ -94,7 +94,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	index = moo_hash_oochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
 	/* find a matching symbol in the open-addressed symbol table */
-	while ((moo_oop_t)(symbol = (moo_oop_char_t)MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index)) != moo->_nil) 
+	while ((moo_oop_t)(symbol = (moo_oop_char_t)MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index)) != moo->_nil)
 	{
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 
@@ -107,7 +107,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		index = (index + 1) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 	}
 
-	if (!create) 
+	if (!create)
 	{
 		moo_seterrnum (moo, MOO_ENOENT);
 		return MOO_NULL;
@@ -118,7 +118,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	tally = MOO_OOP_TO_SMOOI(moo->symtab->tally);
 	if (tally >= MOO_SMOOI_MAX)
 	{
-		/* this built-in table is not allowed to hold more than 
+		/* this built-in table is not allowed to hold more than
 		 * MOO_SMOOI_MAX items for efficiency sake */
 		moo_seterrbfmt (moo, MOO_EDFULL, "unable to add a symbol %.*js - symbol table full", len, ptr);
 		return MOO_NULL;
@@ -126,7 +126,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 
 	/* no conversion to moo_oow_t is necessary for tally + 1.
 	 * the maximum value of tally is checked to be MOO_SMOOI_MAX - 1.
-	 * tally + 1 can produce at most MOO_SMOOI_MAX. above all, 
+	 * tally + 1 can produce at most MOO_SMOOI_MAX. above all,
 	 * MOO_SMOOI_MAX is way smaller than MOO_TYPE_MAX(moo_ooi_t). */
 	if (tally + 1 >= MOO_OBJ_GET_SIZE(moo->symtab->bucket))
 	{
@@ -148,7 +148,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		/* recalculate the index for the expanded bucket */
 		index = moo_hash_oochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
-		while (MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index) != moo->_nil) 
+		while (MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index) != moo->_nil)
 			index = (index + 1) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 	}
 

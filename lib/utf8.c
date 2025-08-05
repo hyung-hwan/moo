@@ -58,7 +58,7 @@ struct __utf8_t
 
 typedef struct __utf8_t __utf8_t;
 
-static __utf8_t utf8_table[] = 
+static __utf8_t utf8_table[] =
 {
 	{0x00000000ul, 0x0000007Ful, 0x00, 0x80, 0x7F, 1},
 	{0x00000080ul, 0x000007FFul, 0xC0, 0xE0, 0x1F, 2},
@@ -82,7 +82,7 @@ static MOO_INLINE __utf8_t* get_utf8_slot (moo_uch_t uc)
 	end = utf8_table + MOO_COUNTOF(utf8_table);
 	cur = utf8_table;
 
-	while (cur < end) 
+	while (cur < end)
 	{
 		if (uc >= cur->lower && uc <= cur->upper) return cur;
 		cur++;
@@ -100,7 +100,7 @@ moo_oow_t moo_uc_to_utf8 (moo_uch_t uc, moo_bch_t* utf8, moo_oow_t size)
 	if (utf8 && cur->length <= size)
 	{
 		int index = cur->length;
-		while (index > 1) 
+		while (index > 1)
 		{
 			/*
 			 * 0x3F: 00111111
@@ -130,16 +130,16 @@ moo_oow_t moo_utf8_to_uc (const moo_bch_t* utf8, moo_oow_t size, moo_uch_t* uc)
 	end = utf8_table + MOO_COUNTOF(utf8_table);
 	cur = utf8_table;
 
-	while (cur < end) 
+	while (cur < end)
 	{
-		if ((utf8[0] & cur->mask) == cur->fbyte) 
+		if ((utf8[0] & cur->mask) == cur->fbyte)
 		{
 
-			/* if size is less that cur->length, the incomplete-seqeunce 
+			/* if size is less that cur->length, the incomplete-seqeunce
 			 * error is naturally indicated. so validate the string
 			 * only if size is as large as cur->length. */
 
-			if (size >= cur->length) 
+			if (size >= cur->length)
 			{
 				int i;
 
@@ -151,12 +151,12 @@ moo_oow_t moo_utf8_to_uc (const moo_bch_t* utf8, moo_oow_t size, moo_uch_t* uc)
 					for (i = 1; i < cur->length; i++)
 					{
 						/* in utf8, trailing bytes are all
-						 * set with 0x80. 
+						 * set with 0x80.
 						 *
 						 *   10XXXXXX & 11000000 => 10000000
 						 *
 						 * if not, invalid. */
-						if ((utf8[i] & 0xC0) != 0x80) return 0; 
+						if ((utf8[i] & 0xC0) != 0x80) return 0;
 						w = (w << 6) | (utf8[i] & 0x3F);
 					}
 					*uc = w;
@@ -166,19 +166,19 @@ moo_oow_t moo_utf8_to_uc (const moo_bch_t* utf8, moo_oow_t size, moo_uch_t* uc)
 					for (i = 1; i < cur->length; i++)
 					{
 						/* in utf8, trailing bytes are all
-						 * set with 0x80. 
+						 * set with 0x80.
 						 *
 						 *   10XXXXXX & 11000000 => 10000000
 						 *
 						 * if not, invalid. */
-						if ((utf8[i] & 0xC0) != 0x80) return 0; 
+						if ((utf8[i] & 0xC0) != 0x80) return 0;
 					}
 				}
 			}
 
-			/* this return value can indicate both 
-			 *    the correct length (size >= cur->length) 
-			 * and 
+			/* this return value can indicate both
+			 *    the correct length (size >= cur->length)
+			 * and
 			 *    the incomplete seqeunce error (size < cur->length).
 			 */
 			return (moo_oow_t)cur->length;

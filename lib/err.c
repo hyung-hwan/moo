@@ -68,7 +68,7 @@ static moo_ooch_t* errstr[] =
 	errstr_8, errstr_9, errstr_10, errstr_11, errstr_12, errstr_13, errstr_14, errstr_15,
 	errstr_16, errstr_17, errstr_18, errstr_19, errstr_20, errstr_21, errstr_22, errstr_23,
 	errstr_24, errstr_25, errstr_26, errstr_27, errstr_28, errstr_29, errstr_30, errstr_31,
-	errstr_32, errstr_33 
+	errstr_32, errstr_33
 };
 
 #if defined(MOO_INCLUDE_COMPILER)
@@ -165,12 +165,12 @@ static moo_ooch_t* synerrstr[] =
 	synerrstr_56, synerrstr_57, synerrstr_58, synerrstr_59, synerrstr_60, synerrstr_61, synerrstr_62, synerrstr_63,
 	synerrstr_64, synerrstr_65, synerrstr_66, synerrstr_67, synerrstr_68, synerrstr_69, synerrstr_70, synerrstr_71,
 	synerrstr_72, synerrstr_73, synerrstr_74, synerrstr_75, synerrstr_76, synerrstr_77, synerrstr_78, synerrstr_79,
-	synerrstr_80 
+	synerrstr_80
 };
 #endif
 /* END: GENERATED WITH generr.moo */
 
-/* -------------------------------------------------------------------------- 
+/* --------------------------------------------------------------------------
  * ERROR NUMBER TO STRING CONVERSION
  * -------------------------------------------------------------------------- */
 const moo_ooch_t* moo_errnum_to_errstr (moo_errnum_t errnum)
@@ -187,7 +187,7 @@ static const moo_ooch_t* synerr_to_errstr (moo_synerrnum_t errnum)
 }
 #endif
 
-/* -------------------------------------------------------------------------- 
+/* --------------------------------------------------------------------------
  * ERROR NUMBER/MESSAGE HANDLING
  * -------------------------------------------------------------------------- */
 const moo_ooch_t* moo_geterrstr (moo_t* moo)
@@ -216,8 +216,8 @@ const moo_ooch_t* moo_backuperrmsg (moo_t* moo)
 void moo_seterrnum (moo_t* moo, moo_errnum_t errnum)
 {
 	if (moo->shuterr) return;
-	moo->errnum = errnum; 
-	moo->errmsg.len = 0; 
+	moo->errnum = errnum;
+	moo->errmsg.len = 0;
 }
 
 
@@ -375,11 +375,11 @@ void moo_seterrbfmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, con
 	va_list ap;
 
 	if (moo->shuterr) return;
-	
+
 	if (moo->vmprim.syserrstrb)
 	{
 		errnum = moo->vmprim.syserrstrb(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
-		
+
 		va_start (ap, fmt);
 		moo_seterrbfmtv (moo, errnum, fmt, ap);
 		va_end (ap);
@@ -432,7 +432,7 @@ void moo_seterrufmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, con
 	va_list ap;
 
 	if (moo->shuterr) return;
-	
+
 	if (moo->vmprim.syserrstrb)
 	{
 		errnum = moo->vmprim.syserrstrb(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
@@ -490,7 +490,7 @@ void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 
 	if (moo->shuterr) return;
 
-	if (msgfmt) 
+	if (msgfmt)
 	{
 		va_list ap;
 		int i, selen;
@@ -504,14 +504,14 @@ void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 		for (i = 0; i < selen; i++) moo->errmsg.buf[i] = syntax_error[i];
 		moo->errmsg.buf[MOO_COUNTOF(moo->errmsg.buf) - 1] = '\0';
 	}
-	else 
+	else
 	{
 		moo_seterrbfmt (moo, MOO_ESYNERR, "%hs%js", syntax_error, synerr_to_errstr(num));
 	}
 	moo->c->synerr.num = num;
 
 	/* The SCO compiler complains of this ternary operation saying:
-	 *    error: operands have incompatible types: op ":" 
+	 *    error: operands have incompatible types: op ":"
 	 * it seems to complain of type mismatch between *loc and
 	 * moo->c->tok.loc due to 'const' prefixed to loc. */
 	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
@@ -523,10 +523,10 @@ void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 	{
 		moo->c->synerr.loc = moo->c->tok.loc;
 	}
-	
+
 	if (tgt)
 	{
-		if (tgt->len >= MOO_COUNTOF(moo->c->synerr_tgtbuf) && 
+		if (tgt->len >= MOO_COUNTOF(moo->c->synerr_tgtbuf) &&
 		    moo_copyoocharstosbuf(moo, tgt->ptr, tgt->len, MOO_SBUF_ID_SYNERR) >= 0)
 		{
 			moo->c->synerr.tgt.ptr = moo->sbuf[MOO_SBUF_ID_SYNERR].ptr;
@@ -540,7 +540,7 @@ void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 			moo_copy_oochars (moo->c->synerr.tgt.ptr, tgt->ptr, moo->c->synerr.tgt.len);
 		}
 	}
-	else 
+	else
 	{
 		moo->c->synerr.tgt.ptr = MOO_NULL;
 		moo->c->synerr.tgt.len = 0;
@@ -553,7 +553,7 @@ void moo_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 
 	if (moo->shuterr) return;
 
-	if (msgfmt) 
+	if (msgfmt)
 	{
 		va_list ap;
 		int i, selen;
@@ -567,14 +567,14 @@ void moo_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 		for (i = 0; i < selen; i++) moo->errmsg.buf[i] = syntax_error[i];
 		moo->errmsg.buf[MOO_COUNTOF(moo->errmsg.buf) - 1] = '\0';
 	}
-	else 
+	else
 	{
 		moo_seterrbfmt (moo, MOO_ESYNERR, "%hs%js", syntax_error, synerr_to_errstr(num));
 	}
 	moo->c->synerr.num = num;
 
 	/* The SCO compiler complains of this ternary operation saying:
-	 *    error: operands have incompatible types: op ":" 
+	 *    error: operands have incompatible types: op ":"
 	 * it seems to complain of type mismatch between *loc and
 	 * moo->c->tok.loc due to 'const' prefixed to loc. */
 	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
@@ -589,7 +589,7 @@ void moo_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 
 	if (tgt)
 	{
-		if (tgt->len >= MOO_COUNTOF(moo->c->synerr_tgtbuf) && 
+		if (tgt->len >= MOO_COUNTOF(moo->c->synerr_tgtbuf) &&
 		    moo_copyoocharstosbuf(moo, tgt->ptr, tgt->len, MOO_SBUF_ID_SYNERR) >= 0)
 		{
 			moo->c->synerr.tgt.ptr = moo->sbuf[MOO_SBUF_ID_SYNERR].ptr;
@@ -603,7 +603,7 @@ void moo_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 			moo_copy_oochars (moo->c->synerr.tgt.ptr, tgt->ptr, moo->c->synerr.tgt.len);
 		}
 	}
-	else 
+	else
 	{
 		moo->c->synerr.tgt.ptr = MOO_NULL;
 		moo->c->synerr.tgt.len = 0;

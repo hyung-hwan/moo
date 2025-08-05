@@ -67,7 +67,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 		alloc_size = size;
 		heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, &alloc_size);
 	}
-	if (MOO_UNLIKELY(!heap)) 
+	if (MOO_UNLIKELY(!heap))
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to allocate a heap - %js", oldmsg);
@@ -131,7 +131,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 		heap->newspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->newspace.base), MOO_SIZEOF(moo_oop_t));
 		heap->newspace.limit = heap->newspace.base + space_size;
 
-		/* if size is too small, space.ptr may go past space.limit even at 
+		/* if size is too small, space.ptr may go past space.limit even at
 		 * this moment depending on the alignment of space.base. subsequent
 		 * calls to moo_allocheapspace() are bound to fail. Make sure to
 		 * pass a heap size large enough */
@@ -181,7 +181,7 @@ void* moo_callocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
 
 	MOO_ASSERT (moo, moo->gc_type == MOO_GC_TYPE_MARK_SWEEP);
 	ptr = MOO_MMGR_ALLOC(&heap->xmmgr, size);
-	if (MOO_UNLIKELY(!ptr)) 
+	if (MOO_UNLIKELY(!ptr))
 	{
 		MOO_DEBUG2 (moo, "Cannot callocate %zd bytes from heap - ptr %p\n", size, heap);
 		moo_seterrnum (moo, MOO_EOOMEM);

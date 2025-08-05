@@ -52,9 +52,9 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 	moo_ooi_t ip = 0, cdlen; /* byte code length is limited by the compiler. so moo_ooi_t is good enough */
 	moo_ooi_t fetched_instruction_pointer;
 	moo_oow_t b1, b2;
- 
+
 	cdptr = MOO_METHOD_GET_CODE_BYTE(mth);
-	cdlen = MOO_METHOD_GET_CODE_SIZE(mth); 
+	cdlen = MOO_METHOD_GET_CODE_SIZE(mth);
 
 	if (classfqn)
 		MOO_LOG3 (moo, DECODE_LOG_MASK, "%.*js>>%O\n", classfqn->len, classfqn->ptr, mth->name);
@@ -427,7 +427,7 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 			/* -------------------------------------------------------- */
 			case BCODE_SEND_MESSAGE_X:
 			case BCODE_SEND_MESSAGE_TO_SUPER_X:
-				/* b1 -> number of arguments 
+				/* b1 -> number of arguments
 				 * b2 -> selector index stored in the literal frame */
 				FETCH_PARAM_CODE_TO (moo, b1);
 				FETCH_PARAM_CODE_TO (moo, b2);
@@ -446,7 +446,7 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 
 			handle_send_message:
 				LOG_INST_3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
-				break; 
+				break;
 
 			/* -------------------------------------------------------- */
 

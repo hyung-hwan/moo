@@ -19,7 +19,7 @@
 #define POLLNVAL        0x020           /* Invalid polling request.  */
 
 /* Data structure describing a polling request.  */
-struct pollfd 
+struct pollfd
 {
 	int fd;                     /* File descriptor to poll.  */
 	short int events;           /* Types of events poller cares about.  */

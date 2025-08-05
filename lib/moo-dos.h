@@ -85,7 +85,7 @@
 #	define MOO_SIZEOF_MBSTATE_T   MOO_SIZEOF_LONG
 #	define MOO_MBLEN_MAX          8
 
-#elif defined(__TURBOC__) 
+#elif defined(__TURBOC__)
 /* TODO: be more version specific wchar_t may be available in newer BCC */
 #	define MOO_SIZEOF_CHAR        1
 #	define MOO_SIZEOF_SHORT       2
@@ -96,7 +96,7 @@
 #	define MOO_SIZEOF_VOID_P      4
 #	define MOO_SIZEOF_FLOAT       4
 #	define MOO_SIZEOF_DOUBLE      8
-#	define MOO_SIZEOF_LONG_DOUBLE 10 
+#	define MOO_SIZEOF_LONG_DOUBLE 10
 #	define MOO_SIZEOF_WCHAR_T     0
 
 #	define MOO_SIZEOF___INT8      0

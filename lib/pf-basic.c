@@ -27,10 +27,10 @@
 
 #include "moo-prv.h"
 
-/* -------------------------------------------------------------------------------- 
+/* --------------------------------------------------------------------------------
  * COMPARISON
  * -------------------------------------------------------------------------------- */
- 
+
 moo_pfrc_t moo_pf_identical (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, b;
@@ -91,7 +91,7 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 			if (MOO_OBJ_GET_CLASS(rcv) != MOO_OBJ_GET_CLASS(arg)) return 0; /* different class, not equal */
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(rcv) == MOO_OBJ_GET_FLAGS_TYPE(arg));
 
-			if (MOO_OBJ_GET_CLASS(rcv) == moo->_class && rcv != arg) 
+			if (MOO_OBJ_GET_CLASS(rcv) == moo->_class && rcv != arg)
 			{
 				/* a class object are supposed to be unique */
 				return 0;
@@ -124,8 +124,8 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 
 					if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(rcv)))
 					{
-						/* the stack in a process object doesn't need to be 
-						 * scanned in full. the slots above the stack pointer 
+						/* the stack in a process object doesn't need to be
+						 * scanned in full. the slots above the stack pointer
 						 * are garbages. */
 						size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)rcv)->sp) + 1;
 						MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(rcv));
@@ -139,7 +139,7 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 						int n;
 						/* TODO: remove recursion */
 
-						/* [NOTE] even if the object implements the equality method, 
+						/* [NOTE] even if the object implements the equality method,
 						 * this primitive method doesn't honor it. */
 						n = _equal_objects(moo, MOO_OBJ_GET_OOP_VAL(rcv, i), MOO_OBJ_GET_OOP_VAL(arg, i));
 						if (n <= 0) return n;
@@ -185,7 +185,7 @@ moo_pfrc_t moo_pf_not_equal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 }
 
 
-/* -------------------------------------------------------------------------------- 
+/* --------------------------------------------------------------------------------
  * INSTANTIATION
  * -------------------------------------------------------------------------------- */
 
@@ -196,7 +196,7 @@ moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	moo_oow_t size = 0; /* size of the variable/indexed part */
 
 	_class = (moo_oop_class_t)MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo, _class) != moo->_class) 
+	if (MOO_CLASSOF(moo, _class) != moo->_class)
 	{
 		/* the receiver is not a class object */
 		moo_seterrbfmt (moo, MOO_EMSGRCV, "non-class receiver - %O", _class);
@@ -221,15 +221,15 @@ moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		}
 	}
 
-	if (MOO_OOP_IS_SMOOI(((moo_oop_class_t)_class)->trsize)) 
+	if (MOO_OOP_IS_SMOOI(((moo_oop_class_t)_class)->trsize))
 	{
 		obj = moo_instantiatewithtrailer(moo, _class, size, MOO_NULL, MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->trsize));
 	}
-	else 
+	else
 	{
-		/* moo_instantiate() will ignore size if the instance specification 
+		/* moo_instantiate() will ignore size if the instance specification
 		 * disallows indexed(variable) parts. */
-		/* TODO: should i check the specification before calling 
+		/* TODO: should i check the specification before calling
 		*       moo_instantiate()? */
 		obj = moo_instantiate(moo, _class, MOO_NULL, size);
 	}
@@ -253,7 +253,7 @@ moo_pfrc_t moo_pf_shallow_copy (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-/* -------------------------------------------------------------------------------- 
+/* --------------------------------------------------------------------------------
  * BASIC ACCESS
  * -------------------------------------------------------------------------------- */
 
@@ -278,7 +278,7 @@ moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
-		/* a non-pointer object has the size of 0. 
+		/* a non-pointer object has the size of 0.
 		 * such an object doesn't consume object memory space except an OOP word */
 		sz = MOO_SMOOI_TO_OOP(0);
 	}
@@ -327,7 +327,7 @@ moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
-		/* a non-pointer object has the size of 0. 
+		/* a non-pointer object has the size of 0.
 		 * such an object doesn't consume object memory space except an OOP word.
 		 * use -1 to indicate that the last index doesn't exist */
 		sz = MOO_SMOOI_TO_OOP(-1);
@@ -677,7 +677,7 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	if (ssz <= 0) 
+	if (ssz <= 0)
 	{
 		/* no filling is performed. also no validation about the range of
 		 * source position is performed */
@@ -800,11 +800,11 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	if (ssz <= 0) 
+	if (ssz <= 0)
 	{
 		/* no shifting is performed. also no validation about the range of
 		 * source position and destionation position is performed */
-		goto done; 
+		goto done;
 	}
 
 	if (sidx >= MOO_OBJ_GET_SIZE(rcv))
@@ -833,15 +833,15 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				MOO_MEMMOVE (MOO_OBJ_GET_BYTE_PTR(rcv, didx),
 				             MOO_OBJ_GET_BYTE_PTR(rcv, sidx),
 				             ssz * MOO_SIZEOF(MOO_OBJ_GET_BYTE_VAL(rcv, 0)));
-				
+
 				if (didx > sidx)
 				{
-					MOO_MEMSET (MOO_OBJ_GET_BYTE_PTR(rcv, sidx), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_BYTE_PTR(rcv, sidx), 0,
 					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_BYTE_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (MOO_OBJ_GET_BYTE_PTR(rcv, didx + ssz - 1), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_BYTE_PTR(rcv, didx + ssz - 1), 0,
 					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_BYTE_VAL(rcv, 0)));
 				}
 				break;
@@ -853,12 +853,12 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 				if (didx > sidx)
 				{
-					MOO_MEMSET (MOO_OBJ_GET_CHAR_PTR(rcv, sidx), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_CHAR_PTR(rcv, sidx), 0,
 					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_CHAR_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (MOO_OBJ_GET_CHAR_PTR(rcv, didx + ssz - 1), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_CHAR_PTR(rcv, didx + ssz - 1), 0,
 					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_CHAR_VAL(rcv, 0)));
 				}
 				break;
@@ -870,12 +870,12 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 				if (didx > sidx)
 				{
-					MOO_MEMSET (MOO_OBJ_GET_HALFWORD_PTR(rcv, sidx), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_HALFWORD_PTR(rcv, sidx), 0,
 					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_HALFWORD_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (MOO_OBJ_GET_HALFWORD_PTR(rcv, didx + ssz - 1), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_HALFWORD_PTR(rcv, didx + ssz - 1), 0,
 					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_HALFWORD_VAL(rcv, 0)));
 				}
 				break;
@@ -887,12 +887,12 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 				if (didx > sidx)
 				{
-					MOO_MEMSET (MOO_OBJ_GET_WORD_PTR(rcv, sidx), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_WORD_PTR(rcv, sidx), 0,
 					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_WORD_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (MOO_OBJ_GET_WORD_PTR(rcv, didx + ssz - 1), 0, 
+					MOO_MEMSET (MOO_OBJ_GET_WORD_PTR(rcv, didx + ssz - 1), 0,
 					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_WORD_VAL(rcv, 0)));
 				}
 				break;
@@ -906,7 +906,7 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 						MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, didx + i), MOO_OBJ_GET_OOP_VAL(rcv, sidx + i));
 					}
 
-					while (sidx < didx) 
+					while (sidx < didx)
 					{
 						/* no need to use MOO_STORE_OOP because moo->_nil is the assigned value */
 						MOO_OBJ_SET_OOP_VAL (rcv, sidx, moo->_nil);
@@ -922,7 +922,7 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 						MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, didx + i), MOO_OBJ_GET_OOP_VAL(rcv, sidx + i));
 					}
 
-					while (didx > sidx) 
+					while (didx > sidx)
 					{
 						/* no need to use MOO_STORE_OOP because moo->_nil is the assigned value */
 						MOO_OBJ_SET_OOP_VAL (rcv, didx + ssz, moo->_nil);
@@ -957,7 +957,7 @@ done:
 	return MOO_PF_SUCCESS;
 }
 
-/* -------------------------------------------------------------------------------- 
+/* --------------------------------------------------------------------------------
  * BASIC QUERY
  * -------------------------------------------------------------------------------- */
 

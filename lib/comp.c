@@ -93,14 +93,14 @@ struct var_info_t
 	var_type_t            type;
 
 	/* not used for VAR_GLOBAL */
-	moo_ooi_t             pos; 
+	moo_ooi_t             pos;
 
-	/* useful if type is VAR_CLASS(class variable). 
+	/* useful if type is VAR_CLASS(class variable).
 	 * note it may be set to MOO_NULL to indicate the self class when
 	 * the current class being compiled has not been instantiated. */
-	moo_oop_class_t       cls; 
+	moo_oop_class_t       cls;
 
-	union 
+	union
 	{
 		moo_oop_association_t gbl; /* used for VAR_GLOBAL only */
 		moo_oop_t             lit; /* used for VAR_LITERAL only */
@@ -333,8 +333,8 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 		case '*':
 		case '+':
 		case '-':
-		case '/': 
-		case '%': 
+		case '/':
+		case '%':
 		case '<':
 		case '>':
 		case '=':
@@ -371,7 +371,7 @@ static MOO_INLINE int is_closing_char (moo_ooci_t c)
 		case '\"':
 		case '\'':
 			return 1;
-	
+
 		default:
 			return 0;
 	}
@@ -380,7 +380,7 @@ static MOO_INLINE int is_closing_char (moo_ooci_t c)
 
 static MOO_INLINE int is_word (const moo_oocs_t* oocs, voca_id_t id)
 {
-	return oocs->len == vocas[id].len && 
+	return oocs->len == vocas[id].len &&
 	       moo_equal_oochars(oocs->ptr, vocas[id].str, vocas[id].len);
 }
 
@@ -390,7 +390,7 @@ static int is_reserved_word (const moo_oocs_t* ucs, moo_iotok_type_t* token_type
 	{
 		voca_id_t voca_id;
 		moo_iotok_type_t token_type;
-	} rw[] = 
+	} rw[] =
 	{
 		{ VOCA_SELF,          MOO_IOTOK_SELF },
 		{ VOCA_SUPER,         MOO_IOTOK_SUPER },
@@ -418,7 +418,7 @@ static int is_reserved_word (const moo_oocs_t* ucs, moo_iotok_type_t* token_type
 
 	for (i = 0; i < MOO_COUNTOF(rw); i++)
 	{
-		if (is_word(ucs, rw[i].voca_id)) 
+		if (is_word(ucs, rw[i].voca_id))
 		{
 			if (token_type) *token_type = rw[i].token_type;
 			return 1;
@@ -433,7 +433,7 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 {
 	/* not fully reserved. but restricted in a certain context */
 
-	static int rw[] = 
+	static int rw[] =
 	{
 		VOCA_CLASS,
 		VOCA_EXTEND,
@@ -498,7 +498,7 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 static int find_word_in_string (const moo_oocs_t* haystack, const moo_oocs_t* name, moo_oow_t* xindex)
 {
 	/* this function is inefficient. but considering the typical number
-	 * of arguments and temporary variables, the inefficiency can be 
+	 * of arguments and temporary variables, the inefficiency can be
 	 * ignored in my opinion. the overhead to maintain the reverse lookup
 	 * table from a name to an index should be greater than this simple
 	 * inefficient lookup */
@@ -519,7 +519,7 @@ static int find_word_in_string (const moo_oocs_t* haystack, const moo_oocs_t* na
 			if (t >= e || name->ptr[i] != *t) goto unmatched;
 			t++;
 		}
-		if (t >= e || is_spacechar(*t)) 
+		if (t >= e || is_spacechar(*t))
 		{
 			if (xindex) *xindex = index;
 			return 0;
@@ -577,7 +577,7 @@ static int find_oop_in_oopbuf (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oow_t start
 
 	for (i = start; i < oopbuf->count; i += step)
 	{
-		if (oopbuf->ptr[i] == item) 
+		if (oopbuf->ptr[i] == item)
 		{
 			if (index) *index = i;
 			return 0;
@@ -612,9 +612,9 @@ static int add_oop_to_oopbuf_nodup (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oop_t 
 {
 	moo_oow_t i;
 
-	for (i = 0; i < oopbuf->count; i++) 
+	for (i = 0; i < oopbuf->count; i++)
 	{
-		if (oopbuf->ptr[i] == item) 
+		if (oopbuf->ptr[i] == item)
 		{
 			*index = i;
 			return 0; /* the same item exists */
@@ -676,7 +676,7 @@ static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t*
 	while (ptr < end && (v = ZDIGIT_TO_NUM(*ptr, base)) < base)
 	{
 		value = value * base + v;
-		if (value < old_value) 
+		if (value < old_value)
 		{
 			/* overflow must have occurred */
 			moo_seterrnum (moo, MOO_ERANGE);
@@ -694,7 +694,7 @@ static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t*
 	}
 
 	MOO_ASSERT (moo, -MOO_SMOOI_MAX == MOO_SMOOI_MIN);
-	if (value > MOO_SMOOI_MAX) 
+	if (value > MOO_SMOOI_MAX)
 	{
 		moo_seterrnum (moo, MOO_ERANGE);
 		return -1;
@@ -819,7 +819,7 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 	{
 		v = moo_strtoint(moo, &str->ptr[pos], len, base);
 	}
-	if (!v) 
+	if (!v)
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to convert to fpdec %.*js - %js", str->len, str->ptr, oldmsg);
@@ -842,12 +842,12 @@ static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 	 * i just skip all non-digit letters for simplicity sake. */
 	while (ptr < end)
 	{
-		if (is_digitchar(*ptr)) 
+		if (is_digitchar(*ptr))
 		{
 			moo_oow_t xnum;
 
 			xnum = num * 10 + (*ptr - '0');
-			if (xnum < num || xnum > MOO_ERROR_MAX) 
+			if (xnum < num || xnum > MOO_ERROR_MAX)
 			{
 				/* overflowed */
 				moo_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, loc, str);
@@ -875,7 +875,7 @@ static moo_oop_t string_to_ptr (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 	 * i just skip all non-digit letters for simplicity sake. */
 	while (ptr < end)
 	{
-		if (is_xdigitchar(*ptr)) 
+		if (is_xdigitchar(*ptr))
 		{
 			moo_oow_t xnum;
 
@@ -923,7 +923,7 @@ static void fini_oow_pool (moo_t* moo, moo_oow_pool_t* pool)
 		chunk = next;
 	}
 
-	/* this doesn't reinitialize the pool. call init_oow_pool() 
+	/* this doesn't reinitialize the pool. call init_oow_pool()
 	 * to reuse it */
 }
 
@@ -1009,7 +1009,7 @@ static MOO_INLINE moo_oocs_t* get_cunit_fqn (moo_t* moo)
 	return (moo_oocs_t*)((moo_uint8_t*)moo->c->cunit + offset[moo->c->cunit->cunit_type]);
 }
 /* ---------------------------------------------------------------------
- * Tokenizer 
+ * Tokenizer
  * --------------------------------------------------------------------- */
 
 #define GET_CHAR(moo) \
@@ -1111,12 +1111,12 @@ static int get_char (moo_t* moo)
 		return 0;
 	}
 
-	if (moo->c->curinp->b.state == -1) 
+	if (moo->c->curinp->b.state == -1)
 	{
 		moo->c->curinp->b.state = 0;
 		return -1;
 	}
-	else if (moo->c->curinp->b.state == 1) 
+	else if (moo->c->curinp->b.state == 1)
 	{
 		moo->c->curinp->b.state = 0;
 		goto return_eof;
@@ -1126,7 +1126,7 @@ static int get_char (moo_t* moo)
 	{
 		n = moo->c->impl(moo, MOO_IO_READ, moo->c->curinp);
 		if (n <= -1) return -1;
-		
+
 		if (n == 0)
 		{
 		return_eof:
@@ -1137,7 +1137,7 @@ static int get_char (moo_t* moo)
 			moo->c->lxc = moo->c->curinp->lxc;
 
 			/* indicate that EOF has been read. lxc.c is also set to EOF. */
-			return 0; 
+			return 0;
 		}
 
 		moo->c->curinp->b.pos = 0;
@@ -1150,11 +1150,11 @@ static int get_char (moo_t* moo)
 		 * to be read is still in the buffer (moo->c->curinp->buf).
 		 * moo->cu->curinp->colm has been incremented when the previous
 		 * character has been read. */
-		if (moo->c->curinp->line > 1 && 
+		if (moo->c->curinp->line > 1 &&
 		    moo->c->curinp->colm == 2 &&
-		    moo->c->curinp->nl != moo->c->curinp->lxc.c) 
+		    moo->c->curinp->nl != moo->c->curinp->lxc.c)
 		{
-			/* most likely, it's the second character in '\r\n' or '\n\r' 
+			/* most likely, it's the second character in '\r\n' or '\n\r'
 			 * sequence. let's not update the line and column number. */
 			/*moo->c->curinp->colm = 1;*/
 		}
@@ -1196,9 +1196,9 @@ static int skip_comment (moo_t* moo)
 	if ((moo->c->pragma_flags & MOO_PRAGMA_QC) && c == '"')
 	{
 		/* skip up to the closing " */
-		do 
+		do
 		{
-			GET_CHAR_TO (moo, c); 
+			GET_CHAR_TO (moo, c);
 			if (c == MOO_OOCI_EOF) goto unterminated;
 		}
 		while (c != '"');
@@ -1213,7 +1213,7 @@ static int skip_comment (moo_t* moo)
 		GET_CHAR_TO (moo, c);
 		if (c == '/')
 		{
-			do 
+			do
 			{
 				GET_CHAR_TO (moo, c);
 				if (c == MOO_OOCI_EOF)
@@ -1226,14 +1226,14 @@ static int skip_comment (moo_t* moo)
 					GET_CHAR (moo); /* keep the first meaningful character in lxc */
 					break;
 				}
-			} 
+			}
 			while (1);
 
-			return 1; /* single line comment led by // */	
+			return 1; /* single line comment led by // */
 		}
 		else if (c == '*')
 		{
-			do 
+			do
 			{
 				GET_CHAR_TO (moo, c);
 				if (c == MOO_OOCI_EOF) goto unterminated;
@@ -1251,12 +1251,12 @@ static int skip_comment (moo_t* moo)
 						break;
 					}
 				}
-			} 
+			}
 			while (1);
 
 			return 1; /* multi-line comment enclosed in /x and x/ where x is * */
 		}
-		
+
 		goto not_comment;
 	}
 	else if (c == '#')
@@ -1269,7 +1269,7 @@ static int skip_comment (moo_t* moo)
 		GET_CHAR_TO (moo, c);
 
 		if (c != '!') goto not_comment;
-		do 
+		do
 		{
 			GET_CHAR_TO (moo, c);
 			if (c == MOO_OOCI_EOF)
@@ -1282,12 +1282,12 @@ static int skip_comment (moo_t* moo)
 				GET_CHAR (moo); /* keep the first meaningful character in lxc */
 				break;
 			}
-		} 
+		}
 		while (1);
 
 		return 1; /* single line comment led by #! */
 	}
-	else 
+	else
 	{
 		/* not comment. but no next character has been consumed.
 		 * no need to unget a character */
@@ -1330,9 +1330,9 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 	{
 		ADD_TOKEN_CHAR (moo, c);
 		GET_CHAR_TO (moo, c);
-	} 
+	}
 
-	if (c == ':') 
+	if (c == ':')
 	{
 #if 0
 	read_more_kwsym:
@@ -1340,12 +1340,12 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		SET_TOKEN_TYPE (moo, MOO_IOTOK_KEYWORD);
 		GET_CHAR_TO (moo, c);
 
-		if (moo->c->in_array && is_leadidentchar(c)) 
+		if (moo->c->in_array && is_leadidentchar(c))
 		{
 			/* when reading an array literal, read as many characters as
 			 * would compose a normal keyword symbol literal.
 			 * for example, in #(a #b:c: x:y:) x:y: is not preceded
-			 * by #. in an array literal, it should still be treated as 
+			 * by #. in an array literal, it should still be treated as
 			 * a symbol. */
 			do
 			{
@@ -1364,7 +1364,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		}
 		else
 		{
-			unget_char (moo, &moo->c->lxc); 
+			unget_char (moo, &moo->c->lxc);
 		}
 #else
 		moo_iolxc_t lc = moo->c->lxc;
@@ -1374,14 +1374,14 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		if (c == '=' || c == '{')
 		{
 			/* := or :{ appeared after an identifier */
-			unget_char (moo, &moo->c->lxc); 
+			unget_char (moo, &moo->c->lxc);
 			unget_char (moo, &lc);
 		}
 		else
 		{
 			ADD_TOKEN_CHAR (moo, lc.c);
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_KEYWORD);
-			unget_char (moo, &moo->c->lxc); 
+			unget_char (moo, &moo->c->lxc);
 		}
 #endif
 	}
@@ -1411,19 +1411,19 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 				while (is_identchar(c));
 
 				if (c == '.') goto read_more_seg;
-				unget_char (moo, &moo->c->lxc); 
+				unget_char (moo, &moo->c->lxc);
 			}
 			else
 			{
-				unget_char (moo, &moo->c->lxc); 
+				unget_char (moo, &moo->c->lxc);
 
 				/* unget the period itself */
-				unget_char (moo, &period); 
+				unget_char (moo, &period);
 			}
 		}
 		else
 		{
-			unget_char (moo, &moo->c->lxc); 
+			unget_char (moo, &moo->c->lxc);
 		}
 
 		if (is_reserved_word(TOKEN_NAME(moo), &token_type))
@@ -1438,7 +1438,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 
 static int get_numlit (moo_t* moo, int negated)
 {
-	/* 
+	/*
 	 * number-literal := number | ("-" number)
 	 * number := integer | float | scaledDecimal
 	 * integer := decimal-integer  | radix-integer
@@ -1464,7 +1464,7 @@ static int get_numlit (moo_t* moo, int negated)
 	SET_TOKEN_TYPE (moo, MOO_IOTOK_INTLIT);
 
 /*TODO: support a complex numeric literal */
-	do 
+	do
 	{
 		/* collect the potential radix specifier */
 		if (!radix_overflowed)
@@ -1495,13 +1495,13 @@ static int get_numlit (moo_t* moo, int negated)
 			}
 			else continue;
 		}
-	} 
+	}
 	while (is_digitchar(c));
 
 	if (c == 'p')
 	{
 		/* fixed-point decimal with the scale specified.
-		 *   5p99 -> 99.0000,  5p99.12 -> 99.12000 
+		 *   5p99 -> 99.0000,  5p99.12 -> 99.12000
 		 * treat the radix value as the scale */
 
 		if (radix_overflowed || radix < 1 || radix > MOO_SMOOI_MAX)
@@ -1542,7 +1542,7 @@ static int get_numlit (moo_t* moo, int negated)
 			GET_CHAR_TO (moo, c);
 			if (xscale > 0 && c == '.') goto fixed_point;
 
-			if (c == '_') 
+			if (c == '_')
 			{
 				moo_iolxc_t underscore;
 				underscore = moo->c->lxc;
@@ -1579,7 +1579,7 @@ static int get_numlit (moo_t* moo, int negated)
 		{
 			unget_char (moo, &moo->c->lxc);
 			unget_char (moo, &period);
-			if (xscale <= 0) 
+			if (xscale <= 0)
 			{
 				/* * restore the token type. it's not prefixed with 'p' like 20p.
 				 * the number is followed by a terminating period rather than a decimal point. */
@@ -1633,13 +1633,13 @@ static int get_numlit (moo_t* moo, int negated)
 
 static int get_charlit (moo_t* moo)
 {
-	/* 
+	/*
 	 * character-literal := "$" character
 	 * character := normal-character | "'"
 	 */
 
 	moo_ooci_t c = moo->c->lxc.c; /* even a new-line or white space would be taken */
-	if (c == MOO_OOCI_EOF) 
+	if (c == MOO_OOCI_EOF)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_CLTNT, LEXER_LOC(moo), MOO_NULL);
 		return -1;
@@ -1654,7 +1654,7 @@ static int get_charlit (moo_t* moo)
 
 static int get_strlit (moo_t* moo, int byte_only)
 {
-	/* 
+	/*
 	 * string-literal := single-quote string-character* single-quote
 	 * string-character := normal-character | (single-quote single-quote)
 	 * single-quote := "'"
@@ -1671,27 +1671,27 @@ static int get_strlit (moo_t* moo, int byte_only)
 
 	if (c != oc)
 	{
-		do 
+		do
 		{
-			do 
+			do
 			{
 			in_strlit:
 				if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c);
 				ADD_TOKEN_CHAR (moo, c);
 				GET_CHAR_TO (moo, c);
 
-				if (c == MOO_OOCI_EOF) 
+				if (c == MOO_OOCI_EOF)
 				{
 					/* string not closed */
 					moo_setsynerr (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
 					return -1;
 				}
-			} 
+			}
 			while (c != oc);
 
 			/* 'c' must be a single quote at this point*/
 			GET_CHAR_TO (moo, c);
-		} 
+		}
 		while (c == oc); /* if the next character is a single quote, it becomes a literal single quote character. */
 	}
 	else
@@ -1736,9 +1736,9 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			{
 				c_acc = c_acc * 8 + c - '0';
 				digit_count++;
-				if (digit_count >= escaped) 
+				if (digit_count >= escaped)
 				{
-					/* should i limit the max to 0xFF/0377 regardless of byte_only? 
+					/* should i limit the max to 0xFF/0377 regardless of byte_only?
 					 * if (c_acc > 0377) c_acc = 0377;*/
 
 					 if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
@@ -1762,7 +1762,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			{
 				c_acc = c_acc * 16 + c - '0';
 				digit_count++;
-				if (digit_count >= escaped) 
+				if (digit_count >= escaped)
 				{
 					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
@@ -1774,7 +1774,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			{
 				c_acc = c_acc * 16 + c - 'A' + 10;
 				digit_count++;
-				if (digit_count >= escaped) 
+				if (digit_count >= escaped)
 				{
 					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
@@ -1786,7 +1786,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			{
 				c_acc = c_acc * 16 + c - 'a' + 10;
 				digit_count++;
-				if (digit_count >= escaped) 
+				if (digit_count >= escaped)
 				{
 					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
@@ -1797,12 +1797,12 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			else
 			{
 				/* \x, \u, \U not followed by a hexadecimal digit */
-				if (digit_count == 0) 
+				if (digit_count == 0)
 				{
 					static moo_ooch_t esc_char_tab[] = { '\0', '\0', 'x', '\0', 'u', '\0', '\0', '\0', 'U' };
 					ADD_TOKEN_CHAR (moo, esc_char_tab[escaped]);
 				}
-				else 
+				else
 				{
 					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
@@ -1832,7 +1832,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			else if (c == 'b') c = '\b';
 			else if (c == 'v') c = '\v';
 			else if (c == 'a') c = '\a';
-			else if (c >= '0' && c <= '7' && !regex) 
+			else if (c >= '0' && c <= '7' && !regex)
 			{
 				/* i don't support the octal notation for a regular expression.
 				 * it conflicts with the backreference notation between \1 and \7 inclusive. */
@@ -1841,33 +1841,33 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 				c_acc = c - '0';
 				continue;
 			}
-			else if (c == 'x') 
+			else if (c == 'x')
 			{
 				escaped = 2;
 				digit_count = 0;
 				c_acc = 0;
 				continue;
 			}
-			else if (!byte_only && c == 'u' && MOO_SIZEOF(moo_ooch_t) >= 2) 
+			else if (!byte_only && c == 'u' && MOO_SIZEOF(moo_ooch_t) >= 2)
 			{
 				escaped = 4;
 				digit_count = 0;
 				c_acc = 0;
 				continue;
 			}
-			else if (!byte_only && c == 'U' && MOO_SIZEOF(moo_ooch_t) >= 4) 
+			else if (!byte_only && c == 'U' && MOO_SIZEOF(moo_ooch_t) >= 4)
 			{
 				escaped = 8;
 				digit_count = 0;
 				c_acc = 0;
 				continue;
 			}
-			else if (regex) 
+			else if (regex)
 			{
 				/* if the following character doesn't compose a proper
-				 * escape sequence, keep the escape character. 
-				 * an unhandled escape sequence can be handled 
-				 * outside this function since the escape character 
+				 * escape sequence, keep the escape character.
+				 * an unhandled escape sequence can be handled
+				 * outside this function since the escape character
 				 * is preserved.*/
 				ADD_TOKEN_CHAR (moo, esc_char);
 			}
@@ -1890,7 +1890,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 
 static int get_binsel (moo_t* moo)
 {
-	/* 
+	/*
 	 * binary-selector := binary-selector-character+
 	 */
 	moo_ooci_t oc;
@@ -1904,7 +1904,7 @@ static int get_binsel (moo_t* moo)
 
 #if 1
 	/* up to 2 characters only */
-	if (is_binselchar (moo->c->lxc.c)) 
+	if (is_binselchar (moo->c->lxc.c))
 	{
 		ADD_TOKEN_CHAR (moo, moo->c->lxc.c);
 	}
@@ -1914,7 +1914,7 @@ static int get_binsel (moo_t* moo)
 	}
 #else
 	/* or up to any occurrences */
-	while (is_binselchar(moo->c->lxc.c)) 
+	while (is_binselchar(moo->c->lxc.c))
 	{
 		ADD_TOKEN_CHAR (moo, c);
 		GET_CHAR (moo);
@@ -1934,13 +1934,13 @@ static int get_token (moo_t* moo)
 retry:
 	GET_CHAR (moo);
 
-	do 
+	do
 	{
 		/* skip spaces */
 		while (is_spacechar(moo->c->lxc.c)) GET_CHAR (moo);
 		/* the first character after the last space is in moo->c->lxc */
 		if ((n = skip_comment(moo)) <= -1) return -1;
-	} 
+	}
 	while (n >= 1);
 
 	/* clear the token name, reset its location */
@@ -1978,7 +1978,7 @@ retry:
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_COLON);
 			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
-			if (c == '=') 
+			if (c == '=')
 			{
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_ASSIGN);
 				ADD_TOKEN_CHAR (moo, c);
@@ -2015,7 +2015,7 @@ retry:
 		case '[':
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_LBRACK);
 			goto single_char_token;
-		case ']': 
+		case ']':
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_RBRACK);
 			goto single_char_token;
 		case '(':
@@ -2034,7 +2034,7 @@ retry:
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_SEMICOLON);
 			goto single_char_token;
 
-		case '#':  
+		case '#':
 			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
 			switch (c)
@@ -2067,14 +2067,14 @@ retry:
 					}
 					else
 					{
-						/* NOTE the double hashes not followed by (, [, or { is 
+						/* NOTE the double hashes not followed by (, [, or { is
 						 *      meaningless at this moment. however, i return
-						 *      it as a token so that the compiler anyway 
+						 *      it as a token so that the compiler anyway
 						 *      will fail eventually */
 						unget_char (moo, &moo->c->lxc);
 					}
 					break;
-					
+
 				case '(':
 					/* #( - array literal */
 					ADD_TOKEN_CHAR (moo, c);
@@ -2092,7 +2092,7 @@ retry:
 					ADD_TOKEN_CHAR (moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACE);
 					break;
-					
+
 				case '\'':
 					/* #'XXXX' - quoted symbol literal */
 					if (get_strlit(moo, 0) <= -1) return -1; /* reuse the string literal tokenizer */
@@ -2162,27 +2162,27 @@ retry:
 				default:
 					/* symbol-literal := "#" symbol-body
 					 * symbol-body := identifier | keyword+ | binary-selector | string-literal
-					 */ 
+					 */
 
 					/* unquoted symbol literal */
 					if (is_binselchar(c))
 					{
-						do 
+						do
 						{
 							ADD_TOKEN_CHAR (moo, c);
 							GET_CHAR_TO (moo, c);
-						} 
+						}
 						while (is_binselchar(c));
 
 						unget_char (moo, &moo->c->lxc);
 					}
-					else if (is_leadidentchar(c)) 
+					else if (is_leadidentchar(c))
 					{
-						do 
+						do
 						{
 							ADD_TOKEN_CHAR (moo, c);
 							GET_CHAR_TO (moo, c);
-						} 
+						}
 						while (is_identchar(c));
 
 						if (c == ':')
@@ -2194,11 +2194,11 @@ retry:
 
 							if (is_leadidentchar(c))
 							{
-								do 
+								do
 								{
 									ADD_TOKEN_CHAR (moo, c);
 									GET_CHAR_TO (moo, c);
-								} 
+								}
 								while (is_identchar(c));
 
 								if (c == ':') goto read_more_word;
@@ -2242,13 +2242,13 @@ retry:
 							}
 							else
 							{
-								unget_char (moo, &moo->c->lxc); 
-								unget_char (moo, &period); 
+								unget_char (moo, &moo->c->lxc);
+								unget_char (moo, &period);
 							}
 						}
 						else
 						{
-							unget_char (moo, &moo->c->lxc); 
+							unget_char (moo, &moo->c->lxc);
 						}
 					}
 					else
@@ -2340,20 +2340,20 @@ retry:
 	 */
 
 		default:
-			if (is_leadidentchar(c)) 
+			if (is_leadidentchar(c))
 			{
 				if (get_ident(moo, MOO_OOCI_EOF) <= -1) return -1;
 			}
-			else if (is_digitchar(c)) 
+			else if (is_digitchar(c))
 			{
 				if (get_numlit(moo, 0) <= -1) return -1;
 			}
-			else if (is_binselchar(c)) 
+			else if (is_binselchar(c))
 			{
 				/* binary selector */
 				if (get_binsel(moo) <= -1) return -1;
 			}
-			else 
+			else
 			{
 				moo->c->ilchr = (moo_ooch_t)c;
 				moo_setsynerr (moo, MOO_SYNERR_ILCHR, LEXER_LOC(moo), &moo->c->ilchr_ucs);
@@ -2423,7 +2423,7 @@ static int begin_include (moo_t* moo)
 	/*arg->nl = '\0';*/
 	arg->includer = moo->c->curinp;
 
-	if (moo->c->impl(moo, MOO_IO_OPEN, arg) <= -1) 
+	if (moo->c->impl(moo, MOO_IO_OPEN, arg) <= -1)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_INCLUDE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
@@ -2441,13 +2441,13 @@ static int begin_include (moo_t* moo)
 	moo->c->curinp = arg;
 	/* moo->c->depth.incl++; */
 
-	/* read in the first character in the included file. 
+	/* read in the first character in the included file.
 	 * so the next call to get_token() sees the character read
 	 * from this file. */
-	if (get_token(moo) <= -1) 
+	if (get_token(moo) <= -1)
 	{
-		end_include (moo); 
-		/* i don't jump to oops since i've called 
+		end_include (moo);
+		/* i don't jump to oops since i've called
 		 * end_include() which frees moo->c->curinp/arg */
 		return -1;
 	}
@@ -2473,8 +2473,8 @@ static int end_include (moo_t* moo)
 
 	/* if closing has failed, still destroy the
 	 * sio structure first as normal and return
-	 * the failure below. this way, the caller 
-	 * does not call MOO_IO_CLOSE on 
+	 * the failure below. this way, the caller
+	 * does not call MOO_IO_CLOSE on
 	 * moo->c->curinp again. */
 
 	cur = moo->c->curinp;
@@ -2500,9 +2500,9 @@ static int end_include (moo_t* moo)
 
 static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
-	/* 
-	 * this removes redundancy of symbols, characters, and small integers. 
-	 * more complex redundacy check may be done somewhere else like 
+	/*
+	 * this removes redundancy of symbols, characters, and small integers.
+	 * more complex redundacy check may be done somewhere else like
 	 * in add_string_literal().
 	 */
 	moo_method_data_t* md = get_cunit_method_data(moo);
@@ -2515,13 +2515,13 @@ static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* ind
 	moo_oop_t lit;
 	moo_oow_t i;
 
-	for (i = 0; i < md->literals.count; i++) 
+	for (i = 0; i < md->literals.count; i++)
 	{
 		lit = md->literals.ptr[i];
 
-		if (MOO_CLASSOF(moo, lit) == moo->_string && 
+		if (MOO_CLASSOF(moo, lit) == moo->_string &&
 		    MOO_OBJ_GET_SIZE(lit) == str->len &&
-		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(lit), str->ptr, str->len)) 
+		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(lit), str->ptr, str->len))
 		{
 			*index = i;
 			return 0;
@@ -2603,7 +2603,7 @@ static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code, const m
 	}
 
 	md->code.ptr[md->code.len] = code;
-	if (srcloc) 
+	if (srcloc)
 	{
 		if (srcloc->file == md->start_loc.file && srcloc->line >= md->start_loc.line)
 		{
@@ -2707,7 +2707,7 @@ write_short:
 	return 0;
 
 write_long:
-	if (param_1 > MAX_CODE_PARAM) 
+	if (param_1 > MAX_CODE_PARAM)
 	{
 		moo_seterrnum (moo, MOO_ERANGE);
 		return -1;
@@ -2765,7 +2765,7 @@ write_short:
 	return 0;
 
 write_long:
-	if (param_1 > MAX_CODE_PARAM || param_2 > MAX_CODE_PARAM) 
+	if (param_1 > MAX_CODE_PARAM || param_2 > MAX_CODE_PARAM)
 	{
 		moo_seterrnum (moo, MOO_ERANGE);
 		return -1;
@@ -2777,7 +2777,7 @@ write_long:
 	    emit_byte_instruction(moo, (param_2 >> 8) & 0xFF, srcloc) <= -1 ||
 	    emit_byte_instruction(moo, param_2 & 0xFF, srcloc) <= -1) return -1;
 #else
-	
+
 	if (emit_byte_instruction(moo, bc, srcloc) <= -1 ||
 	    emit_byte_instruction(moo, param_1, srcloc) <= -1 ||
 	    emit_byte_instruction(moo, param_2, srcloc) <= -1) return -1;
@@ -2875,7 +2875,7 @@ static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t 
 	else
 	{
 		/* jip - jump instruction pointer, jt - jump target *
-		 * 
+		 *
 		 * when this jump instruction is executed, the instruction pointer advances
 		 * to the next instruction. so the actual jump size gets offset by the size
 		 * of this jump instruction. MOO_BCODE_LONG_PARAM_SIZE + 1 is the size of
@@ -2942,7 +2942,7 @@ static int update_loop_jumps (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t jt)
 		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
 		{
 			if (chunk->buf[j].v != INVALID_IP &&
-			    patch_forward_jump_instruction(moo, chunk->buf[j].v, jt) <= -1) 
+			    patch_forward_jump_instruction(moo, chunk->buf[j].v, jt) <= -1)
 			{
 				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &chunk->buf[j].loc, MOO_NULL, "unable to patch conditional loop jump");
 				return -1;
@@ -2966,7 +2966,7 @@ static void adjust_loop_jumps_for_elimination (moo_t* moo, moo_oow_pool_t* pool,
 		{
 			if (chunk->buf[j].v != INVALID_IP)
 			{
-				if (chunk->buf[j].v >= start && chunk->buf[j].v <= end) 
+				if (chunk->buf[j].v >= start && chunk->buf[j].v <= end)
 				{
 					/* invalidate the instruction position */
 					chunk->buf[j].v = INVALID_IP;
@@ -3018,7 +3018,7 @@ static MOO_INLINE void adjust_all_gotos_for_elimination (moo_t* moo, moo_oow_t s
 		{
 			if (_goto->ip >= start && _goto->ip <= end)
 			{
-				/* invalidate this entry since the goto instruction itself is getting eliminated. 
+				/* invalidate this entry since the goto instruction itself is getting eliminated.
 				 * i don't kill this node. the resolver must skip this node. */
 				_goto->ip = INVALID_IP;
 			}
@@ -3088,7 +3088,7 @@ static MOO_INLINE int inject_break_to_loop (moo_t* moo, const moo_ioloc_t* srclo
 static MOO_INLINE int inject_continue_to_loop (moo_t* moo, const moo_ioloc_t* srcloc)
 {
 	moo_method_data_t* md = get_cunit_method_data(moo);
-	/* used for a do-while loop. jump forward because the conditional 
+	/* used for a do-while loop. jump forward because the conditional
 	 * is at the end of the do-while loop */
 	if (add_to_oow_pool(moo, &md->loop->continue_ip_pool, md->code.len, srcloc) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, srcloc) <= -1) return -1;
@@ -3186,7 +3186,7 @@ static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type,
 	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
 
 	n = copy_string_to(moo, name, &cc->var[var_type].str, &cc->var[var_type].str_capa, 1, ' ');
-	if (n >= 0) 
+	if (n >= 0)
 	{
 		static moo_oow_t varlim[] =
 		{
@@ -3237,11 +3237,11 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 		cc->var[var_type].initv_capa = newcapa;
 	}
 
-	if (var_index >= cc->var[var_type].initv_count) 
+	if (var_index >= cc->var[var_type].initv_count)
 	{
 		moo_oow_t i;
 
-		for (i = cc->var[var_type].initv_count; i < var_index; i++) 
+		for (i = cc->var[var_type].initv_count; i < var_index; i++)
 		{
 			cc->var[var_type].initv[i].v = MOO_NULL;
 			cc->var[var_type].initv[i].flags = 0;
@@ -3282,7 +3282,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 	{
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, self) == moo->_class);
 
-		/* [NOTE] 
+		/* [NOTE]
 		 *  the loop here assumes that the class has the following
 		 *  fields in the order shown below:
 		 *    instvars
@@ -3302,7 +3302,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 				MOO_ASSERT (moo, super == cc->super_oop);
 
 				/* 'self' may be MOO_NULL if MOO_NULL has been given for it.
-				 * the caller must take good care when interpreting the meaning of 
+				 * the caller must take good care when interpreting the meaning of
 				 * this field */
 				var->cls = self;
 				goto done;
@@ -3332,7 +3332,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 	{
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, super) == moo->_class);
 
-		/* [NOTE] 
+		/* [NOTE]
 		 *  the loop here assumes that the class has the following
 		 *  fields in the order shown below:
 		 *    instvars
@@ -3350,9 +3350,9 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 			{
 				/* class variables reside in the class where the definition is found.
 				 * that means a class variable is found in the definition of
-				 * a superclass, the superclass is the placeholder of the 
+				 * a superclass, the superclass is the placeholder of the
 				 * class variable. on the other hand, instance variables and
-				 * class instance variables live in the current class being 
+				 * class instance variables live in the current class being
 				 * compiled as they are inherited. */
 				var->cls = (index == VAR_CLASS)? (moo_oop_class_t)super: self;
 				super = ((moo_oop_class_t)super)->superclass;
@@ -3377,7 +3377,7 @@ done:
 		switch (index)
 		{
 			case VAR_INSTANCE:
-				/* each class has the number of named instance variables 
+				/* each class has the number of named instance variables
 				 * accumulated for inheritance. the position found in the
 				 * local variable string can be adjusted by adding the
 				 * number in the superclass */
@@ -3394,8 +3394,8 @@ done:
 				/* [NOTE]
 				 *  no adjustment is needed.
 				 *  a class object is composed of three parts.
-				 *    fixed-part | classinst-variables | class-variabes 
-				 *  the position returned here doesn't consider 
+				 *    fixed-part | classinst-variables | class-variabes
+				 *  the position returned here doesn't consider
 				 *  class instance variables that can be potentially
 				 *  placed before the class variables. */
 				break;
@@ -3538,7 +3538,7 @@ static moo_oop_nsdic_t add_namespace (moo_t* moo, moo_oop_nsdic_t dic, const moo
 	ass = moo_putatdic(moo, (moo_oop_dic_t)dic, (moo_oop_t)sym, (moo_oop_t)nsdic);
 	if (!ass) goto oops;
 
-	nsdic = (moo_oop_nsdic_t)ass->value; 
+	nsdic = (moo_oop_nsdic_t)ass->value;
 	MOO_STORE_OOP (moo, &nsdic->nsup, (moo_oop_t)dic);
 	MOO_STORE_OOP (moo, (moo_oop_t*)&nsdic->name, (moo_oop_t)sym);
 
@@ -3675,7 +3675,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 				{
 					/* A pool dictionary is treated as if it's a name space.
 					 * However, the pool dictionary can only act as a name space
-					 * if it's the second last segment. A pool dictionary 
+					 * if it's the second last segment. A pool dictionary
 					 * cannot be nested in another pool dictionary */
 					dic = (moo_oop_nsdic_t)ass->value;
 					pooldic_gotten = 1;
@@ -3696,7 +3696,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 					 * if Planet doesn't exist */
 					goto wrong_name;
 				}
-				
+
 				/* When definining a new class, add a missing namespace */
 				t = add_namespace(moo, dic, &seg);
 				if (!t) return -1;
@@ -3948,7 +3948,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 				GET_TOKEN (moo);
 
 				/* [NOTE] default value assignment. only a literal is allowed.
-				 *    the initial values for instance variables and 
+				 *    the initial values for instance variables and
 				 *    class instance variables are set to read-only.
 				 *    I may change this if i get the actual initial
 				 *    value assignment upon instantiation to employ
@@ -4034,7 +4034,7 @@ static int compile_class_level_imports (moo_t* moo)
 					dcl_type = IMPORT_POOLDIC;
 					GET_TOKEN (moo);
 				}
-				else 
+				else
 			#endif
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
 				{
@@ -4075,7 +4075,7 @@ static int compile_class_level_imports (moo_t* moo)
 		{
 			last = *TOKEN_NAME(moo);
 			/* it falls back to the name space of the class */
-			ns_oop = cc->ns_oop; 
+			ns_oop = cc->ns_oop;
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 		{
@@ -4131,7 +4131,7 @@ static int compile_unary_method_name (moo_t* moo)
 		{
 			do
 			{
-				if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
 				{
 					/* wrong argument name. identifier is expected */
 					moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -4146,7 +4146,7 @@ static int compile_unary_method_name (moo_t* moo)
 
 				if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
 				md->tmpr_nargs++;
-				GET_TOKEN (moo); 
+				GET_TOKEN (moo);
 
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
 
@@ -4157,7 +4157,7 @@ static int compile_unary_method_name (moo_t* moo)
 				}
 
 				GET_TOKEN (moo);
-			} 
+			}
 			while (1);
 		}
 
@@ -4179,7 +4179,7 @@ static int compile_binary_method_name (moo_t* moo)
 	GET_TOKEN (moo);
 
 	/* collect the argument name */
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
 	{
 		/* wrong argument name. identifier expected */
 		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -4213,12 +4213,12 @@ static int compile_keyword_method_name (moo_t* moo)
 	MOO_ASSERT (moo, md->name.len == 0);
 	MOO_ASSERT (moo, md->tmpr_nargs == 0);
 
-	do 
+	do
 	{
 		if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
 
 		GET_TOKEN (moo);
-		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
 		{
 			/* wrong argument name. identifier is expected */
 			moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -4235,7 +4235,7 @@ static int compile_keyword_method_name (moo_t* moo)
 		md->tmpr_nargs++;
 
 		GET_TOKEN (moo);
-	} 
+	}
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD);
 
 	return 0;
@@ -4243,7 +4243,7 @@ static int compile_keyword_method_name (moo_t* moo)
 
 static int compile_method_name (moo_t* moo)
 {
-	/* 
+	/*
 	 * method-name := unary-method-name | binary-method-name | keyword-method-name
 	 * unary-method-name := unary-selector
 	 * binary-method-name := binary-selector selector-argument
@@ -4280,7 +4280,7 @@ static int compile_method_name (moo_t* moo)
 
 	if (n <= -1) return -1;
 
-	if (method_exists_noseterr(moo, &md->name)) 
+	if (method_exists_noseterr(moo, &md->name))
 	{
 		moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &md->name_loc, &md->name);
 		return -1;
@@ -4294,7 +4294,7 @@ static int compile_method_name (moo_t* moo)
 	}
 
 	MOO_ASSERT (moo, md->tmpr_nargs < MAX_CODE_NARGS);
-	/* the total number of temporaries is equal to the number of 
+	/* the total number of temporaries is equal to the number of
 	 * arguments after having processed the message pattern. it's because
 	 * moo treats arguments the same as temporaries */
 	md->tmpr_count = md->tmpr_nargs;
@@ -4303,13 +4303,13 @@ static int compile_method_name (moo_t* moo)
 
 static int compile_method_temporaries (moo_t* moo)
 {
-	/* 
+	/*
 	 * method-temporaries := "|" variable-list "|"
 	 * variable-list := identifier*
 	 */
 	moo_method_data_t* md = get_cunit_method_data(moo);
 
-	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR))
 	{
 		/* return without doing anything if | is not found.
 		 * this is not an error condition */
@@ -4317,11 +4317,11 @@ static int compile_method_temporaries (moo_t* moo)
 	}
 
 	GET_TOKEN (moo);
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT) 
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
-		/* a temporary variable name may get the same as a class level variable name 
+		/* a temporary variable name may get the same as a class level variable name
 		 * or even a class name in such as case, it shadows the class level variable
-		 * name or the class name. however, it can't be the same as another temporary 
+		 * name or the class name. however, it can't be the same as another temporary
 		 * variable */
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
@@ -4341,7 +4341,7 @@ static int compile_method_temporaries (moo_t* moo)
 		GET_TOKEN (moo);
 	}
 
-	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR))
 	{
 		moo_setsynerr (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
@@ -4353,7 +4353,7 @@ static int compile_method_temporaries (moo_t* moo)
 
 static int compile_method_pragma (moo_t* moo)
 {
-	/* 
+	/*
 	 * method-pragma := "<"  "primitive:" integer ">" |
 	 *                  "<"  "primitive:" symbol ">" |
 	 *                  "<"  "exception" ">" |
@@ -4363,7 +4363,7 @@ static int compile_method_pragma (moo_t* moo)
 	moo_ooi_t pfnum;
 	const moo_ooch_t* ptr, * end;
 
-	if (!is_token_binary_selector(moo, VOCA_LT)) 
+	if (!is_token_binary_selector(moo, VOCA_LT))
 	{
 		/* return if < is not seen. it is not an error condition */
 		return 0;
@@ -4372,7 +4372,7 @@ static int compile_method_pragma (moo_t* moo)
 	GET_TOKEN (moo);
 	if (is_token_keyword(moo, VOCA_PRIMITIVE_COLON))
 	{
-		GET_TOKEN (moo); 
+		GET_TOKEN (moo);
 		switch (TOKEN_TYPE(moo))
 		{
 			case MOO_IOTOK_INTLIT:
@@ -4380,7 +4380,7 @@ static int compile_method_pragma (moo_t* moo)
 				ptr = TOKEN_NAME_PTR(moo);
 				end = ptr + TOKEN_NAME_LEN(moo);
 				pfnum = 0;
-				while (ptr < end && is_digitchar(*ptr)) 
+				while (ptr < end && is_digitchar(*ptr))
 				{
 					pfnum = pfnum * 10 + (*ptr - '0');
 					if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
@@ -4410,7 +4410,7 @@ static int compile_method_pragma (moo_t* moo)
 				pfbase = moo_getpfnum(moo, tptr, tlen, &pfnum);
 				if (!pfbase)
 				{
-					/* a built-in primitive function is not found 
+					/* a built-in primitive function is not found
 					 * check if it is a primitive function identifier */
 					moo_oow_t lit_idx;
 
@@ -4434,7 +4434,7 @@ static int compile_method_pragma (moo_t* moo)
 
 					if (cc->mth.tmpr_nargs < pfbase->minargs || cc->mth.tmpr_nargs > pfbase->maxargs)
 					{
-						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n",
 							tlen, tptr, pfbase->minargs, pfbase->maxargs, cc->mth.tmpr_nargs);
 						moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &cc->mth.name_loc, &cc->mth.name);
 						return -1;
@@ -4446,7 +4446,7 @@ static int compile_method_pragma (moo_t* moo)
 					 * so the index to the symbol registered should be very small like 0 */
 					MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx));
 
-					cc->mth.pftype = PFTYPE_NAMED; 
+					cc->mth.pftype = PFTYPE_NAMED;
 					cc->mth.pfnum = lit_idx;
 				}
 				else if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
@@ -4458,13 +4458,13 @@ static int compile_method_pragma (moo_t* moo)
 				{
 					if (cc->mth.tmpr_nargs < pfbase->minargs || cc->mth.tmpr_nargs > pfbase->maxargs)
 					{
-						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n",
 							tlen, tptr, pfbase->minargs, pfbase->maxargs, cc->mth.tmpr_nargs);
 						moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &cc->mth.name_loc, &cc->mth.name);
 						return -1;
 					}
 
-					cc->mth.pftype = PFTYPE_NUMBERED; 
+					cc->mth.pftype = PFTYPE_NUMBERED;
 					cc->mth.pfnum = pfnum;
 				}
 
@@ -4479,7 +4479,7 @@ static int compile_method_pragma (moo_t* moo)
 	}
 	else if (is_token_word(moo, VOCA_EXCEPTION))
 	{
-/* TODO: exception handler is supposed to be used by BlockContext on:do:. 
+/* TODO: exception handler is supposed to be used by BlockContext on:do:.
  *       it needs to check the number of arguments at least */
 		cc->mth.pftype = PFTYPE_EXCEPTION;
 	}
@@ -4494,7 +4494,7 @@ static int compile_method_pragma (moo_t* moo)
 	}
 
 	GET_TOKEN (moo);
-	if (!is_token_binary_selector(moo, VOCA_GT)) 
+	if (!is_token_binary_selector(moo, VOCA_GT))
 	{
 		moo_setsynerr (moo, MOO_SYNERR_GT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
@@ -4540,7 +4540,7 @@ static int validate_class_level_variable (moo_t* moo, var_info_t* var, const moo
 
 			/* increment the position by the number of class instance variables
 			 * as the class variables are placed after the class instance variables */
-			var->pos += MOO_CLASS_NAMED_INSTVARS + 
+			var->pos += MOO_CLASS_NAMED_INSTVARS +
 					  MOO_CLASS_SELFSPEC_CLASSINSTVARS(MOO_OOP_TO_SMOOI(var->cls->selfspec));
 			break;
 
@@ -4565,7 +4565,7 @@ static moo_oow_t is_dotted_ident_prefixed (const moo_oocs_t* name, int voca_id)
 static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, var_info_t* var)
 {
 	/* if a name is dotted,
-	 * 
+	 *
 	 *   self.XXX - instance variable
 	 *   A.B.C    - namespace or pool dictionary related reference.
 	 *   self.B.C - B.C under the current class where B is not an instance variable
@@ -4635,7 +4635,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 
 					if (cc->in_class_body)
 					{
-						/* [NOTE] 
+						/* [NOTE]
 						 *  cls.ns_oop is set when the class name is enountered.
 						 *  cls.super_oop is set when the parent class name is enountered.
 						 *  cls.super_oop may still be MOO_NULL even if cls.ns_oop is not.
@@ -4648,7 +4648,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 
 						if (find_class_level_variable(moo, cc->self_oop, &last, var) >= 0)
 						{
-							/* if the current class has not been instantiated, 
+							/* if the current class has not been instantiated,
 							 * no validation nor adjustment of the var->pos field is performed */
 							if (cc->self_oop && validate_class_level_variable(moo, var, name, name_loc) <= -1) return -1;
 							return 0;
@@ -4684,7 +4684,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 				case MOO_CUNIT_POOLDIC:
 					/* a pooldic definition cannot contain subdictionaries.
 					 * the pooldic is a terminal point and the items inside
-					 * are final nodes. if self is followed by more than 1 
+					 * are final nodes. if self is followed by more than 1
 					 * subsegments, it's an error. */
 					goto varinacc;
 
@@ -4828,7 +4828,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 			if (cc->ns_oop)
 			{
 				ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)cc->ns_oop, name); /* in the current name space */
-				if (!ass && cc->ns_oop != moo->sysdic) 
+				if (!ass && cc->ns_oop != moo->sysdic)
 					ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 			}
 			else
@@ -4858,7 +4858,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 				}
 
 				ass = ass2;
-				if (!ass) 
+				if (!ass)
 				{
 					moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 					return -1;
@@ -4889,7 +4889,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 			if (ifce->ns_oop)
 			{
 				ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)ifce->ns_oop, name); /* in the current name space */
-				if (!ass && ifce->ns_oop != moo->sysdic) 
+				if (!ass && ifce->ns_oop != moo->sysdic)
 					ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 			}
 			else
@@ -4930,7 +4930,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 	 * i assume the functions above don't taint the var-type field when it's meaningless. */
 	if (var->pos > MAX_CODE_INDEX)
 	{
-		/* the assignee is not usable because its index is too large 
+		/* the assignee is not usable because its index is too large
 		 * to be expressed in byte-codes. */
 		moo_setsynerr (moo, MOO_SYNERR_VARUNUSE, name_loc, name);
 		return -1;
@@ -4941,13 +4941,13 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 
 static int compile_block_temporaries (moo_t* moo)
 {
-	/* 
+	/*
 	 * block-temporaries := "|" variable-list "|"
 	 * variable-list := identifier*
 	 */
 	moo_method_data_t* md = get_cunit_method_data(moo);
 
-	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR))
 	{
 		/* return without doing anything if | is not found.
 		 * this is not an error condition */
@@ -4955,7 +4955,7 @@ static int compile_block_temporaries (moo_t* moo)
 	}
 
 	GET_TOKEN (moo);
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT) 
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
@@ -4967,14 +4967,14 @@ static int compile_block_temporaries (moo_t* moo)
 		md->tmpr_count++;
 		if (md->tmpr_count > MAX_CODE_NTMPRS)
 		{
-			moo_setsynerr (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+			moo_setsynerr (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
 		GET_TOKEN (moo);
 	}
 
-	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR))
 	{
 		moo_setsynerr (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
@@ -5026,12 +5026,12 @@ static int compile_block_expression (moo_t* moo)
 	/* this function expects [ not to be consumed away */
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK);
 
-	if (md->loop) 
+	if (md->loop)
 	{
 		/* this [] block is placed inside the {} loop.
-		 * this counter is used to check if 'break' or 'countinue' is 
+		 * this counter is used to check if 'break' or 'countinue' is
 		 * placed inside [], which is prohibited. */
-		md->loop->blkcount++; 
+		md->loop->blkcount++;
 	}
 	block_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo);
@@ -5041,16 +5041,16 @@ static int compile_block_expression (moo_t* moo)
 	MOO_ASSERT (moo, md->blk_depth > 0);
 	MOO_ASSERT (moo, md->blk_tmprcnt[md->blk_depth - 1] == saved_tmpr_count);
 
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_COLON) 
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_COLON)
 	{
 		colon_loc = moo->c->tok.loc;
 
 		/* block temporary variables  - argument to blocks */
-		do 
+		do
 		{
 			GET_TOKEN (moo);
 
-			if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
 			{
 				/* wrong argument name. identifier expected */
 				moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -5068,12 +5068,12 @@ static int compile_block_expression (moo_t* moo)
 			md->tmpr_count++;
 			if (md->tmpr_count > MAX_CODE_NARGS)
 			{
-				moo_setsynerr (moo, MOO_SYNERR_BLKARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+				moo_setsynerr (moo, MOO_SYNERR_BLKARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
 			GET_TOKEN (moo);
-		} 
+		}
 		while (TOKEN_TYPE(moo) == MOO_IOTOK_COLON);
 
 		if (!is_token_binary_selector(moo, VOCA_VBAR))
@@ -5092,7 +5092,7 @@ static int compile_block_expression (moo_t* moo)
 		 * block arguments, evaluation which is done by message passing
 		 * limits the number of arguments that can be passed. so the
 		 * check is implemented */
-		moo_setsynerr (moo, MOO_SYNERR_BLKARGFLOOD, &colon_loc, MOO_NULL); 
+		moo_setsynerr (moo, MOO_SYNERR_BLKARGFLOOD, &colon_loc, MOO_NULL);
 		return -1;
 	}
 
@@ -5103,7 +5103,7 @@ static int compile_block_expression (moo_t* moo)
 	block_tmpr_count = md->tmpr_count - saved_tmpr_count;
 	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
 	{
-		moo_setsynerr (moo, MOO_SYNERR_BLKTMPRFLOOD, &tmpr_loc, MOO_NULL); 
+		moo_setsynerr (moo, MOO_SYNERR_BLKTMPRFLOOD, &tmpr_loc, MOO_NULL);
 		return -1;
 	}
 
@@ -5116,13 +5116,13 @@ static int compile_block_expression (moo_t* moo)
 
 	/* insert dummy instructions before replacing them with a jump instruction */
 	jump_inst_pos = md->code.len;
-	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
+	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to
 	 * produce the long jump instruction (BCODE_JUMP_FORWARD) */
 	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, &block_loc) <= -1) return -1;
 
 	/* compile statements inside a block */
 	code_start = md->code.len;
-	if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1; 
+	if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
 	{
@@ -5147,7 +5147,7 @@ static int compile_block_expression (moo_t* moo)
 			{
 				/* compile_block_statement() processed non-statement item like a jump label. */
 				MOO_ASSERT (moo, md->_label != MOO_NULL);
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 				{
 					/* the last label inside [] must be followed by a valid statement */
 					moo_oocs_t labname;
@@ -5159,14 +5159,14 @@ static int compile_block_expression (moo_t* moo)
 			}
 			else if (n == 7777)
 			{
-				/* goto statement - 
+				/* goto statement -
 				 *   the goto statement looks like a normal statement, but it never pushes a value.
 				 *   so no pop_stacktop instruction needs to get injected */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 				{
 					/* eliminate BCODE_POP_STACKTOP produced in the else block below
 					 * becuase the non-statement item is the last item before the closing bracket */
-					if (pop_stacktop_pos != INVALID_IP) 
+					if (pop_stacktop_pos != INVALID_IP)
 					{
 						eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
 						pop_stacktop_pos = INVALID_IP;
@@ -5190,7 +5190,7 @@ static int compile_block_expression (moo_t* moo)
 				pop_stacktop_pos = md->code.len;
 				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) return -1;
 
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 				{
 					eliminate_instructions(moo, pop_stacktop_pos, pop_stacktop_pos);
 					pop_stacktop_pos = INVALID_IP;
@@ -5199,7 +5199,7 @@ static int compile_block_expression (moo_t* moo)
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 				{
 					GET_TOKEN (moo);
-					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 					{
 						eliminate_instructions(moo, pop_stacktop_pos, pop_stacktop_pos);
 						pop_stacktop_pos = INVALID_IP;
@@ -5227,7 +5227,7 @@ static int compile_block_expression (moo_t* moo)
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK, TOKEN_LOC(moo)) <= -1) return -1;
 
-	if (patch_forward_jump_instruction(moo, jump_inst_pos, md->code.len) <= -1) 
+	if (patch_forward_jump_instruction(moo, jump_inst_pos, md->code.len) <= -1)
 	{
 		moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &block_loc, MOO_NULL, "unable to patch block jump");
 		return -1;
@@ -5237,7 +5237,7 @@ static int compile_block_expression (moo_t* moo)
 	md->tmprs.len = saved_tmprs_len;
 	md->tmpr_count = saved_tmpr_count;
 
-	if (md->loop) 
+	if (md->loop)
 	{
 		MOO_ASSERT (moo, md->loop->blkcount > 0);
 		md->loop->blkcount--;
@@ -5314,14 +5314,14 @@ static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 				/* accept a character literal inside a byte array literal */
 				tmp = TOKEN_NAME_PTR(moo)[0];
 			}
-			
+
 			else if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT, &tmp) <= -1)
 			{
 				/* the token reader reads a valid token. no other errors
 				 * than the range error must not occur */
 				MOO_ASSERT (moo, moo->errnum == MOO_ERANGE);
 
-				/* if the token is out of the SMOOI range, it's too big or 
+				/* if the token is out of the SMOOI range, it's too big or
 				 * to small to be a byte */
 				moo_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				goto oops;
@@ -5572,7 +5572,7 @@ static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_ma
 			}
 
 			GET_TOKEN (moo);
-		} 
+		}
 		while (1);
 
 	/* TODO: devise a double_param MAKE_ARRAY to increase the number of elementes supported... */
@@ -5663,7 +5663,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 
 	*to_super = 0;
 
-	if (ident) 
+	if (ident)
 	{
 		/* the caller has read the identifier and the next word */
 	handle_ident:
@@ -5704,10 +5704,10 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 
 			case VAR_CLASS:
-				/* get_variable_info must not set var.cls to MOO_NULL 
+				/* get_variable_info must not set var.cls to MOO_NULL
 				 * because the class object pointer should be available
 				 * when a method definition is compiled */
-				MOO_ASSERT (moo, var.cls != MOO_NULL); 
+				MOO_ASSERT (moo, var.cls != MOO_NULL);
 
 				if (add_literal(moo, (moo_oop_t)var.cls, &index) <= -1 ||
 				    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var.pos, index, ident_loc) <= -1) return -1;
@@ -5718,7 +5718,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				 * the association object pointed to by a system dictionary
 				 * is stored into the literal frame. so the system dictionary
 				 * must not migrate the value of the association to a new
-				 * association when it rehashes the entire dictionary. 
+				 * association when it rehashes the entire dictionary.
 				 * If the association entry is deleted from the dictionary,
 				 * the code compiled before deletion will still access
 				 * the deleted association
@@ -5754,7 +5754,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 			case MOO_IOTOK_SUPER:
 				if (moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE)
 				{
-					/* i don't allow super in an interface method 
+					/* i don't allow super in an interface method
 					 * message sending to super requires the owning class
 					 * of an active method. a method taken by a class from
 					 * an interface points to the interface in the owner field.
@@ -5963,7 +5963,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 	return 0;
 }
 
-static moo_oob_t send_message_cmd[] = 
+static moo_oob_t send_message_cmd[] =
 {
 	BCODE_SEND_MESSAGE_0,
 	BCODE_SEND_MESSAGE_TO_SUPER_0
@@ -6000,7 +6000,7 @@ static int compile_unary_message (moo_t* moo, int to_super)
 					/* this argument is not a real block. but change the block id
 					 * to prevent 'goto' from jumping out of the argument expression */
 					cur_blk_id = md->blk_id;
-					md->blk_id = md->blk_idseq++; 
+					md->blk_id = md->blk_idseq++;
 					n = compile_method_expression(moo, 0);
 					md->blk_id = cur_blk_id;
 					if (n <= -1) return -1;
@@ -6067,14 +6067,14 @@ static int compile_binary_message (moo_t* moo, int to_super)
 		/* this argument expression is not a real block. but change the block id
 		 * to prevent 'goto' from jumping out of the argument expression */
 		cur_blk_id = md->blk_id;
-		md->blk_id = md->blk_idseq++; 
+		md->blk_id = md->blk_idseq++;
 		n = compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2);
 		md->blk_id = cur_blk_id;
 		if (n <= -1) goto oops;
 
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && compile_unary_message(moo, to_super2) <= -1) goto oops;
 
-		/* update the pointer to the cloned selector now 
+		/* update the pointer to the cloned selector now
 		 * to be free from reallocation risk for the recursive call
 		 * to compile_expression_primary(). */
 		binsel.ptr = &md->binsels.ptr[binsel_offset];
@@ -6115,7 +6115,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 	saved_kwsel_len = md->kwsels.len;
 
 /* TODO: optimization for ifTrue: ifFalse: whileTrue: whileFalse .. */
-	do 
+	do
 	{
 		kw = *TOKEN_NAME(moo);
 		if (clone_keyword(moo, &kw, &kw_offset) <= -1) goto oops;
@@ -6125,7 +6125,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 		/* this argument expression is not a real block. but change the block id
 		 * to prevent 'goto' from jumping out of the argument expression */
 		cur_blk_id = md->blk_id;
-		md->blk_id = md->blk_idseq++; 
+		md->blk_id = md->blk_idseq++;
 		n = compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2);
 		md->blk_id = cur_blk_id;
 		if (n <= -1) goto oops;
@@ -6135,16 +6135,16 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 		kw.ptr = &md->kwsels.ptr[kw_offset];
 		if (nargs >= MAX_CODE_NARGS)
 		{
-			/* 'kw' points to only one segment of the full keyword message. 
+			/* 'kw' points to only one segment of the full keyword message.
 			 * if it parses an expression like 'aBlock value: 10 with: 20',
 			 * 'kw' may point to 'value:' or 'with:'.
 			 */
-			moo_setsynerr (moo, MOO_SYNERR_ARGFLOOD, &saved_kwsel_loc, &kw); 
+			moo_setsynerr (moo, MOO_SYNERR_ARGFLOOD, &saved_kwsel_loc, &kw);
 			goto oops;
 		}
 
 		nargs++;
-	} 
+	}
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD) /* loop */;
 
 	kwsel.ptr = &md->kwsels.ptr[saved_kwsel_len];
@@ -6165,11 +6165,11 @@ static int compile_message_expression (moo_t* moo, int to_super)
 {
 	/*
 	 * message-expression := single-message cascaded-message
-	 * single-message := 
+	 * single-message :=
 	 *     (unary-message+ binary-message* keyword-message?) |
 	 *     (binary-message+ keyword-message?) |
 	 *     keyword-message
-	 * 
+	 *
 	 * keyword-message := (keyword keyword-argument)+
 	 * keyword-argument := expression-primary unary-message* binary-message*
 	 * binary-message := binary-selector binary-argument
@@ -6186,7 +6186,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 		switch (TOKEN_TYPE(moo))
 		{
 			case MOO_IOTOK_IDENT:
-				/* insert NOOP to change to DUP_STACKTOP if there is a 
+				/* insert NOOP to change to DUP_STACKTOP if there is a
 				 * cascaded message */
 				noop_pos = md->code.len;
 				if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
@@ -6222,7 +6222,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 					noop_pos = md->code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
-					/* don't pass to_super. pass 0 as it can't be the 
+					/* don't pass to_super. pass 0 as it can't be the
 					 * first message after 'super' */
 					if (compile_keyword_message(moo, 0/*to_super*/) <= -1) return -1;
 				}
@@ -6243,7 +6243,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 					noop_pos = md->code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
-					/* don't pass to_super. pass 0 as it can't be the 
+					/* don't pass to_super. pass 0 as it can't be the
 					 * first message after 'super' */
 					if (compile_keyword_message(moo, 0/*to_super*/) <= -1) return -1;
 				}
@@ -6267,7 +6267,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 			if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) return -1;
 			GET_TOKEN(moo);
 		}
-		else 
+		else
 		{
 			MOO_ASSERT (moo, md->code.len > noop_pos);
 			/*MOO_MEMMOVE (&md->code.ptr[noop_pos], &md->code.ptr[noop_pos + 1], md->code.len - noop_pos - 1);
@@ -6322,14 +6322,14 @@ start_over:
 		 * identifer if it encounters an assignment operator after an identifer.
 		 * i only allow a basic expression after a logical operator.
 		 * the basic expression doesn't include an assignment expression
-		 * if it is not in the parenthesis. so i nullify the following 2 variables 
+		 * if it is not in the parenthesis. so i nullify the following 2 variables
 		 *
 		 * a := 30 > 20 and 10 > 20 is equavelent to a := (30 > 20 and 10 > 20).
 		 *
 		 * you will encounter a syntax error for the following expression as the
 		 * expression end after y.
 		 *   a := 30 > 20 and y := 10 > 20
-		 * 
+		 *
 		 * a := 30 > 20 and (y := 10 > 20) is perfectly valid.
 		 */
 		ident = MOO_NULL;
@@ -6342,7 +6342,7 @@ start_over:
 	{
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_forward_jump_instruction (moo, jumptoend_chunk->buf[j].v, md->code.len) <= -1) 
+			if (patch_forward_jump_instruction (moo, jumptoend_chunk->buf[j].v, md->code.len) <= -1)
 			{
 				/* the logical expression is too large to patch the jump instruction */
 				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &expr_loc, MOO_NULL, "unable to patch logical operator jump");
@@ -6390,7 +6390,7 @@ static int compile_braced_block (moo_t* moo)
 			if (n <= -1) return -1;
 			if (n == 8888)
 			{
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)
 				{
 					/* non-statement followed by the closing brace.
 					 * if there is a statement above the non-statement item, the POP_STACKSTOP is produced.
@@ -6402,7 +6402,7 @@ static int compile_braced_block (moo_t* moo)
 			else if (n == 7777)
 			{
 				/* goto statement */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)
 				{
 					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
 					break;
@@ -6484,19 +6484,19 @@ static int compile_braced_block (moo_t* moo)
 			else if (n == 7777)
 			{
 				/* goto statement */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)
 				{
 					/* jumping somewhere inside {} is different from inside [].
 					 * [] needs to leave a return value when leaving the block.
 					 * {} doesn't need to because {} can only be used as part of 'if', 'while', 'until', 'do'.
 					 * that means, the last evaluated value inside {} before exit is used
 					 * as a lvalue but the jump target can't be break into an assignment statement.
-					 * 
+					 *
 					 *       a : 3.
-					 *       a := if (1) { goto L30 }.   // if jump to L30 is made inside {}, assignment to 'a' is skipped. 
+					 *       a := if (1) { goto L30 }.   // if jump to L30 is made inside {}, assignment to 'a' is skipped.
 					 *                                   // so the evaluation result of the 'if' statement goes unused.
  					 *  L30: b := a + 1.                 // therefore, 'a' holds 3.
-					 * 
+					 *
 					 * it is not allowed to place label inside "b := a + 1".
 					 * so the pop_stacktop produced must not be eliminated.
 					 */
@@ -6527,7 +6527,7 @@ static int compile_braced_block (moo_t* moo)
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 				{
 					GET_TOKEN (moo);
-					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)
 					{
 						eliminate_instructions(moo, pop_stacktop_pos, pop_stacktop_pos);
 						pop_stacktop_pos = INVALID_IP;
@@ -6573,7 +6573,7 @@ static int compile_conditional (moo_t* moo)
 
 	GET_TOKEN (moo);
 
-	/* a weird expression like this is also allowed for the call to  compile_method_expression() 
+	/* a weird expression like this is also allowed for the call to  compile_method_expression()
 	 *   if (if (a == 10) { ^20 }) { ^40 }. */
 	if (compile_method_expression(moo, 0) <= -1) return -1;
 
@@ -6625,7 +6625,7 @@ static int compile_if_expression (moo_t* moo)
 		precondpos = md->code.len;
 
 		if (jumptonext != INVALID_IP &&
-		    patch_forward_jump_instruction(moo, jumptonext, precondpos) <= -1) 
+		    patch_forward_jump_instruction(moo, jumptonext, precondpos) <= -1)
 		{
 			moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &brace_loc, MOO_NULL, "unable to patch conditional branching jump");
 			goto oops;
@@ -6635,7 +6635,7 @@ static int compile_if_expression (moo_t* moo)
 		postcondpos = md->code.len;
 
 		/* remember position of the jmpop_forward_if_false instruction to be generated */
-		jumptonext = md->code.len; 
+		jumptonext = md->code.len;
 		/* BCODE_JMPOP_FORWARD_IF_FALSE is always a long jump instruction.
 		 * just specify MAX_CODE_JUMP for consistency with short jump variants */
 		if (emit_single_param_instruction(moo, jmpop_inst, MAX_CODE_JUMP, &if_loc) <= -1) goto oops;
@@ -6649,7 +6649,7 @@ static int compile_if_expression (moo_t* moo)
 
 		/* [NOTE]
 		 *  it checks by comparing 'la' and 'b' if there has been a label found inside a braced block.
-		 *  the code below doesn't eliminate instructions emitted of a braced block containing one or 
+		 *  the code below doesn't eliminate instructions emitted of a braced block containing one or
 		 *  more labels.
 		 *
 		 *  the check is suboptimal and primitive. an optimizing compiler needs to check if the actual
@@ -6668,7 +6668,7 @@ static int compile_if_expression (moo_t* moo)
 				eliminate_instructions (moo, precondpos, precondpos);
 				postcondpos = precondpos;
 
-				if (endoftrueblock == INVALID_IP) 
+				if (endoftrueblock == INVALID_IP)
 				{
 					/* update the end position of the first true block */
 					endoftrueblock = md->code.len;
@@ -6719,7 +6719,7 @@ static int compile_if_expression (moo_t* moo)
 	while (1);
 
 	if (jumptonext != INVALID_IP &&
-	    patch_forward_jump_instruction(moo, jumptonext, md->code.len) <= -1) 
+	    patch_forward_jump_instruction(moo, jumptonext, md->code.len) <= -1)
 	{
 		moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &brace_loc, MOO_NULL, "unable to patch conditional branching jump");
 		goto oops;
@@ -6750,7 +6750,7 @@ static int compile_if_expression (moo_t* moo)
 	{
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_forward_jump_instruction(moo, jumptoend_chunk->buf[j].v, md->code.len) <= -1) 
+			if (patch_forward_jump_instruction(moo, jumptoend_chunk->buf[j].v, md->code.len) <= -1)
 			{
 				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &jumptoend_chunk->buf[j].loc, MOO_NULL, "unable to patch conditional branching jump");
 				goto oops;
@@ -6800,7 +6800,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 			inst2 = BCODE_PUSH_FALSE;
 		}
 
-		/* simple optimization - 
+		/* simple optimization -
 		 *   if the conditional is known to be true, emit the absolute jump instruction.
 		 *   if it is known to be false, kill all generated instructions. */
 		if (md->code.ptr[precondpos] == inst1)
@@ -6815,7 +6815,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 			/* the conditional is always false for while, or false for until */
 			cond_style = -1;
 		}
-/* TODO: at least check some other literals for optimization. 
+/* TODO: at least check some other literals for optimization.
  *       most literal values must be evaluate to true. */
 	}
 
@@ -6854,9 +6854,9 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	}
 
 	/* emit an instruction to jump back to the condition */
-	if (emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD, md->code.len - precondpos, &closing_brace_loc) <= -1) 
+	if (emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD, md->code.len - precondpos, &closing_brace_loc) <= -1)
 	{
-		if (moo->errnum == MOO_ERANGE) 
+		if (moo->errnum == MOO_ERANGE)
 		{
 			/* the jump offset is out of the representable range by the offset
 			 * portion of the jump instruction */
@@ -6867,14 +6867,14 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 
 	if (cond_style != 1)
 	{
-		if (patch_forward_jump_instruction(moo, postcondpos, md->code.len) <= -1) 
+		if (patch_forward_jump_instruction(moo, postcondpos, md->code.len) <= -1)
 		{
 			moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &brace_loc, MOO_NULL, "unable to patch conditional loop jump");
 			goto oops;
 		}
 	}
 
-	if (la == lb && cond_style == -1) 
+	if (la == lb && cond_style == -1)
 	{
 		/* optimization - get rid of instructions generated for the while
 		 * loop including the conditional as the condition was false */
@@ -6913,7 +6913,7 @@ static int compile_do_while_expression (moo_t* moo)
 	GET_TOKEN (moo); /* get { */
 	prebbpos = md->code.len;
 
-	/* remember information about this loop. 
+	/* remember information about this loop.
 	 * position of the conditional is not known yet.*/
 	if (push_loop(moo, MOO_LOOP_DO_WHILE, prebbpos) <= -1) goto oops;
 	loop_pushed = 1;
@@ -6955,14 +6955,14 @@ static int compile_do_while_expression (moo_t* moo)
 	/* cannnot destroy the loop information because of pending jump updates
 	 * for break. but need to unlink it as the conditional is not really
 	 * part of the loop body */
-	loop = unlink_loop (moo); 
+	loop = unlink_loop (moo);
 
 	if (compile_conditional (moo) <= -1) goto oops;
 	postcondpos = md->code.len;
 	jbinst = (is_until_loop? BCODE_JMPOP_BACKWARD_IF_FALSE: BCODE_JMPOP_BACKWARD_IF_TRUE);
 	if (precondpos + 1 == postcondpos)
 	{
-		/* simple optimization - 
+		/* simple optimization -
 		 *   if the conditional is known to be true, emit the absolute jump instruction.
 		 *   if it is known to be false, kill all generated instructions. */
 		if (md->code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_FALSE: BCODE_PUSH_TRUE))
@@ -6981,9 +6981,9 @@ static int compile_do_while_expression (moo_t* moo)
 		}
 	}
 
-	if (emit_backward_jump_instruction(moo, jbinst, md->code.len - prebbpos, TOKEN_LOC(moo)) <= -1) 
+	if (emit_backward_jump_instruction(moo, jbinst, md->code.len - prebbpos, TOKEN_LOC(moo)) <= -1)
 	{
-		if (moo->errnum == MOO_ERANGE) 
+		if (moo->errnum == MOO_ERANGE)
 		{
 			/* the jump offset is out of the representable range by the offset
 			 * portion of the jump instruction */
@@ -7007,7 +7007,7 @@ skip_emitting_jump_backward:
 	return 0;
 
 oops:
-	if (loop_pushed) 
+	if (loop_pushed)
 	{
 		if (loop) free_loop (moo, loop);
 		else pop_loop (moo);
@@ -7063,7 +7063,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 		assignee_dotted = (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
 
 		GET_TOKEN (moo);
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN) 
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN)
 		{
 			/* assignment expression */
 			var_info_t var;
@@ -7075,7 +7075,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 			if (compile_method_expression(moo, 0) <= -1) goto oops;
 
 			/* compile_method_expression() is called after clone_assignee().
-			 * clone_assignee() may reallocate a single buffer that holds 
+			 * clone_assignee() may reallocate a single buffer that holds
 			 * a series of assigness names. this pointer based operation is
 			 * fragile as it can change. use the offset of the cloned
 			 * assignee to update the actual pointer after the recursive
@@ -7137,7 +7137,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 					goto oops;
 			}
 		}
-		else 
+		else
 		{
 			/* what is held in assignee is not an assignee any more.
 			 * potentially it is a variable or object reference
@@ -7146,7 +7146,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 			if (compile_basic_expression(moo, &assignee, &assignee_loc, assignee_dotted) <= -1) goto oops;
 		}
 	}
-	else 
+	else
 	{
 		assignee.len = 0;
 		if (compile_basic_expression(moo, MOO_NULL, MOO_NULL, 0) <= -1) goto oops;
@@ -7188,7 +7188,7 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 			in 'label: goto label',  _goto->ip and _label->ip are the same.
 			*/
 
-			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip) <= -1) 
+			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip) <= -1)
 			{
 				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &_goto->loc, MOO_NULL, "unable to patch unconditional jump");
 				return -1;
@@ -7280,7 +7280,7 @@ static int compile_goto_statement (moo_t* moo)
 	nptr[target->len] = '\0';
 
 	_goto->ip = md->code.len;
-	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) 
+	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1)
 	{
 		moo_freemem (moo, _goto);
 		return -1;
@@ -7301,7 +7301,7 @@ static int compile_special_statement (moo_t* moo)
 	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_ioloc_t start_loc = *TOKEN_LOC(moo);
 
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN) 
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN)
 	{
 		/* ^ - return - return to the sender of the origin */
 		GET_TOKEN (moo);
@@ -7398,13 +7398,13 @@ static int compile_method_statement (moo_t* moo)
 
 	if (n == 9999)
 	{
-		/* the second parameter to compile_method_expression() indicates 
+		/* the second parameter to compile_method_expression() indicates
 		 * that the stack top will eventually be popped off. the compiler
-		 * can optimize some instruction sequencese. for example, two 
-		 * consecutive store and pop intructions can be transformed to 
-		 * a more specialized single pop-and-store instruction. 
-		 * the compile_method_expression() function emits POP_INTO_XXX 
-		 * instructions if the second parameter is 1 whenever possible and 
+		 * can optimize some instruction sequencese. for example, two
+		 * consecutive store and pop intructions can be transformed to
+		 * a more specialized single pop-and-store instruction.
+		 * the compile_method_expression() function emits POP_INTO_XXX
+		 * instructions if the second parameter is 1 whenever possible and
 		 * STORE_INTO_XXX if it's 0.*/
 		moo_oow_t preexprpos;
 
@@ -7473,7 +7473,7 @@ static int compile_method_statements (moo_t* moo)
 			else
 			{
 				/* a proper statement or a goto statement(if n == 7777) has been processed */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD) 
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 				{
 					/* period after a statement */
 					GET_TOKEN (moo);
@@ -7495,7 +7495,7 @@ static int compile_method_statements (moo_t* moo)
 		while (1);
 	}
 
-	/* arrange to return the receiver if execution reached 
+	/* arrange to return the receiver if execution reached
 	 * the end of the method without explicit return */
 	return emit_byte_instruction(moo, BCODE_RETURN_RECEIVER, TOKEN_LOC(moo));
 }
@@ -7636,7 +7636,7 @@ static moo_ooi_t compute_preamble (moo_t* moo, moo_method_data_t* md)
 		preamble_code = MOO_METHOD_PREAMBLE_EXCEPTION;
 		preamble_index = 0;
 	}
-	else 
+	else
 	{
 		MOO_ASSERT (moo, md->pftype == PFTYPE_ENSURE);
 		preamble_code = MOO_METHOD_PREAMBLE_ENSURE;
@@ -7660,12 +7660,12 @@ static void add_method_info_to_dbgi (moo_t* moo, moo_method_data_t* md, moo_oow_
 	file_name = md->start_loc.file;
 	if (!file_name) file_name = &_nul;
 
-	if (moo_addfiletodbgi(moo, file_name, file_offset) <= -1) 
+	if (moo_addfiletodbgi(moo, file_name, file_offset) <= -1)
 	{
 		/* TODO: warning */
 		*file_offset = 0;
 	}
-	else if (*file_offset > MOO_SMOOI_MAX) 
+	else if (*file_offset > MOO_SMOOI_MAX)
 	{
 		/* TODO: warning */
 		*file_offset = 0;
@@ -7699,7 +7699,7 @@ static int add_compiled_method_to_class (moo_t* moo)
 	if (!name) goto oops;
 	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
 
-	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
+	/* The variadic data part passed to moo_instantiate() is not GC-safe.
 	 * let's delay initialization of variadic data a bit. */
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, cc->mth.literals.count, cc->mth.code.ptr, cc->mth.code.len);
 	if (!mth) goto oops;
@@ -7721,7 +7721,7 @@ static int add_compiled_method_to_class (moo_t* moo)
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(cc->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(cc->mth.tmpr_nargs);
 
-	if (moo->dbgi) 
+	if (moo->dbgi)
 	{
 		moo_oow_t file_offset;
 		moo_oow_t method_offset;
@@ -7737,7 +7737,7 @@ static int add_compiled_method_to_class (moo_t* moo)
 	if (cc->mth.type == MOO_METHOD_DUAL)
 	{
 		if (!moo_putatdic(moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-		if (!moo_putatdic(moo, cc->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
+		if (!moo_putatdic(moo, cc->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth))
 		{
 			/* 'name' is a symbol created of cc->mth.name. so use it as a key for deletion */
 			moo_deletedic (moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], &cc->mth.name);
@@ -7774,11 +7774,11 @@ static int add_compiled_method_to_interface (moo_t* moo)
 	if (!name) goto oops;
 	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
 
-	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
+	/* The variadic data part passed to moo_instantiate() is not GC-safe.
 	 * let's delay initialization of variadic data a bit. */
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, ifce->mth.literals.count, ifce->mth.code.ptr, ifce->mth.code.len);
 	if (!mth) goto oops;
-	
+
 	for (i = 0; i < ifce->mth.literals.count; i++)
 	{
 		/* let's do the variadic data initialization here - fill the literal frame */
@@ -7799,7 +7799,7 @@ static int add_compiled_method_to_interface (moo_t* moo)
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_nargs);
 
-	if (moo->dbgi) 
+	if (moo->dbgi)
 	{
 		moo_oow_t file_offset;
 		moo_oow_t method_offset;
@@ -7815,7 +7815,7 @@ static int add_compiled_method_to_interface (moo_t* moo)
 	if (ifce->mth.type == MOO_METHOD_DUAL)
 	{
 		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth))
 		{
 			/* 'name' is a symbol created of ifce->mth.name. so use it as a key for deletion */
 			moo_deletedic (moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], &ifce->mth.name);
@@ -7867,7 +7867,7 @@ static int add_method_signature (moo_t* moo)
 	if (ifce->mth.type == MOO_METHOD_DUAL)
 	{
 		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth))
 		{
 			/* 'name' is a symbol created of ifce->mth.name. so use it as a key for deletion */
 			moo_deletedic (moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], &ifce->mth.name);
@@ -7910,7 +7910,7 @@ static void clear_method_data (moo_t* moo, moo_method_data_t* mth)
 
 	/* this must not happen as loop data are cleared in functions that handle loop expressions().
 	 * but let me have this here just in case */
-	while (mth->loop) pop_loop (moo); 
+	while (mth->loop) pop_loop (moo);
 
 	while (mth->_label)
 	{
@@ -8148,7 +8148,7 @@ static int resolve_primitive_method (moo_t* moo)
 		pfbase = moo_getpfnum(moo, &cc->modname.ptr[savedlen], cc->modname.len - savedlen, &pfnum);
 		if (!pfbase)
 		{
-			MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n", 
+			MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n",
 				cc->modname.len - savedlen, &cc->modname.ptr[savedlen]);
 			moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &cc->mth.name_loc, &cc->mth.name);
 			cc->modname.len = savedlen;
@@ -8157,7 +8157,7 @@ static int resolve_primitive_method (moo_t* moo)
 
 		if (cc->mth.tmpr_nargs < pfbase->minargs || cc->mth.tmpr_nargs > pfbase->maxargs)
 		{
-			MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+			MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n",
 				cc->modname.len - savedlen, &cc->modname.ptr[savedlen],
 				pfbase->minargs, pfbase->maxargs, cc->mth.tmpr_nargs);
 			moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &cc->mth.name_loc, &cc->mth.name);
@@ -8168,7 +8168,7 @@ static int resolve_primitive_method (moo_t* moo)
 		cc->modname.len = savedlen;
 
 		MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum));
-		cc->mth.pftype = PFTYPE_NUMBERED; 
+		cc->mth.pftype = PFTYPE_NUMBERED;
 		cc->mth.pfnum = pfnum;
 	}
 	else
@@ -8199,7 +8199,7 @@ static int resolve_primitive_method (moo_t* moo)
 		pfbase = moo_querymodpf(moo, &cc->modname.ptr[savedlen], cc->modname.len - savedlen, MOO_NULL);
 		if (!pfbase)
 		{
-			MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", 
+			MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n",
 				cc->modname.len - savedlen, &cc->modname.ptr[savedlen]);
 			moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &cc->mth.name_loc, &cc->mth.name);
 			cc->modname.len = savedlen;
@@ -8208,7 +8208,7 @@ static int resolve_primitive_method (moo_t* moo)
 
 		if (cc->mth.tmpr_nargs < pfbase->minargs || cc->mth.tmpr_nargs > pfbase->maxargs)
 		{
-			MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+			MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n",
 				cc->modname.len - savedlen, &cc->modname.ptr[savedlen],
 				pfbase->minargs, pfbase->maxargs, cc->mth.tmpr_nargs);
 			moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &cc->mth.name_loc, &cc->mth.name);
@@ -8222,7 +8222,7 @@ static int resolve_primitive_method (moo_t* moo)
 		MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(litidx));
 
 		/* external named primitive containing a period. */
-		cc->mth.pftype = PFTYPE_NAMED; 
+		cc->mth.pftype = PFTYPE_NAMED;
 		cc->mth.pfnum = litidx;
 	}
 
@@ -8453,7 +8453,7 @@ static int make_getters_and_setters (moo_t* moo)
 				/* hack to simulate a parameter. note i don't manipulate tmprs or tmprs_capa
 				 * because there is no method body code to process. i simply generate a setter
 				 * method */
-				cc->mth.tmpr_count = 1; 
+				cc->mth.tmpr_count = 1;
 				cc->mth.tmpr_nargs = 1;
 
 				MOO_ASSERT (moo, var_info.type == var_type);
@@ -8483,7 +8483,7 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 	else
 	{
 		super_initv_count = 0;
-		
+
 	}
 	initv_count += super_initv_count;
 
@@ -8494,9 +8494,9 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 
 		/* [NOTE]
 		 *  if some elements at the back of a class definition are lacking default values,
-		 *  initv_count is less than total_count. 
+		 *  initv_count is less than total_count.
 		 *  in the following case(no inheritance for simplicity):
-		 *    class ... { var a, b := 10, c. } 
+		 *    class ... { var a, b := 10, c. }
 		 *  initv_count is 1 whereas total_count is 3. */
 		MOO_ASSERT (moo, initv_count <= cc->var[var_type].total_count);
 
@@ -8507,7 +8507,7 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 		{
 			/* handle default values defined in the superclass chain.
 			 * i merge them into a single array for convenience and
-			 * efficiency of object instantiation by moo_instantiate(). 
+			 * efficiency of object instantiation by moo_instantiate().
 			 * it can avoid looking up superclasses upon instantiaion */
 			moo_oop_oop_t initv;
 
@@ -8517,7 +8517,7 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
 			for (i = 0; i < super_initv_count; i++)
 			{
-				if (MOO_OBJ_GET_OOP_VAL(initv, i)) 
+				if (MOO_OBJ_GET_OOP_VAL(initv, i))
 					MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(tmp, j), MOO_OBJ_GET_OOP_VAL(initv, i));
 				j++;
 			}
@@ -8694,7 +8694,7 @@ static int make_defined_class (moo_t* moo)
 		j = cc->var[VAR_CLASSINST].total_count;
 
 		MOO_ASSERT (moo, MOO_CLASS_NAMED_INSTVARS + j + initv_count <= MOO_OBJ_GET_SIZE(cc->self_oop));
-		for (i = 0; i < initv_count; i++) 
+		for (i = 0; i < initv_count; i++)
 		{
 			MOO_STORE_OOP (moo, &cc->self_oop->cvar[j], cc->var[VAR_CLASS].initv[i].v);
 			j++;
@@ -8712,7 +8712,7 @@ static int make_defined_class (moo_t* moo)
 
 	if (just_made)
 	{
-		/* register the class to the system dictionary. kernel classes have 
+		/* register the class to the system dictionary. kernel classes have
 		 * been registered at the ignition phase. */
 		if (!moo_putatdic(moo, (moo_oop_dic_t)cc->ns_oop, (moo_oop_t)cc->self_oop->name, (moo_oop_t)cc->self_oop)) return -1;
 		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->nsup, (moo_oop_t)cc->ns_oop);
@@ -8754,7 +8754,7 @@ static int process_class_modifiers (moo_t* moo, moo_ioloc_t* type_loc)
 		do
 		{
 			int permit_non_pointer_instsize = 0;
-			
+
 			if (is_token_symbol(moo, VOCA_BYTE_S))
 			{
 				/* class(#byte) */
@@ -8870,13 +8870,13 @@ static int process_class_modifiers (moo_t* moo, moo_ioloc_t* type_loc)
 						return -1;
 					}
 
-					if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT, &tmp) <= -1 || 
+					if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT, &tmp) <= -1 ||
 						tmp < 0 || tmp > MOO_MAX_NAMED_INSTVARS)
 					{
 						/* the class type size has nothing to do with the name instance variables
 						 * in the semantics. but it is stored into the named-instvar bits in the
 						 * spec field of a class. so i check it against MOO_MAX_NAMED_INSTVARS. */
-						moo_setsynerr (moo, MOO_SYNERR_NPINSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+						moo_setsynerr (moo, MOO_SYNERR_NPINSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -8967,10 +8967,10 @@ static int process_class_superclass (moo_t* moo)
 		if (get_variable_info(moo, &cc->superfqn, &cc->superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
 
 		if (var.type != VAR_GLOBAL) goto unknown_superclass;
-		if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && 
+		if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class &&
 		    MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != MOO_OBJ_FLAGS_KERNEL_IMMATURE)
 		{
-			/* the value found must be a class and it must not be an incomplete internal class object. 
+			/* the value found must be a class and it must not be an incomplete internal class object.
 			 *  0(non-kernel object)
 			 *  1(incomplete kernel object),
 			 *  2(complete kernel object) */
@@ -8992,7 +8992,7 @@ static int process_class_superclass (moo_t* moo)
 			if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)cc->super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
 			{
 				/* cannot inherit a #final class */
-				if (cc->self_oop == MOO_NULL) /* self_oop is not null if it's a predefined kernel class. */ 
+				if (cc->self_oop == MOO_NULL) /* self_oop is not null if it's a predefined kernel class. */
 				{
 					/* the restriction applies to non-kernel classes only */
 					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
@@ -9035,7 +9035,7 @@ static int process_class_module_import (moo_t* moo)
 	if (TOKEN_NAME_LEN(moo) <= 0 || TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
 	    moo_find_oochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
 	{
-		/* check for a bad module name. 
+		/* check for a bad module name.
 		 * also disallow a dash in the name - i like converting
 		 * a period to a dash when mapping the module name to an
 		 * actual module file. disallowing a dash lowers confusion
@@ -9152,7 +9152,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 				{
 					/* duplicate interface method name found */
 					moo_setsynerrbfmt (moo, MOO_SYNERR_MTHNAMEDUPL, MOO_NULL, MOO_NULL,
-						"%.*js defined in multiple interfaces for %.*js - %.*js, %.*js", 
+						"%.*js defined in multiple interfaces for %.*js - %.*js, %.*js",
 						name.len, name.ptr,
 						MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
 						MOO_OBJ_GET_SIZE(im->owner->name), MOO_OBJ_GET_CHAR_SLOT(im->owner->name),
@@ -9165,7 +9165,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 			if (add_oop_to_oopbuf(moo, &ciim->cc->ifce_mths[ciim->mth_type], (moo_oop_t)mth) <= -1)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
-				moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to take interface method %.*js>>%.*js to %.*js - %js", 
+				moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to take interface method %.*js>>%.*js to %.*js - %js",
 					MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
 					name.len, name.ptr,
 					MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
@@ -9179,7 +9179,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, ass->value) == moo->_methsig);
 
-		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
+		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL,
 			"%.*js not implementing %.*js>>%.*js",
 			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
 			MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
@@ -9189,7 +9189,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 	}
 	else
 	{
-		/* TODO: 
+		/* TODO:
 		 * if the method is found in the class chain, also check if the method found
 		 * has been taken from the interface. if so, multiple interfaces are defining
 		 * the method. it's an error */
@@ -9205,7 +9205,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 		if (MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) != MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(sig->preamble)))
 		{
 		modifier_conflict:
-			moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
+			moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL,
 				"%.*js>>%.*js modifiers conficting with %.*js>>%.*js",
 				MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
 				name.len, name.ptr,
@@ -9218,7 +9218,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 		if (mth->tmpr_nargs != sig->tmpr_nargs) /* don't need MOO_OOP_TO_SMOOI */
 		{
 		param_conflict:
-			moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
+			moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL,
 				"%.*js>>%.*js parameters conflicting with %.*js>>%.*js",
 				MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
 				name.len, name.ptr,
@@ -9294,7 +9294,7 @@ static int check_class_interface_conformance (moo_t* moo)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 				mth = (moo_oop_method_t)cc->ifce_mths[j].ptr[i]; /* in case gc has been triggered in moo_putatdic */
-				moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to put interface method %.*js>>%.*js to %.*js - %js", 
+				moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to put interface method %.*js>>%.*js to %.*js - %js",
 					MOO_OBJ_GET_SIZE(mth->owner->name), MOO_OBJ_GET_CHAR_SLOT(mth->owner->name),
 					MOO_OBJ_GET_SIZE(mth->name), MOO_OBJ_GET_CHAR_SLOT(mth->name),
 					MOO_OBJ_GET_SIZE(cc->self_oop->name), MOO_OBJ_GET_CHAR_SLOT(cc->self_oop->name),
@@ -9310,7 +9310,7 @@ static int check_class_interface_conformance (moo_t* moo)
 
 static int __compile_class_definition (moo_t* moo, int class_type)
 {
-	/* 
+	/*
 	 * class-definition := class class-modifier? class-name super-class-spec interface-spec?  (class-body | class-module-import)
 	 *
 	 * class-modifier := "(" (#byte | #character | #word | #pointer)? ")"
@@ -9319,7 +9319,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	 * interface-name-list := interface-name | interface-name "," inteface-name-list
 	 * class-body := "{" variable-definition* method-definition* "}"
 	 * class-module-import := from "module-name-string"
-	 * 
+	 *
 	 * TOOD: add | |, |+ |, |* |
 	 * variable-definition := (#var | #variable) variable-modifier? variable-list "."
 	 * variable-modifier := "(" (#class | #classinst)? ")"
@@ -9366,7 +9366,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	}
 #endif
 
-	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
+	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested
 	 *        inside a class. it is merely a name that appeared in the source
 	 *        code.
 	 *  TODO: compose the full name by traversing the namespace chain. */
@@ -9391,7 +9391,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	{
 		cc->ns_oop = moo->sysdic;
 	}
-	GET_TOKEN (moo); 
+	GET_TOKEN (moo);
 
 	if (class_type == CLASS_TYPE_EXTEND)
 	{
@@ -9405,7 +9405,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != MOO_OBJ_FLAGS_KERNEL_IMMATURE)
 		{
 			/* the value must be a class object.
-			 * and it must be either a user-defined(0) or completed kernel built-in(2). 
+			 * and it must be either a user-defined(0) or completed kernel built-in(2).
 			 * an incomplete kernel built-in class object(1) can not be extended */
 			cc->self_oop = (moo_oop_class_t)ass->value;
 		}
@@ -9418,7 +9418,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		cc->super_oop = cc->self_oop->superclass;
 		MOO_ASSERT (moo, cc->super_oop == moo->_nil || MOO_CLASSOF(moo, cc->super_oop) == moo->_class);
-		
+
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK)
 		{
 			if (process_class_interfaces(moo) <= -1) return -1;
@@ -9431,11 +9431,11 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
 		if (ass)
 		{
-			if (MOO_CLASSOF(moo, ass->value) != moo->_class || 
+			if (MOO_CLASSOF(moo, ass->value) != moo->_class ||
 			    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) == MOO_OBJ_FLAGS_KERNEL_MATURE)
 			{
-				/* the object found with the name is not a class object 
-				 * or the the class object found is a fully defined kernel 
+				/* the object found with the name is not a class object
+				 * or the the class object found is a fully defined kernel
 				 * class object */
 				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, &cc->fqn_loc, &cc->name, "duplicate class name");
 				return -1;
@@ -9482,7 +9482,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		spec = MOO_OOP_TO_SMOOI(c->spec);
 		self_spec = MOO_OOP_TO_SMOOI(c->selfspec);
 
-		/* [NOTE] class variables are not inherited. 
+		/* [NOTE] class variables are not inherited.
 		 *        so no data about them are not transferred over */
 
 		if ((cc->flags & CLASS_INDEXED) && cc->indexed_type != MOO_OBJ_TYPE_OOP)
@@ -9491,8 +9491,8 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			if (MOO_CLASS_SPEC_INDEXED_TYPE(spec) == MOO_OBJ_TYPE_OOP && MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0)
 			{
 				/* a non-pointer object cannot inherit from a pointer object with instance variables */
-				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn, 
-					"the non-pointer class %.*js cannot inherit from a pointer class defined with instance variables", 
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
+					"the non-pointer class %.*js cannot inherit from a pointer class defined with instance variables",
 					cc->fqn.len, cc->fqn.ptr);
 				return -1;
 			}
@@ -9504,7 +9504,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			if (cc->non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
 			{
 				moo_setsynerrbfmt (moo, MOO_SYNERR_NPINSTSIZEINVAL, &type_loc, MOO_NULL,
-					"the instance size(%zu) for the non-pointer class %.*js must not be less than the size(%zu) defined in the superclass ", 
+					"the instance size(%zu) for the non-pointer class %.*js must not be less than the size(%zu) defined in the superclass ",
 					cc->non_pointer_instsize, cc->fqn.len, cc->fqn.ptr, (moo_oow_t)MOO_CLASS_SPEC_NAMED_INSTVARS(spec));
 				return -1;
 			}
@@ -9528,12 +9528,12 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		file_name = cc->fqn_loc.file;
 		if (!file_name) file_name = &_nul;
 
-		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
+		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1)
 		{
 			/* TODO: warning */
 			file_offset = 0;
 		}
-		else if (file_offset > MOO_SMOOI_MAX) 
+		else if (file_offset > MOO_SMOOI_MAX)
 		{
 			/* TODO: warning */
 			file_offset = 0;
@@ -9551,7 +9551,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		moo_oop_char_t pds;
 
 		/* when a class is extended, a new variable cannot be added */
-		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) || 
+		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) ||
 		    is_token_binary_selector(moo, VOCA_VBAR) ||
 		    is_token_binary_selector(moo, VOCA_VBAR_PLUS) ||
 		    is_token_binary_selector(moo, VOCA_VBAR_ASTER))
@@ -9602,7 +9602,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				{
 					last = tok;
 					/* it falls back to the name space of the class */
-					ns_oop = cc->ns_oop; 
+					ns_oop = cc->ns_oop;
 				}
 
 				if (import_pooldic(moo, cc, ns_oop, &last, &tok, &loc) <= -1) return -1;
@@ -9660,7 +9660,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			 *  even if the modname field is set in the class object itself
 			 *  by make_define_class(), i pass the module name in the compiler
 			 *  memory(not part of the object memory) to moo_importmod().
-			 *  no big overhead as it's already available. but Accessing 
+			 *  no big overhead as it's already available. but Accessing
 			 *  this extra module name, i'm free from GC headache */
 			if (moo_importmod(moo, cc->self_oop, cc->modname.ptr, cc->modname.len) <= -1)
 			{
@@ -9889,7 +9889,7 @@ static int __compile_interface_definition (moo_t* moo)
 	}
 #endif
 
-	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
+	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested
 	 *        inside a class. it is merely a name that appeared in the source
 	 *        code.
 	 *  TODO: compose the full name by traversing the namespace chain. */
@@ -9915,7 +9915,7 @@ static int __compile_interface_definition (moo_t* moo)
 	{
 		ifce->ns_oop = moo->sysdic;
 	}
-	GET_TOKEN (moo); 
+	GET_TOKEN (moo);
 
 	MOO_INFO2 (moo, "Defining an interface %.*js\n", ifce->fqn.len, ifce->fqn.ptr);
 
@@ -9936,7 +9936,7 @@ static int __compile_interface_definition (moo_t* moo)
 	GET_TOKEN (moo);
 
 	/* an interface cannot have variables */
-	if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) || 
+	if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) ||
 	    is_token_binary_selector(moo, VOCA_VBAR) ||
 	    is_token_binary_selector(moo, VOCA_VBAR_PLUS) ||
 	    is_token_binary_selector(moo, VOCA_VBAR_ASTER))
@@ -9953,12 +9953,12 @@ static int __compile_interface_definition (moo_t* moo)
 		file_name = ifce->fqn_loc.file;
 		if (!file_name) file_name = &_nul;
 
-		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
+		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1)
 		{
 			/* TODO: warning */
 			file_offset = 0;
 		}
-		else if (file_offset > MOO_SMOOI_MAX) 
+		else if (file_offset > MOO_SMOOI_MAX)
 		{
 			/* TODO: warning */
 			file_offset = 0;
@@ -10189,9 +10189,9 @@ static int __compile_pooldic_definition (moo_t* moo)
 	}
 #endif
 
-	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
+	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested
 	 *        inside a class. it is merely a name that appeared in the source
-	 *        code. 
+	 *        code.
 	 *  TODO: compose the full name by traversing the namespace chain. */
 	if (set_pooldic_fqn(moo, pd, TOKEN_NAME(moo)) <= -1) goto oops;
 	pd->fqn_loc = moo->c->tok.loc;
@@ -10452,7 +10452,7 @@ static int compile_pragma_definition (moo_t* moo)
 		{
 			/* #pragma push() - saves the pragma flags and keep the existing flags */
 			/* #pragma push(reset) - saves the pragma flags and reset the flags to 0 */
-		
+
 		}
 		else if (is_token_word(moo, VOCA_POP))
 		{
@@ -10505,13 +10505,13 @@ static int compile_pragma_definition (moo_t* moo)
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD) goto done;
 	}
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA);
-	
+
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
-	
+
 done:
 	GET_TOKEN (moo);
 	return 0;
@@ -10568,7 +10568,7 @@ static int compile_stream (moo_t* moo)
 		{
 			/* #main */
 			/* TODO: implement this */
-			
+
 		}
 #endif
 		else
@@ -10633,7 +10633,7 @@ static void gc_cunit_chain (moo_t* moo)
 				moo_cunit_class_t* cc;
 				cc = (moo_cunit_class_t*)cunit;
 
-				if (cc->self_oop) 
+				if (cc->self_oop)
 					cc->self_oop = (moo_oop_class_t)moo_updateoopforgc(moo, (moo_oop_t)cc->self_oop);
 
 				if (cc->super_oop)
@@ -10673,7 +10673,7 @@ static void gc_cunit_chain (moo_t* moo)
 				moo_cunit_interface_t* ifce;
 				ifce = (moo_cunit_interface_t*)cunit;
 
-				if (ifce->self_oop) 
+				if (ifce->self_oop)
 					ifce->self_oop = (moo_oop_interface_t)moo_updateoopforgc(moo, (moo_oop_t)ifce->self_oop);
 
 				if (ifce->ns_oop)
@@ -10860,7 +10860,7 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 		if (!cbp) return -1;
 
 		moo->c = moo_callocmem (moo, MOO_SIZEOF(*moo->c));
-		if (!moo->c) 
+		if (!moo->c)
 		{
 			moo_deregevtcb (moo, cbp);
 			return -1;
@@ -10878,12 +10878,12 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 
 	/* reset pragma flags */
 	moo->c->pragma_flags = 0;
-	
+
 	/* initialize some key fields */
 	moo->c->impl = io;
 	moo->c->nungots = 0;
 
-	/* The name field and the includer field are MOO_NULL 
+	/* The name field and the includer field are MOO_NULL
 	 * for the main stream */
 	MOO_MEMSET (&moo->c->arg, 0, MOO_SIZEOF(moo->c->arg));
 	moo->c->arg.line = 1;
@@ -10907,7 +10907,7 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 
 oops:
 	/* an error occurred and control has reached here
-	 * probably, some included files might not have been 
+	 * probably, some included files might not have been
 	 * closed. close them */
 	while (moo->c->curinp != &moo->c->arg)
 	{

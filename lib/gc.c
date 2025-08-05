@@ -40,11 +40,11 @@
  *    | +-------- NilObject ......:  :
  *    |                 ^........ nil  :
  *   Object ...........................:
- *    ^  
- *    |  
+ *    ^
+ *    |
  *
  * The class hierarchy is roughly as follows:
- * 
+ *
  *   Apex
  *      Class
  *      NilObject
@@ -69,9 +69,9 @@
  *                  LargeInteger
  *                     LargePositiveInteger
  *                     LargeNegativeInteger
- * 
+ *
  * Apex has no instance variables.
- *  
+ *
  */
 
 struct kernel_class_info_t
@@ -89,7 +89,7 @@ struct kernel_class_info_t
 };
 typedef struct kernel_class_info_t kernel_class_info_t;
 
-static kernel_class_info_t kernel_classes[] = 
+static kernel_class_info_t kernel_classes[] =
 {
 	/* --------------------------------------------------------------
 	 * Apex            - proto-object with 1 class variable.
@@ -160,7 +160,7 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_OFFSETOF(moo_t, _string) },
 
 	{ 6,
-	  { 'S','y','m','b','o','l' },   
+	  { 'S','y','m','b','o','l' },
 	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  0,
@@ -212,7 +212,7 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _association) },
-	  
+
 	{ 9,
 	  { 'N','a','m','e','s','p','a','c','e' },
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
@@ -427,7 +427,7 @@ static kernel_class_info_t kernel_classes[] =
 
 static moo_oow_t move_finalizable_objects (moo_t* moo);
 
-/* ----------------------------------------------------------------------- 
+/* -----------------------------------------------------------------------
  * BOOTSTRAPPER
  * ----------------------------------------------------------------------- */
 
@@ -446,7 +446,7 @@ static moo_oop_class_t alloc_kernel_class (moo_t* moo, int class_flags, moo_oow_
 	if (MOO_CLASS_SPEC_IS_UNCOPYABLE(cspec)) MOO_OBJ_SET_FLAGS_UNCOPYABLE (c, 1); /* class itself is uncopyable */
 
 	MOO_OBJ_SET_CLASS (c, (moo_oop_t)moo->_class);
-	c->spec = MOO_SMOOI_TO_OOP(spec); 
+	c->spec = MOO_SMOOI_TO_OOP(spec);
 	c->selfspec = MOO_SMOOI_TO_OOP(MOO_CLASS_SELFSPEC_MAKE(num_classvars, 0, class_flags));
 
 	return c;
@@ -466,12 +466,12 @@ static int ignite_1 (moo_t* moo)
 	MOO_ASSERT (moo, moo->_class == MOO_NULL);
 	/* --------------------------------------------------------------
 	 * Class
-	 * The instance of Class can have indexed instance variables 
+	 * The instance of Class can have indexed instance variables
 	 * which are actually class variables.
 	 * -------------------------------------------------------------- */
 	moo->_class = alloc_kernel_class(
-		moo, kernel_classes[KCI_CLASS].class_flags, 
-		kernel_classes[KCI_CLASS].class_num_classvars, 
+		moo, kernel_classes[KCI_CLASS].class_flags,
+		kernel_classes[KCI_CLASS].class_num_classvars,
 		MOO_CLASS_SPEC_MAKE(kernel_classes[KCI_CLASS].class_spec_named_instvars,
 		                    kernel_classes[KCI_CLASS].class_spec_flags,
 		                    kernel_classes[KCI_CLASS].class_spec_indexed_type));
@@ -488,7 +488,7 @@ static int ignite_1 (moo_t* moo)
 
 		tmp = alloc_kernel_class(
 			moo, kernel_classes[i].class_flags,
-			kernel_classes[i].class_num_classvars, 
+			kernel_classes[i].class_num_classvars,
 			MOO_CLASS_SPEC_MAKE(kernel_classes[i].class_spec_named_instvars,
 			                    kernel_classes[i].class_spec_flags,
 			                    kernel_classes[i].class_spec_indexed_type));
@@ -499,7 +499,7 @@ static int ignite_1 (moo_t* moo)
 	MOO_OBJ_SET_CLASS (moo->_nil, (moo_oop_t)moo->_undefined_object);
 
 	/* an instance of a method class stores byte codes in the trailer space.
-	 * unlike other classes with trailer size set, the size of the trailer 
+	 * unlike other classes with trailer size set, the size of the trailer
 	 * space is not really determined by the traailer size set in the class.
 	 * the compiler determines the actual size of the trailer space depending
 	 * on the byte codes generated. i should set the following fields to avoid
@@ -520,18 +520,18 @@ static int ignite_2 (moo_t* moo)
 	moo->_false = moo_instantiate(moo, moo->_false_class, MOO_NULL, 0);
 	if (MOO_UNLIKELY(!moo->_true) || MOO_UNLIKELY(!moo->_false)) return -1;
 
-	/* Prevent the object instations in the permspace. 
+	/* Prevent the object instations in the permspace.
 	 *
 	 * 1. The symbol table is big and it may resize after ignition.
 	 *    the resizing operation will migrate the obejct out of the
 	 *    permspace. The space taken by the symbol table and the
 	 *    system dictionary is wasted. I'd rather allocate these
-	 *    in the normal space. 
-	 *  
+	 *    in the normal space.
+	 *
 	 * 2. For compact_symbol_table() to work properly, moo_gc() must not
 	 *    scan the symbol table before it executes compact_symbol_table().
-	 *    since moo_gc() scans the entire perspace, it naturally gets to 
-	 *    moo->symtab, which causes problems in compact_symbol_table(). 
+	 *    since moo_gc() scans the entire perspace, it naturally gets to
+	 *    moo->symtab, which causes problems in compact_symbol_table().
 	 *    I may reserve a special space for only the symbol table
 	 *    to overcome this issue.
 	 *
@@ -546,8 +546,8 @@ static int ignite_2 (moo_t* moo)
 
 	moo->symtab->tally = MOO_SMOOI_TO_OOP(0);
 	/* It's important to assign the result of moo_instantiate() to a temporary
-	 * variable first and then assign it to moo->symtab->bucket. 
-	 * The pointer 'moo->symtab; can change in moo_instantiate() and the 
+	 * variable first and then assign it to moo->symtab->bucket.
+	 * The pointer 'moo->symtab; can change in moo_instantiate() and the
 	 * target address of assignment may get set before moo_instantiate()
 	 * is called. */
 	tmp = moo_instantiate(moo, moo->_array, MOO_NULL, moo->option.dfl_symtab_size);
@@ -592,7 +592,7 @@ static int ignite_3 (moo_t* moo)
 	static moo_ooch_t str_does_not_understand[] = { 'd', 'o', 'e', 's', 'N', 'o', 't', 'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':' };
 	static moo_ooch_t str_primitive_failed[] = {  'p', 'r', 'i', 'm', 'i', 't', 'i', 'v', 'e', 'F', 'a', 'i', 'l', 'e', 'd' };
 	static moo_ooch_t str_unwindto_return[] = { 'u', 'n', 'w', 'i', 'n', 'd', 'T', 'o', ':', 'r', 'e', 't', 'u', 'r', 'n', ':' };
-	
+
 	moo_oow_t i;
 	moo_oop_t sym;
 	moo_oop_class_t cls;
@@ -632,11 +632,11 @@ static int ignite_3 (moo_t* moo)
 	sym = moo_makesymbol(moo, str_does_not_understand, MOO_COUNTOF(str_does_not_understand));
 	if (!sym) return -1;
 	moo->does_not_understand_sym = (moo_oop_char_t)sym;
-	
+
 	sym = moo_makesymbol(moo, str_primitive_failed, MOO_COUNTOF(str_primitive_failed));
 	if (!sym) return -1;
 	moo->primitive_failed_sym = (moo_oop_char_t)sym;
-	
+
 	sym = moo_makesymbol(moo, str_unwindto_return, MOO_COUNTOF(str_unwindto_return));
 	if (!sym) return -1;
 	moo->unwindto_return_sym = (moo_oop_char_t)sym;
@@ -669,7 +669,7 @@ oops:
 	return -1;
 }
 
-/* ----------------------------------------------------------------------- 
+/* -----------------------------------------------------------------------
  * GARBAGE COLLECTOR
  * ----------------------------------------------------------------------- */
 
@@ -718,7 +718,7 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 			tmp = MOO_OBJ_GET_OOP_VAL(bucket, y);
 			if (tmp == _nil) break;
 
-			/* get the natural hash index for the data in the slot 
+			/* get the natural hash index for the data in the slot
 			 * at the current hash index */
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,tmp) == moo->_symbol);
 			z = moo_hash_oochars(MOO_OBJ_GET_CHAR_SLOT(tmp), MOO_OBJ_GET_SIZE(tmp)) % bucket_size;
@@ -751,7 +751,7 @@ moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop)
 
 	if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 	{
-		/* only an OOP object can have the trailer. 
+		/* only an OOP object can have the trailer.
 		 *
 		 * | _flags    |
 		 * | _size     |  <-- if it's 3
@@ -777,7 +777,7 @@ moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop)
 	}
 
 	nbytes = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
-	if (MOO_OBJ_GET_FLAGS_HASH(oop) == MOO_OBJ_FLAGS_HASH_STORED) 
+	if (MOO_OBJ_GET_FLAGS_HASH(oop) == MOO_OBJ_FLAGS_HASH_STORED)
 	{
 		MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t));
 		nbytes += MOO_SIZEOF(moo_oow_t);
@@ -826,8 +826,8 @@ static MOO_INLINE void gc_ms_mark (moo_t* moo, moo_oop_t oop)
 		 * determine that it is an instance of process? */
 		if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(oop)))
 		{
-			/* the stack in a process object doesn't need to be 
-			 * scanned in full. the slots above the stack pointer 
+			/* the stack in a process object doesn't need to be
+			 * scanned in full. the slots above the stack pointer
 			 * are garbages. */
 			size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)oop)->sp) + 1;
 			MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(oop));
@@ -876,8 +876,8 @@ static MOO_INLINE void gc_ms_scan_stack (moo_t* moo)
 			 * determine that it is an instance of process? */
 			if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(oop)))
 			{
-				/* the stack in a process object doesn't need to be 
-				 * scanned in full. the slots above the stack pointer 
+				/* the stack in a process object doesn't need to be
+				 * scanned in full. the slots above the stack pointer
 				 * are garbages. */
 				size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)oop)->sp) + 1;
 				MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(oop));
@@ -976,7 +976,7 @@ static MOO_INLINE void gc_ms_mark_roots (moo_t* moo)
 	if (moo->active_context) gc_ms_mark (moo, (moo_oop_t)moo->active_context);
 	if (moo->active_method) gc_ms_mark (moo, (moo_oop_t)moo->active_method);
 
-	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
+	moo_rbt_walk (&moo->modtab, call_module_gc, moo);
 
 	for (cb = moo->evtcb_list; cb; cb = cb->next)
 	{
@@ -1136,7 +1136,7 @@ static moo_oop_t gc_ss_move_oop (moo_t* moo, moo_oop_t oop)
 
 	if (MOO_OBJ_GET_FLAGS_MOVED(oop))
 	{
-		/* this object has migrated to the new heap. 
+		/* this object has migrated to the new heap.
 		 * the class field has been updated to the new object
 		 * in the 'else' block below. i can simply return it
 		 * without further migration. */
@@ -1151,23 +1151,23 @@ static moo_oop_t gc_ss_move_oop (moo_t* moo, moo_oop_t oop)
 
 		if (MOO_OBJ_GET_FLAGS_HASH(oop) == MOO_OBJ_FLAGS_HASH_CALLED)
 		{
-			MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t)); 
-			/* don't need explicit alignment since oop and oow have the same size 
+			MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t));
+			/* don't need explicit alignment since oop and oow have the same size
 			extra_bytes = MOO_ALIGN(MOO_SIZEOF(moo_oow_t), MOO_SIZEOF(moo_oop_t)); */
-			extra_bytes = MOO_SIZEOF(moo_oow_t); 
+			extra_bytes = MOO_SIZEOF(moo_oow_t);
 		}
 
 		/* allocate space in the new heap */
 		tmp = moo_allocheapspace(moo, &moo->heap->newspace, MOO_SIZEOF(moo_obj_t) + nbytes_aligned + extra_bytes);
 
 		/* allocation here must not fail because
-		 * i'm allocating the new space in a new heap for 
-		 * moving an existing object in the current heap. 
+		 * i'm allocating the new space in a new heap for
+		 * moving an existing object in the current heap.
 		 *
 		 * assuming the new heap is as large as the old heap,
 		 * and garbage collection doesn't allocate more objects
 		 * than in the old heap, it must not fail. */
-		MOO_ASSERT (moo, tmp != MOO_NULL); 
+		MOO_ASSERT (moo, tmp != MOO_NULL);
 
 		/* copy the payload to the new object */
 		MOO_MEMCPY (tmp, oop, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
@@ -1175,8 +1175,8 @@ static moo_oop_t gc_ss_move_oop (moo_t* moo, moo_oop_t oop)
 		/* mark the old object that it has migrated to the new heap */
 		MOO_OBJ_SET_FLAGS_MOVED (oop, 1);
 
-		/* let the class field of the old object point to the new 
-		 * object allocated in the new heap. it is returned in 
+		/* let the class field of the old object point to the new
+		 * object allocated in the new heap. it is returned in
 		 * the 'if' block at the top of this function. */
 		MOO_OBJ_SET_CLASS (oop, tmp);
 
@@ -1215,8 +1215,8 @@ static moo_uint8_t* gc_ss_scan_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t*
 			 * determine that it is an instance of process? */
 			if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(oop)))
 			{
-				/* the stack in a process object doesn't need to be 
-				 * scanned in full. the slots above the stack pointer 
+				/* the stack in a process object doesn't need to be
+				 * scanned in full. the slots above the stack pointer
 				 * are garbages. */
 				size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)oop)->sp) + 1;
 				MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(oop));
@@ -1231,7 +1231,7 @@ static moo_uint8_t* gc_ss_scan_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t*
 				tmp = MOO_OBJ_GET_OOP_VAL(oop, i);
 				if (MOO_OOP_IS_POINTER(tmp))
 				{
-					/* i must not use MOO_STORE_OOP() as this operation is 
+					/* i must not use MOO_STORE_OOP() as this operation is
 					 * part of garbage collection. */
 					tmp = moo_updateoopforgc(moo, tmp);
 					MOO_OBJ_SET_OOP_VAL (oop, i, tmp);
@@ -1248,7 +1248,7 @@ static moo_uint8_t* gc_ss_scan_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t*
 			 * i don't use moo->_nil because c->trgc field may not have
 			 * been updated to a new nil address while moo->_nil could
 			 * have been updated in the process of garbage collection.
-			 * this comment will be invalidated when moo->_nil is 
+			 * this comment will be invalidated when moo->_nil is
 			 * stored in a permanent heap or GC gets changed to
 			 * a non-copying collector. no matter what GC implementation
 			 * i choose, using SMPTR(0) for this purpose is safe. */
@@ -1262,13 +1262,13 @@ static moo_uint8_t* gc_ss_scan_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t*
 	}
 
 	/* return the pointer to the beginning of the free space in the heap */
-	return ptr; 
+	return ptr;
 }
 
 
 static void gc_ss_scan_roots (moo_t* moo)
 {
-	/* 
+	/*
 	 * move a referenced object to the new heap.
 	 * inspect the fields of the moved object in the new heap.
 	 * move objects pointed to by the fields to the new heap.
@@ -1286,18 +1286,18 @@ static void gc_ss_scan_roots (moo_t* moo)
 /* TODO: verify if this is correct */
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor != moo->_nil);
 		MOO_ASSERT (moo, (moo_oop_t)moo->processor->active != moo->_nil);
-		/* commit the stack pointer to the active process 
+		/* commit the stack pointer to the active process
 		 * to limit scanning of the process stack properly */
 		moo->processor->active->sp = MOO_SMOOI_TO_OOP(moo->sp);
 	}
 
-	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
+	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
 		"Starting GC curheap base %p ptr %p newheap base %p ptr %p\n",
-		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
+		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr);
 
 	newspace_scan_ptr = (moo_uint8_t*)MOO_ALIGN((moo_uintptr_t)moo->heap->newspace.base, MOO_SIZEOF(moo_oop_t));
 
-	/* TODO: allocate common objects like _nil and the root dictionary 
+	/* TODO: allocate common objects like _nil and the root dictionary
 	 *       in the permanant heap.  minimize moving around */
 	old_nil = moo->_nil;
 
@@ -1360,7 +1360,7 @@ static void gc_ss_scan_roots (moo_t* moo)
 	if (moo->active_method)
 		moo->active_method = (moo_oop_method_t)moo_updateoopforgc(moo, (moo_oop_t)moo->active_method);
 
-	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
+	moo_rbt_walk (&moo->modtab, call_module_gc, moo);
 
 	for (cb = moo->evtcb_list; cb; cb = cb->next)
 	{
@@ -1373,7 +1373,7 @@ static void gc_ss_scan_roots (moo_t* moo)
 	/* scan the new heap to move referenced objects */
 	newspace_scan_ptr = gc_ss_scan_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
-	/* check finalizable objects registered and scan the heap again. 
+	/* check finalizable objects registered and scan the heap again.
 	 * symbol table compation is placed after this phase assuming that
 	 * no symbol is added to be finalized. */
 	gcfin_count = move_finalizable_objects(moo);
@@ -1381,7 +1381,7 @@ static void gc_ss_scan_roots (moo_t* moo)
 
 	/* traverse the symbol table for unreferenced symbols.
 	 * if the symbol has not moved to the new heap, the symbol
-	 * is not referenced by any other objects than the symbol 
+	 * is not referenced by any other objects than the symbol
 	 * table itself */
 	/*if (!moo->igniting) */ compact_symbol_table (moo, old_nil);
 
@@ -1389,7 +1389,7 @@ static void gc_ss_scan_roots (moo_t* moo)
 	moo->symtab = (moo_oop_dic_t)moo_updateoopforgc(moo, (moo_oop_t)moo->symtab);
 
 	/* scan the new heap again from the end position of
-	 * the previous scan to move referenced objects by 
+	 * the previous scan to move referenced objects by
 	 * the symbol table. */
 	newspace_scan_ptr = gc_ss_scan_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
@@ -1412,7 +1412,7 @@ static void gc_ss_scan_roots (moo_t* moo)
 		buc = (moo_oop_oop_t) moo->symtab->bucket;
 		for (index = 0; index < MOO_OBJ_GET_SIZE(buc); index++)
 		{
-			if ((moo_oop_t)buc->slot[index] != moo->_nil) 
+			if ((moo_oop_t)buc->slot[index] != moo->_nil)
 			{
 				MOO_LOG1 (moo, MOO_LOG_GC | MOO_LOG_DEBUG, "\t%O\n", buc->slot[index]);
 			}
@@ -1428,9 +1428,9 @@ static void gc_ss_scan_roots (moo_t* moo)
 	moo_clearmethodcache (moo);
 
 	/* TODO: include some gc statstics like number of live objects, gc performance, etc */
-	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
+	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
 		"Finished GC curheap base %p ptr %p newheap base %p ptr %p\n",
-		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
+		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr);
 }
 
 
@@ -1447,7 +1447,7 @@ if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, MOO_TYPE_MAX(moo_oow_t));
 		/*moo->gci.stack.max = 0;*/
 		gc_ms_mark_roots (moo);
 
-		if (!full && moo->gci.lazy_sweep) 
+		if (!full && moo->gci.lazy_sweep)
 		{
 			/* set the lazy sweeping point to the head of the allocated blocks.
 			 * hawk_allocbytes() updates moo->gci.ls.prev if it is called while
@@ -1532,7 +1532,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		MOO_MEMCPY (z, oop, total_bytes);
 		MOO_OBJ_SET_FLAGS_RDONLY (z, 0); /* a copied object is not read-only */
 		MOO_OBJ_SET_FLAGS_HASH (z, 0); /* no hash field */
-		return z; 
+		return z;
 	}
 
 	return oop;
@@ -1629,9 +1629,9 @@ static moo_oow_t move_finalizable_objects (moo_t* moo)
 			 * from the root except this finalizable list. this object would be
 			 * garbage if not for finalizatin. it's almost collectable. but it
 			 * will survive this cycle for finalization.
-			 * 
+			 *
 			 * if garbages consist of finalizable objects only, GC should fail miserably.
-			 * however this is quite unlikely because some key objects for VM execution 
+			 * however this is quite unlikely because some key objects for VM execution
 			 * like context objects doesn't require finalization. */
 
 			x->oop = moo_updateoopforgc(moo, x->oop);

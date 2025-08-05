@@ -26,13 +26,13 @@
 
 #include "moo-prv.h"
 
-static moo_ooi_t pow_of_ten[] = { 
-	1L, 
+static moo_ooi_t pow_of_ten[] = {
+	1L,
 	10L,
 	100L,
 	1000L,
 	10000L,
-	100000L, 
+	100000L,
 #if (MOO_SIZEOF_OOI_T >= 4)
 	1000000L,
 	10000000L,
@@ -205,7 +205,7 @@ static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 
 moo_oop_t moo_truncfpdecval (moo_t* moo, moo_oop_t iv, moo_ooi_t cs, moo_ooi_t ns)
 {
-	/* this function truncates an existing fixed-point decimal value only if 
+	/* this function truncates an existing fixed-point decimal value only if
 	 * the existing scale is greater than the new scale given.
 	 * [NOTE] this doesn't work on the fpdec object but on the inner integra
 	 *        fpdec value. */
@@ -288,7 +288,7 @@ moo_oop_t moo_truncfpdec (moo_t* moo, moo_oop_t x, moo_ooi_t ns)
 	}
 
 	/* moo_makefpdec returns xv if ns <= 0. so it's safe to call it
-	 * without checks against the 'ns <= 0' condition. 
+	 * without checks against the 'ns <= 0' condition.
 	 * setting ns to 0 or less will converts a decimal to an integer */
 	return moo_makefpdec(moo, xv, ns);
 }
@@ -309,7 +309,7 @@ moo_oop_t moo_addnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_pushvolat (moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
-		if (scale <= -1) 
+		if (scale <= -1)
 		{
 			moo_popvolats (moo, 2);
 			return MOO_NULL;
@@ -338,7 +338,7 @@ moo_oop_t moo_subnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_pushvolat (moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
-		if (scale <= -1) 
+		if (scale <= -1)
 		{
 			moo_popvolats (moo, 2);
 			return MOO_NULL;
@@ -369,7 +369,7 @@ static moo_oop_t mul_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, int mult)
 		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not numeric - %O", xv);
 		return MOO_NULL;
 	}
-	
+
 	ys = 0;
 	yv = y;
 	if (MOO_OOP_IS_FPDEC(moo, y))
@@ -386,7 +386,7 @@ static moo_oop_t mul_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, int mult)
 	nv = moo_mulints(moo, xv, yv);
 	if (!nv) return MOO_NULL;
 
-	cs = xs + ys; 
+	cs = xs + ys;
 	if (cs <= 0) return nv; /* the result must be an integer */
 
 	ns = (mult || xs > ys)? xs: ys;
@@ -451,7 +451,7 @@ moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo)
 	for (i = 0; i < ys; i++)
 	{
 		nv = moo_mulints(moo, nv, MOO_SMOOI_TO_OOP(10));
-		if (!nv) 
+		if (!nv)
 		{
 			moo_popvolat (moo);
 			return MOO_NULL;
@@ -481,7 +481,7 @@ static moo_oop_t comp_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, moo_oop_t (*co
 		moo_pushvolat (moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
-		if (scale <= -1) 
+		if (scale <= -1)
 		{
 			moo_popvolats (moo, 2);
 			return MOO_NULL;

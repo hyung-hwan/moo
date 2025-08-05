@@ -40,7 +40,7 @@ static const char* io_type_str[] =
 
 static MOO_INLINE const char* proc_state_to_string (int state)
 {
-	static const moo_bch_t* str[] = 
+	static const moo_bch_t* str[] =
 	{
 		"TERMINATED",
 		"SUSPENDED",
@@ -142,7 +142,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 static MOO_INLINE int vm_startup (moo_t* moo)
 {
 	moo_oow_t i;
-	
+
 	MOO_DEBUG0 (moo, "VM started up\n");
 
 	for (i = 0; i < moo->sem_io_map_capa; i++)
@@ -163,18 +163,18 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 {
 	moo_oow_t i;
 
-/* TODO: clean up semaphores being waited on 
+/* TODO: clean up semaphores being waited on
 	MOO_ASSERT (moo, moo->sem_io_wait_count == 0); */
 
 	if (moo->processor->total_count != MOO_SMOOI_TO_OOP(0))
 	{
 		/* the stock kernel code is supposed to stop all processes.
 		 * if the code reaches here, the kernel code must be buggy */
-		MOO_LOG3 (moo, MOO_LOG_WARN, "Warning - non-zero number of processes upon VM clean-up - total: %zd runnable: %zd suspended: %zd\n", 
+		MOO_LOG3 (moo, MOO_LOG_WARN, "Warning - non-zero number of processes upon VM clean-up - total: %zd runnable: %zd suspended: %zd\n",
 			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->total_count),
 			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
 			(moo_ooi_t)MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
-		
+
 		MOO_LOG0 (moo, MOO_LOG_WARN, "Warning - terminating all residue processes\n");
 		terminate_all_processes (moo);
 	}
@@ -204,7 +204,7 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 
 			MOO_ASSERT (moo, moo->sem_io_map[i] <= -1);
 		}
-		else 
+		else
 		{
 			i++;
 		}
@@ -215,7 +215,7 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 
 	moo->vmprim.vm_gettime (moo, &moo->exec_end_time); /* raw time. no adjustment */
 	moo->vmprim.vm_cleanup (moo);
-	
+
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
 	moo->sem_gcfin_sigreq = 0;
 
@@ -234,7 +234,7 @@ static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 {
 	moo->vmprim.vm_gettime (moo, now);
 	/* in vm_startup(), moo->exec_start_time has been set to the time of
-	 * that moment. time returned here get offset by moo->exec_start_time and 
+	 * that moment. time returned here get offset by moo->exec_start_time and
 	 * thus becomes relative to it. this way, it is kept small such that it
 	 * can be represented in a small integer with leaving almost zero chance
 	 * of overflow. */
@@ -410,9 +410,9 @@ static MOO_INLINE void wake_process (moo_t* moo, moo_oop_process_t proc)
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING);
 	MOO_STORE_OOP (moo, (moo_oop_t*)&moo->processor->active, (moo_oop_t)proc);
 
-	/* load the stack pointer from 'proc'. 
+	/* load the stack pointer from 'proc'.
 	 * moo->processor->active points to 'proc' now. */
-	LOAD_ACTIVE_SP(moo); 
+	LOAD_ACTIVE_SP(moo);
 
 	/* activate the suspended context of the new process */
 	SWITCH_ACTIVE_CONTEXT (moo, proc->current_context);
@@ -462,7 +462,7 @@ static MOO_INLINE void switch_to_next_runnable_process (moo_t* moo)
 
 static MOO_INLINE void chain_into_processor (moo_t* moo, moo_oop_process_t proc, int new_state)
 {
-	/* the process is not scheduled at all. 
+	/* the process is not scheduled at all.
 	 * link it to the processor's process list. */
 	moo_ooi_t runnable_count;
 	moo_ooi_t suspended_count;
@@ -474,7 +474,7 @@ static MOO_INLINE void chain_into_processor (moo_t* moo, moo_oop_process_t proc,
 	MOO_ASSERT (moo, new_state == PROC_STATE_RUNNABLE || new_state == PROC_STATE_RUNNING);
 
 #if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
+	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG,
 		"Processor - process[%zd] %hs->%hs in chain_into_processor\n",
 		MOO_OOP_TO_SMOOI(proc->id),
 		proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)),
@@ -561,7 +561,7 @@ static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc,
 	/* append a process to the process list of a semaphore or a semaphore group */
 
 	/* a process chained to a semaphore cannot get chained to
-	 * a semaphore again. a process can get chained to a single semaphore 
+	 * a semaphore again. a process can get chained to a single semaphore
 	 * or a single semaphore group only */
 	if ((moo_oop_t)proc->sem != moo->_nil) return; /* ignore it if it happens anyway. TODO: is it desirable???? */
 
@@ -596,11 +596,11 @@ static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t pro
 	                 MOO_OFFSETOF(moo_semaphore_group_t,waiting));
 
 	/* proc->sem may be one of a semaphore or a semaphore group.
-	 * i assume that 'waiting' is defined to the same position 
-	 * in both Semaphore and SemaphoreGroup. there is no need to 
+	 * i assume that 'waiting' is defined to the same position
+	 * in both Semaphore and SemaphoreGroup. there is no need to
 	 * write different code for each class. */
 	sem = (moo_oop_semaphore_t)proc->sem;  /* semgrp = (moo_oop_semaphore_group_t)proc->sem */
-	MOO_DELETE_FROM_OOP_LIST (moo, &sem->waiting, proc, sem_wait); 
+	MOO_DELETE_FROM_OOP_LIST (moo, &sem->waiting, proc, sem_wait);
 
 	proc->sem_wait.prev = (moo_oop_process_t)moo->_nil;
 	proc->sem_wait.next = (moo_oop_process_t)moo->_nil;
@@ -654,7 +654,7 @@ static void dump_process_info (moo_t* moo, moo_bitmask_t log_mask)
 				/* dump process IDs waiting for input signaling */
 				MOO_LOG0 (moo, log_mask, "(wpi");
 				sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-				if (sem) 
+				if (sem)
 				{
 					moo_oop_process_t wp; /* waiting process */
 					for (wp = sem->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
@@ -670,7 +670,7 @@ static void dump_process_info (moo_t* moo, moo_bitmask_t log_mask)
 				/* dump process IDs waitingt for output signaling */
 				MOO_LOG0 (moo, log_mask, ",wpo");
 				sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-				if (sem) 
+				if (sem)
 				{
 					moo_oop_process_t wp; /* waiting process */
 					for (wp = sem->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
@@ -719,8 +719,8 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 				MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 				if (MOO_LOG_ENABLED(moo, MOO_LOG_IC | MOO_LOG_DEBUG))
 				{
-					MOO_LOG5 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
-						"No runnable process after termination of process %zd - total %zd runnable/running %zd suspended %zd - sem_io_wait_count %zu\n", 
+					MOO_LOG5 (moo, MOO_LOG_IC | MOO_LOG_DEBUG,
+						"No runnable process after termination of process %zd - total %zd runnable/running %zd suspended %zd - sem_io_wait_count %zu\n",
 						MOO_OOP_TO_SMOOI(proc->id),
 						MOO_OOP_TO_SMOOI(moo->processor->total_count),
 						MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
@@ -767,7 +767,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 					MOO_DEBUG1 (moo, "terminate_process(sg) - lowered sem_io_wait_count to %zu\n", moo->sem_io_wait_count);
 				}
 			}
-			else 
+			else
 			{
 				MOO_ASSERT (moo, MOO_CLASSOF(moo, proc->sem) == moo->_semaphore);
 				if (((moo_oop_semaphore_t)proc->sem)->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
@@ -775,7 +775,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 					MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
 					moo->sem_io_wait_count--;
 					MOO_DEBUG3 (moo, "terminate_process(s) - lowered sem_io_wait_count to %zu for IO semaphore at index %zd handle %zd\n",
-						moo->sem_io_wait_count, 
+						moo->sem_io_wait_count,
 						MOO_OOP_TO_SMOOI(((moo_oop_semaphore_t)proc->sem)->u.io.index),
 						MOO_OOP_TO_SMOOI(((moo_oop_semaphore_t)proc->sem)->u.io.handle)
 					);
@@ -827,7 +827,7 @@ static void resume_process (moo_t* moo, moo_oop_process_t proc)
 
 		/* don't switch to this process. just change the state to RUNNABLE.
 		 * process switching should be triggerd by the process scheduler. */
-		chain_into_processor (moo, proc, PROC_STATE_RUNNABLE); 
+		chain_into_processor (moo, proc, PROC_STATE_RUNNABLE);
 		/*MOO_STORE_OOP (moo, &proc->current_context = proc->initial_context);*/
 	}
 #if 0
@@ -865,7 +865,7 @@ static void suspend_process (moo_t* moo, moo_oop_process_t proc)
 				sleep_active_process (moo, PROC_STATE_RUNNABLE);
 				unchain_from_processor (moo, proc, PROC_STATE_SUSPENDED);
 
-				/* the last running/runnable process has been unchained 
+				/* the last running/runnable process has been unchained
 				 * from the processor and set to SUSPENDED. the active
 				 * process must be the nil process */
 				MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
@@ -882,7 +882,7 @@ static void suspend_process (moo_t* moo, moo_oop_process_t proc)
 				 * switch_to_process() has changed the active process. */
 				unchain_from_processor (moo, proc, PROC_STATE_SUSPENDED);
 				MOO_ASSERT (moo, moo->processor->active != moo->nil_process);
-				switch_to_process (moo, nrp, PROC_STATE_SUSPENDED); 
+				switch_to_process (moo, nrp, PROC_STATE_SUSPENDED);
 			}
 		}
 		else
@@ -902,10 +902,10 @@ static void yield_process (moo_t* moo, moo_oop_process_t proc)
 
 		MOO_ASSERT (moo, proc == moo->processor->active);
 
-		nrp = find_next_runnable_process (moo); 
+		nrp = find_next_runnable_process (moo);
 		/* if there are more than 1 runnable processes, the next
 		 * runnable process must be different from proc */
-		if (nrp != proc) 
+		if (nrp != proc)
 		{
 		#if defined(MOO_DEBUG_VM_PROCESSOR)
 			MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process[%zd] %hs->RUNNABLE in yield_process\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
@@ -967,17 +967,17 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			 * ------------------------------------------------------------
 			 * the waiting process has been suspended after a waiting
 			 * primitive function in Semaphore or SemaphoreGroup.
-			 * the top of the stack of the process must hold the temporary 
+			 * the top of the stack of the process must hold the temporary
 			 * return value set by await_semaphore() or await_semaphore_group().
-			 * change the return value forcibly to the actual signaled 
+			 * change the return value forcibly to the actual signaled
 			 * semaphore */
 			MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(proc->sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE(proc) - MOO_PROCESS_NAMED_INSTVARS));
 			sp = MOO_OOP_TO_SMOOI(proc->sp);
 			MOO_STORE_OOP (moo, &proc->stack[sp], (moo_oop_t)sem);
 
-			/* i should decrement the counter as long as the group being 
+			/* i should decrement the counter as long as the group being
 			 * signaled contains an IO semaphore */
-			if (MOO_OOP_TO_SMOOI(sg->sem_io_count) > 0) 
+			if (MOO_OOP_TO_SMOOI(sg->sem_io_count) > 0)
 			{
 				MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
 				moo->sem_io_wait_count--;
@@ -987,14 +987,14 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		}
 	}
 
-	/* if the semaphore belongs to a semaphore group and the control reaches 
+	/* if the semaphore belongs to a semaphore group and the control reaches
 	 * here, no process is waiting on the semaphore group. however, a process
 	 * may still be waiting on the semaphore. If a process waits on a semaphore
-	 * group and another process wait on a semaphore that belongs to the 
-	 * semaphore group, the process waiting on the group always wins. 
-	 * 
+	 * group and another process wait on a semaphore that belongs to the
+	 * semaphore group, the process waiting on the group always wins.
+	 *
 	 *    TODO: implement a fair scheduling policy. or do i simply have to disallow individual wait on a semaphore belonging to a group?
-	 *       
+	 *
 	 * if it doesn't belong to a sempahore group, i'm free from the starvation issue.
 	 */
 	if ((moo_oop_t)sem->waiting.first == moo->_nil)
@@ -1023,12 +1023,12 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		/* [NOTE] no GC must occur as 'proc' isn't protected with moo_pushvolat(). */
 
-		/* detach a process from a semaphore's waiting list and 
+		/* detach a process from a semaphore's waiting list and
 		 * make it runnable */
 		unchain_from_semaphore (moo, proc);
 		resume_process (moo, proc);
 
-		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) 
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 		{
 			MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
 			moo->sem_io_wait_count--;
@@ -1082,14 +1082,14 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		proc = moo->processor->active;
 
 		/* suspend the active process */
-		suspend_process (moo, proc); 
+		suspend_process (moo, proc);
 
 		/* link the suspended process to the semaphore's process list */
-		chain_into_semaphore (moo, proc, sem); 
+		chain_into_semaphore (moo, proc, sem);
 
 		MOO_ASSERT (moo, sem->waiting.last == proc);
 
-		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) 
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 		{
 			moo->sem_io_wait_count++;
 			MOO_DEBUG3 (moo, "await_semaphore - raised sem_io_wait_count to %zu for IO semaphore at index %zd handle %zd\n",
@@ -1142,26 +1142,26 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 	proc = moo->processor->active;
 
 	/* suspend the active process */
-	suspend_process (moo, proc); 
+	suspend_process (moo, proc);
 
 	/* link the suspended process to the semaphore group's process list */
-	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp); 
+	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp);
 
 	MOO_ASSERT (moo, semgrp->waiting.last == proc);
 
-	if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) > 0) 
+	if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) > 0)
 	{
 		/* there might be more than 1 IO semaphores in the group
 		 * but i increment moo->sem_io_wait_count by 1 only */
-		moo->sem_io_wait_count++; 
+		moo->sem_io_wait_count++;
 		MOO_DEBUG1 (moo, "await_semaphore_group - raised sem_io_wait_count to %zu\n", moo->sem_io_wait_count);
 	}
 
-	/* the current process will get suspended after the caller (mostly a 
+	/* the current process will get suspended after the caller (mostly a
 	 * a primitive function handler) is over as it's added to a suspened
 	 * process list above */
 	MOO_ASSERT (moo, moo->processor->active != proc);
-	return moo->_nil; 
+	return moo->_nil;
 }
 
 static void sift_up_sem_heap (moo_t* moo, moo_ooi_t index)
@@ -1296,7 +1296,7 @@ static void delete_from_sem_heap (moo_t* moo, moo_ooi_t index)
 		lastsem->u.timed.index = MOO_SMOOI_TO_OOP(index);
 		moo->sem_heap[index] = lastsem;
 
-		if (SEM_HEAP_EARLIER_THAN(moo, lastsem, sem)) 
+		if (SEM_HEAP_EARLIER_THAN(moo, lastsem, sem))
 			sift_up_sem_heap (moo, index);
 		else
 			sift_down_sem_heap (moo, index);
@@ -1338,7 +1338,7 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 		moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range", io_handle);
 		return -1;
 	}
-	
+
 	if (io_handle >= moo->sem_io_map_capa)
 	{
 		moo_oow_t new_capa, i;
@@ -1348,7 +1348,7 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 		new_capa = MOO_ALIGN_POW2(io_handle + 1, SEM_IO_MAP_ALIGN);
 
 		tmp = moo_reallocmem (moo, moo->sem_io_map, MOO_SIZEOF(*tmp) * new_capa);
-		if (!tmp) 
+		if (!tmp)
 		{
 			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 			moo_seterrbfmt (moo, moo->errnum, "handle %zd out of supported range - %js", oldmsg);
@@ -1367,7 +1367,7 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 		/* this handle is not in any tuples. add it to a new tuple */
 		if (moo->sem_io_tuple_count >= SEM_IO_TUPLE_MAX)
 		{
-			moo_seterrbfmt (moo, MOO_ESEMFLOOD, "too many IO semaphore tuples"); 
+			moo_seterrbfmt (moo, MOO_ESEMFLOOD, "too many IO semaphore tuples");
 			return -1;
 		}
 
@@ -1387,13 +1387,13 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 		}
 
 		/* this condition must be true assuming SEM_IO_TUPLE_MAX <= MOO_SMOOI_MAX */
-		MOO_ASSERT (moo, moo->sem_io_tuple_count <= MOO_SMOOI_MAX); 
+		MOO_ASSERT (moo, moo->sem_io_tuple_count <= MOO_SMOOI_MAX);
 		index = moo->sem_io_tuple_count;
 
 		tuple_added = 1;
 
 		/* safe to initialize before vm_muxadd() because
-		 * moo->sem_io_tuple_count has not been incremented. 
+		 * moo->sem_io_tuple_count has not been incremented.
 		 * still no impact even if it fails. */
 		moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] = MOO_NULL;
 		moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT] = MOO_NULL;
@@ -1422,7 +1422,7 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 		moo_popvolat (moo);
 	}
 
-	if (n <= -1) 
+	if (n <= -1)
 	{
 		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to add IO semaphore at index %zd for %hs on handle %zd\n", index, io_type_str[io_type], io_handle);
 		return -1;
@@ -1440,7 +1440,7 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 	moo->sem_io_tuple[index].sem[io_type] = sem;
 
 	moo->sem_io_count++;
-	if (tuple_added) 
+	if (tuple_added)
 	{
 		moo->sem_io_tuple_count++;
 		moo->sem_io_map[io_handle] = index;
@@ -1487,14 +1487,14 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 
 	moo_pushvolat (moo, (moo_oop_t*)&sem);
 	x = new_mask? moo->vmprim.vm_muxmod(moo, io_handle, new_mask):
-	              moo->vmprim.vm_muxdel(moo, io_handle); 
+	              moo->vmprim.vm_muxdel(moo, io_handle);
 	moo_popvolat (moo);
-	if (x <= -1) 
+	if (x <= -1)
 	{
 		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete IO semaphore at index %zd handle %zd for %hs\n", index, io_handle, io_type_str[io_type]);
 		if (!force) return -1;
 
-		/* [NOTE] 
+		/* [NOTE]
 		 *   this means there could be some issue handling the file handles.
 		 *   the file handle might have been closed before reaching here.
 		 *   assuming the callback works correctly, it's not likely that the
@@ -1536,7 +1536,7 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 			/* migrate the last item to the deleted slot to compact the gap */
 			moo->sem_io_tuple[index] = moo->sem_io_tuple[moo->sem_io_tuple_count];
 
-			if (moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]) 
+			if (moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
 				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]->u.io.index = MOO_SMOOI_TO_OOP(index);
 			if (moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
 				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]->u.io.index = MOO_SMOOI_TO_OOP(index);
@@ -1560,10 +1560,10 @@ static void _signal_io_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 	if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
 	{
-		/* this is the only runnable process. 
+		/* this is the only runnable process.
 		 * switch the process to the running state.
 		 * it uses wake_process() instead of
-		 * switch_to_process() as there is no running 
+		 * switch_to_process() as there is no running
 		 * process at this moment */
 		MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 		MOO_ASSERT (moo, proc == moo->processor->runnable.first);
@@ -1628,7 +1628,7 @@ void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 		{
 			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
 			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-			if (sem) 
+			if (sem)
 			{
 				MOO_ASSERT(moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO));
 				delete_sem_from_sem_io_tuple (moo, sem, 0);
@@ -1646,7 +1646,7 @@ void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 		{
 			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
 			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-			if (sem) 
+			if (sem)
 			{
 				MOO_ASSERT(moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO));
 				delete_sem_from_sem_io_tuple (moo, sem, 0);
@@ -1693,7 +1693,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 
 	if (actual_nargs > nargs)
 	{
-		/* more arguments than the method specification have been passed in. 
+		/* more arguments than the method specification have been passed in.
 		 * it must be a variadic or liberal unary method. othewise, the compiler is buggy */
 		MOO_ASSERT (moo, MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) & (MOO_METHOD_PREAMBLE_FLAG_VARIADIC | MOO_METHOD_PREAMBLE_FLAG_LIBERAL));
 		actual_ntmprs = ntmprs + (actual_nargs - nargs);
@@ -1705,7 +1705,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	moo_popvolat (moo);
 	if (MOO_UNLIKELY(!ctx)) return -1;
 
-	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->sender, (moo_oop_t)moo->active_context); 
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->sender, (moo_oop_t)moo->active_context);
 	ctx->ip = MOO_SMOOI_TO_OOP(0);
 	/* ctx->sp will be set further down */
 
@@ -1722,7 +1722,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	 *   +---------------------+
 	 *   | tmp1 (arg1)         | slot[0]
 	 *   | tmp2 (arg2)         | slot[1]
-	 *   | tmp3                | slot[2] 
+	 *   | tmp3                | slot[2]
 	 *   | tmp4                | slot[3]
 	 *   | tmp5                | slot[4]
 	 *   +---------------------+
@@ -1734,10 +1734,10 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	ctx->home = moo->_nil;*/
 	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->origin, (moo_oop_t)ctx); /* point to self */
 
-	/* 
+	/*
 	 * Assume this message sending expression:
 	 *   obj1 do: #this with: #that with: #it
-	 * 
+	 *
 	 * It would be compiled to these logical byte-code sequences shown below:
 	 *   push obj1
 	 *   push #this
@@ -1746,9 +1746,9 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	 *   send #do:with:
 	 *
 	 * After three pushes, the stack looks like this.
-	 * 
+	 *
 	 *  | #it   | <- sp
-	 *  | #that |    sp - 1  
+	 *  | #that |    sp - 1
 	 *  | #this |    sp - 2
 	 *  | obj1  |    sp - nargs
 	 *
@@ -1789,7 +1789,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 
 	MOO_ASSERT (moo, moo->sp >= -1);
 
-	/* the stack pointer in a context is a stack pointer of a process 
+	/* the stack pointer in a context is a stack pointer of a process
 	 * before it is activated. this stack pointer is stored to the context
 	 * so that it is used to restore the process stack pointer upon returning
 	 * from a method context. */
@@ -1809,13 +1809,13 @@ static MOO_INLINE moo_oop_method_t find_method_in_class (moo_t* moo, moo_oop_cla
 	mthdic = _class->mthdic[mth_type];
 
 	/* if a kernel class is not defined in the bootstrapping code,
-	 * the method dictionary is still nil. you must define all the initial 
+	 * the method dictionary is still nil. you must define all the initial
 	 * kernel classes properly before you can use this function */
-	MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil); 
+	MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil);
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, mthdic) == moo->_method_dictionary);
 
 	ass = (moo_oop_association_t)moo_lookupdic_noseterr(moo, mthdic, name);
-	if (ass) 
+	if (ass)
 	{
 		/* found the method */
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, ass->value) == moo->_method);
@@ -1876,7 +1876,7 @@ moo_oop_method_t moo_findmethod_noseterr (moo_t* moo, moo_oop_t receiver, moo_oo
 	if (_class == moo->_class)
 	{
 		/* receiver is a class object (an instance of Class) */
-		c = (moo_oop_class_t)receiver; 
+		c = (moo_oop_class_t)receiver;
 		mth_type = MOO_METHOD_CLASS;
 	}
 	else
@@ -1887,7 +1887,7 @@ moo_oop_method_t moo_findmethod_noseterr (moo_t* moo, moo_oop_t receiver, moo_oo
 	}
 	MOO_ASSERT (moo, (moo_oop_t)c != moo->_nil);
 
-	if (in_super) 
+	if (in_super)
 	{
 		MOO_ASSERT (moo, moo->active_method != MOO_NULL);
 		MOO_ASSERT (moo, moo->active_method->owner != MOO_NULL);
@@ -1910,7 +1910,7 @@ moo_oop_method_t moo_findmethod_noseterr (moo_t* moo, moo_oop_t receiver, moo_oo
 	/*mcidx = ((moo_oow_t)c + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; */
 	mcidx = ((moo_oow_t)_class ^ (moo_oow_t)selector) & (MOO_METHOD_CACHE_SIZE - 1);
 	mcitm = &moo->method_cache[mth_type][mcidx];
-	
+
 	if (mcitm->receiver_class == c && mcitm->selector == selector /*&& mcitm->method_type == mth_type*/)
 	{
 		/* cache hit */
@@ -1922,7 +1922,7 @@ moo_oop_method_t moo_findmethod_noseterr (moo_t* moo, moo_oop_t receiver, moo_oo
 
 	/* [IMPORT] the method lookup logic should be the same as ciim_on_each_method() in comp.c */
 	mth = find_method_in_class_chain(moo, c, mth_type, &message);
-	if (mth) 
+	if (mth)
 	{
 	#if defined(MOO_PROFILE_VM)
 		moo->stat.method_cache_misses++;
@@ -1939,7 +1939,7 @@ not_found:
 	{
 		/* the object is an instance of Class. find the method
 		 * in an instance method dictionary of Class also */
-		
+
 		/*mcidx = MOO_HASH_INIT;
 		mcidx = MOO_HASH_VALUE(mcidx, (moo_oow_t)_class);
 		mcidx = MOO_HASH_VALUE(mcidx, (moo_oow_t)selector);
@@ -1952,13 +1952,13 @@ not_found:
 		{
 			/* cache  hit */
 		#if defined(MOO_PROFILE_VM)
-			moo->stat.method_cache_hits++; 
+			moo->stat.method_cache_hits++;
 		#endif
 			return mcitm->method;
 		}
-		
+
 		mth = find_method_in_class(moo, _class, MOO_METHOD_INSTANCE, &message);
-		if (mth) 
+		if (mth)
 		{
 		#if defined(MOO_PROFILE_VM)
 			moo->stat.method_cache_misses++;
@@ -2017,7 +2017,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 
 #if defined(INVOKE_DIRECTLY)
 	ass = moo_lookupsysdic(moo, objname);
-	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_class) 
+	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_class)
 	{
 		MOO_LOG2 (moo, MOO_LOG_DEBUG, "Cannot find a class '%.*js'", objname->len, objname->ptr);
 		return -1;
@@ -2033,7 +2033,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 	}
 
 	mth = moo_findmethod(moo, moo, ass->value, sym_startup, 0);
-	if (!mth) 
+	if (!mth)
 	{
 		MOO_LOG4 (moo, MOO_LOG_DEBUG, "Cannot find a startup method %.*js>>%.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
 		return -1;
@@ -2041,7 +2041,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 
 	if (MOO_OOP_TO_SMOOI(mth->tmpr_nargs) > 0)
 	{
-		/* this method expects more than 0 arguments. 
+		/* this method expects more than 0 arguments.
 		 * i can't use it as a start-up method.
 TODO: overcome this problem - accept parameters....
 		 */
@@ -2066,7 +2066,7 @@ TODO: overcome this problem - accept parameters....
 	}
 
 	mth = moo_findmethod(moo, (moo_oop_t)moo->_system, (moo_oop_char_t)sym_startup, 0);
-	if (!mth) 
+	if (!mth)
 	{
 		MOO_LOG0 (moo, MOO_LOG_DEBUG, "Cannot find the startup method in the system class");
 		goto oops;
@@ -2114,7 +2114,7 @@ TODO: overcome this problem - accept parameters....
 
 	/* [NOTE]
 	 *  the receiver field and the sender field of ctx are nils.
-	 *  especially, the fact that the sender field is nil is used by 
+	 *  especially, the fact that the sender field is nil is used by
 	 *  the main execution loop for breaking out of the loop */
 
 	MOO_ASSERT (moo, moo->active_context == MOO_NULL);
@@ -2131,7 +2131,7 @@ TODO: overcome this problem - accept parameters....
 	 * let's forcefully set active_context to ctx directly. */
 	moo->active_context = ctx;
 
-	proc = start_initial_process(moo, ctx); 
+	proc = start_initial_process(moo, ctx);
 	moo_popvolats (moo, tmp_count); tmp_count = 0;
 	if (MOO_UNLIKELY(!proc)) goto oops;
 
@@ -2194,7 +2194,7 @@ static void log_char_object (moo_t* moo, moo_bitmask_t mask, moo_oop_char_t msg)
 start_over:
 	while (rem > 0)
 	{
-		if (*ptr == '\0') 
+		if (*ptr == '\0')
 		{
 			n = moo_logbfmt (moo, mask, "%jc", *ptr);
 			MOO_ASSERT (moo, n == 1);
@@ -2205,9 +2205,9 @@ start_over:
 
 		n = moo_logbfmt (moo, mask, "%.*js", rem, ptr);
 		if (n <= -1) break;
-		if (n == 0) 
+		if (n == 0)
 		{
-			/* to skip the unprinted character. 
+			/* to skip the unprinted character.
 			 * actually, this check is not needed because of '\0' skipped
 			 * at the beginning  of the loop */
 			n = moo_logbfmt (moo, mask, "%jc", *ptr);
@@ -2315,7 +2315,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		}
 	}
 
-	/* moo_hashxxx() functions should limit the return value to fall 
+	/* moo_hashxxx() functions should limit the return value to fall
 	 * in the range between 0 and MOO_SMOOI_MAX inclusive */
 	MOO_ASSERT (moo, hv >= 0 && hv <= MOO_SMOOI_MAX);
 
@@ -2404,7 +2404,7 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 	preamble = MOO_OOP_TO_SMOOI(((moo_oop_method_t)rcv->method_or_nargs)->preamble);
 	if (MOO_METHOD_GET_PREAMBLE_CODE(preamble) == MOO_METHOD_PREAMBLE_EXCEPTION)
 	{
-		/* <exception> context 
+		/* <exception> context
 		 * on: ... do: ...*/
 		moo_oow_t size, i;
 
@@ -2413,9 +2413,9 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 		{
 			/* [NOTE] the following loop scans all parameters to the on:do: method.
 			 *       if the on:do: method contains local temporary variables,
-			 *       you must change this function to skip scanning local variables. 
+			 *       you must change this function to skip scanning local variables.
 			 *       the current on:do: method has 1 local variable declared.
-			 *       as local variables are placed after method arguments and 
+			 *       as local variables are placed after method arguments and
 			 *       the loop increments 'i' by 2, the last element is naturally
 			 *       get excluded from inspection.
 			 */
@@ -2514,7 +2514,7 @@ static moo_pfrc_t pf_method_get_ip_source_line (moo_t* moo, moo_mod_t* mod, moo_
 
 		ipv = MOO_OOP_TO_SMOOI(ip);
 		code_loc_ptr = (moo_oow_t*)((moo_uint8_t*)(di + 1) + di->code_loc_start);
-		if (ipv < di->code_loc_len && code_loc_ptr[ipv] <= MOO_SMOOI_MAX) 
+		if (ipv < di->code_loc_len && code_loc_ptr[ipv] <= MOO_SMOOI_MAX)
 		{
 			retv = moo_oowtoint(moo, code_loc_ptr[ipv]);
 			if (MOO_UNLIKELY(!retv)) return MOO_PF_FAILURE;
@@ -2589,7 +2589,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_block_t rcv_block, moo_ooi_
 	/* | sum |
 	 * sum := [ :n | (n < 2) ifTrue: [1] ifFalse: [ n + (sum value: (n - 1))] ].
 	 * (sum value: 10).
-	 * 
+	 *
 	 * For the code above, sum is a block context and it is sent value: inside
 	 * itself. Let me simply clone a block context to allow reentrancy like this
 	 * while the block context is active
@@ -2628,7 +2628,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_block_t rcv_block, moo_ooi_
 
 	/* create a new block context based on the receiver block(rcv_block) */
 	moo_pushvolat (moo, (moo_oop_t*)&rcv_block);
-	blkctx = (moo_oop_context_t)moo_instantiate(moo, moo->_block_context, MOO_NULL, local_ntmprs); 
+	blkctx = (moo_oop_context_t)moo_instantiate(moo, moo->_block_context, MOO_NULL, local_ntmprs);
 	moo_popvolat (moo);
 	if (MOO_UNLIKELY(!blkctx)) return MOO_PF_FAILURE;
 
@@ -2648,7 +2648,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_block_t rcv_block, moo_ooi_
 		MOO_ASSERT (moo, nargs == 1);
 		xarg = (moo_oop_oop_t)MOO_STACK_GETTOP(moo);
 		MOO_ASSERT (moo, MOO_OBJ_IS_OOP_POINTER(xarg));
-		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(xarg) == num_first_arg_elems); 
+		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(xarg) == num_first_arg_elems);
 		for (i = 0; i < num_first_arg_elems; i++)
 		{
 			MOO_STORE_OOP (moo, &blkctx->stack[i], MOO_OBJ_GET_OOP_VAL(xarg, i));
@@ -2713,7 +2713,7 @@ static MOO_INLINE moo_pfrc_t __block_new_process (moo_t* moo, moo_mod_t* mod, mo
 		xarg = MOO_STACK_GETARG(moo, nargs, 0);
 		if (!MOO_OBJ_IS_OOP_POINTER(xarg))
 		{
-			/* the only optional argument must be an OOP-indexable 
+			/* the only optional argument must be an OOP-indexable
 			 * object like an array */
 			moo_seterrnum (moo, MOO_EINVAL);
 			return MOO_PF_FAILURE;
@@ -2744,7 +2744,7 @@ static MOO_INLINE moo_pfrc_t __block_new_process (moo_t* moo, moo_mod_t* mod, mo
 	proc = make_process(moo, blkctx, proc_flags);
 	if (MOO_UNLIKELY(!proc)) return MOO_PF_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
 
-	/* __block_value() has popped all arguments and the receiver. 
+	/* __block_value() has popped all arguments and the receiver.
 	 * PUSH the return value instead of changing the stack top */
 	MOO_STACK_PUSH (moo, (moo_oop_t)proc);
 	return MOO_PF_SUCCESS;
@@ -2868,11 +2868,11 @@ static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nar
 	moo_ntime_t now, ft;
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	if (nargs <= 0)
 	{
-		/* signal_semaphore() may change the active process though the 
+		/* signal_semaphore() may change the active process though the
 		 * implementation as of this writing makes runnable the process waiting
 		 * on the signal to be processed. it is safer to set the return value
 		 * before calling signal_sempahore() */
@@ -2938,11 +2938,11 @@ static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nar
 	 * that can fit into a SmallInteger, even after some additions. */
 	vm_gettime (moo, &now);
 	MOO_ADD_NTIME_SNS (&ft, &now, MOO_OOP_TO_SMOOI(sec), MOO_OOP_TO_SMOOI(nsec));
-	if (ft.sec < 0 || ft.sec > MOO_SMOOI_MAX) 
+	if (ft.sec < 0 || ft.sec > MOO_SMOOI_MAX)
 	{
 		/* soft error - cannot represent the expiry time in a small integer. */
-		MOO_LOG3 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
-			"Error(%hs) - time (%ld) out of range(0 - %zd) when adding a timed semaphore\n", 
+		MOO_LOG3 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR,
+			"Error(%hs) - time (%ld) out of range(0 - %zd) when adding a timed semaphore\n",
 			__PRIMITIVE_NAME__, (unsigned long int)ft.sec, (moo_ooi_t)MOO_SMOOI_MAX);
 
 		moo_seterrnum (moo, MOO_ERANGE);
@@ -2964,7 +2964,7 @@ static moo_pfrc_t pf_semaphore_signal_on_gcfin (moo_t* moo, moo_mod_t* mod, moo_
 	moo_oop_semaphore_t sem;
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 /* TODO: should i prevent overwriting? */
 	moo->sem_gcfin = sem;
@@ -2979,7 +2979,7 @@ static moo_pfrc_t __semaphore_signal_on_io (moo_t* moo, moo_ooi_t nargs, moo_sem
 	moo_oop_t fd;
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	fd = MOO_STACK_GETARG(moo, nargs, 0);
 
@@ -3010,7 +3010,7 @@ static moo_pfrc_t __semaphore_signal_on_io (moo_t* moo, moo_ooi_t nargs, moo_sem
 		return MOO_PF_FAILURE;
 	}
 
-	if (add_sem_to_sem_io_tuple(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1) 
+	if (add_sem_to_sem_io_tuple(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1)
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 		moo_seterrbfmt (moo, moo->errnum, "unable to add the handle %zd to the multiplexer for %hs - %js", MOO_OOP_TO_SMOOI(fd), io_type_str[io_type], oldmsg);
@@ -3036,14 +3036,14 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 	moo_oop_t rcv;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore));
 
 	if (!can_await_semaphore(moo, (moo_oop_semaphore_t)rcv))
 	{
 		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to wait on a semaphore that belongs to a semaphore group");
 		return MOO_PF_FAILURE;
 	}
-	
+
 	/* i must set the return value before calling await_semaphore().
 	 * await_semaphore() may switch the active process and the stack
 	 * manipulation macros target at the active process. i'm not supposed
@@ -3061,7 +3061,7 @@ static moo_pfrc_t pf_semaphore_unsignal (moo_t* moo, moo_mod_t* mod, moo_ooi_t n
 	moo_oop_semaphore_t sem;
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	if (sem == moo->sem_gcfin)
 	{
@@ -3102,7 +3102,7 @@ static moo_pfrc_t pf_semaphore_unsignal (moo_t* moo, moo_mod_t* mod, moo_ooi_t n
 		for (wp = sem->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
 		{
 			MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
-			moo->sem_io_wait_count--;	
+			moo->sem_io_wait_count--;
 		}
 	}
 	MOO_ASSERT (moo, sem->subtype == moo->_nil);
@@ -3119,7 +3119,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 	moo_oop_semaphore_t sem;
 
 	sg = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sg, moo->_semaphore_group)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sg, moo->_semaphore_group));
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
@@ -3142,7 +3142,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 		{
 			/* the semaphore being added is associated with I/O operation. */
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) && 
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) &&
 			                 MOO_OOP_TO_SMOOI(sem->u.io.index) >= 0 &&
 			                 MOO_OOP_TO_SMOOI(sem->u.io.index) < moo->sem_io_tuple_count);
 
@@ -3155,7 +3155,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 			{
 				/* the first IO semaphore is being added to the semaphore group.
 				 * but there are already processes waiting on the semaphore group.
-				 * 
+				 *
 				 * for instance,
 				 *  [Process 1]
 				 *     sg := SemaphoreGroup new.
@@ -3188,7 +3188,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to relocate a semaphore to a different group");
 		return MOO_PF_FAILURE;
 	}
-	
+
 	return MOO_PF_SUCCESS;
 }
 
@@ -3199,7 +3199,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mo
 	moo_ooi_t count;
 
 	rcv = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group));
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
@@ -3214,14 +3214,14 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mo
 			/* there is a process waiting on this semaphore group.
 			 * i don't allow a semaphore to be removed from the group.
 			 * i want to dodge potential problems arising when removal is allowed.
-			 * 
+			 *
 			 * for instance, consider this psuedo code.
 			 *   sg addSemaphore: s
 			 *   [ sg wait ] fork.
 			 *   [ sg wait ] fork.
 			 *   [ sg wait ] fork.
 			 *   sg removeSemaphore: s.
-			 * 
+			 *
 			 */
 			moo_seterrbfmt (moo, MOO_EPERM, "not allowed to remove a semaphore from a group being waited on");
 			return MOO_PF_FAILURE;
@@ -3233,7 +3233,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mo
 		sem->grm.prev = (moo_oop_semaphore_t)moo->_nil;
 		sem->grm.next = (moo_oop_semaphore_t)moo->_nil;
 		sem->group = (moo_oop_semaphore_group_t)moo->_nil;
-		
+
 		count = MOO_OOP_TO_SMOOI(rcv->sem_count);
 		MOO_ASSERT (moo, count > 0);
 		count--;
@@ -3277,14 +3277,14 @@ static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_mod_t* mod, moo_ooi_t
 	moo_oop_t rcv, sem;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore_group)); 
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore_group));
 
 	/* i must set the return value before calling await_semaphore_group().
 	 * MOO_STACK_SETRETTORCV() manipulates the stack of the currently active
 	 * process(moo->processor->active). moo->processor->active may become
-	 * moo->nil_process if the current active process must get suspended. 
+	 * moo->nil_process if the current active process must get suspended.
 	 * it is safer to set the return value of the calling method here.
-	 * but the arguments and the receiver information will be lost from 
+	 * but the arguments and the receiver information will be lost from
 	 * the stack from this moment on. */
 	MOO_STACK_SETRETTORCV (moo, nargs);
 
@@ -3323,7 +3323,7 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod,
  *       test complex chains of method contexts and block contexts */
 	if (MOO_CLASSOF(moo, ctx) == moo->_method_context)
 	{
-		/* when returning to a method context, load the sp register with 
+		/* when returning to a method context, load the sp register with
 		 * the value stored in the context */
 		moo->sp = MOO_OOP_TO_SMOOI(((moo_oop_context_t)ctx)->sp);
 	}
@@ -3955,7 +3955,7 @@ static moo_pfrc_t pf_character_eq (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
-	
+
 	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
 
 	/*res = (MOO_OOP_IS_CHAR(arg) && MOO_OOP_TO_CHAR(rcv) == MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;*/
@@ -3989,12 +3989,12 @@ static moo_pfrc_t pf_character_lt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
-	
+
 	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
 
 	res = (MOO_OOP_TO_CHAR(rcv) < MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;
-	
+
 	MOO_STACK_SETRET (moo, nargs, res);
 	return MOO_PF_SUCCESS;
 }
@@ -4028,7 +4028,7 @@ static moo_pfrc_t pf_character_le (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
-	
+
 	res = (MOO_OOP_TO_CHAR(rcv) <= MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -4043,7 +4043,7 @@ static moo_pfrc_t pf_character_ge (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
-	
+
 	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
 
@@ -4165,7 +4165,7 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 	ec = MOO_OOP_TO_ERROR(rcv);
 	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ec));
 
-/* TODO: error string will be mostly the same.. do i really have to call makestring every time? 
+/* TODO: error string will be mostly the same.. do i really have to call makestring every time?
  *       cache the error string object created? */
 	s = moo_errnum_to_errstr(ec);
 	ss = moo_makestring (moo, s, moo_count_oocstr(s));
@@ -4259,14 +4259,14 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 /* TODO: enhance this primitive */
 	level = MOO_STACK_GETARG(moo, nargs, 0);
-	if (!MOO_OOP_IS_SMOOI(level)) mask = MOO_LOG_APP | MOO_LOG_INFO; 
+	if (!MOO_OOP_IS_SMOOI(level)) mask = MOO_LOG_APP | MOO_LOG_INFO;
 	else mask = MOO_LOG_APP | MOO_OOP_TO_SMOOI(level);
 
 	for (k = 1; k < nargs; k++)
 	{
 		msg = MOO_STACK_GETARG(moo, nargs, k);
 
-		if (msg == moo->_nil || msg == moo->_true || msg == moo->_false) 
+		if (msg == moo->_nil || msg == moo->_true || msg == moo->_false)
 		{
 			goto dump_object;
 		}
@@ -4518,10 +4518,10 @@ moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, mo
 	{
 		mid = base + (lim >> 1);
 		/* moo_comp_oochars_bcstr() is not aware of multibyte encoding.
-		 * so the names above should be composed of the single byte 
+		 * so the names above should be composed of the single byte
 		 * characters only */
 		n = moo_comp_oochars_bcstr(ptr, len, pftab[mid].name);
-		if (n == 0) 
+		if (n == 0)
 		{
 			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(mid)); /* this must never be so big */
 			*pfnum = mid;
@@ -4542,7 +4542,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 #if defined(MOO_DEBUG_VM_EXEC)
 	/* set it to a fake value */
-	moo->last_inst_pointer = 0; 
+	moo->last_inst_pointer = 0;
 #endif
 
 	preamble = MOO_OOP_TO_SMOOI(method->preamble);
@@ -4562,7 +4562,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		{
 /* TODO: better to throw a moo exception so that the caller can catch it??? */
 		arg_count_mismatch:
-			MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
+			MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_FATAL,
 				"Fatal error - Argument count mismatch for a non-variadic method [%O] - %zd expected, %zu given\n",
 				method->name, MOO_OOP_TO_SMOOI(method->tmpr_nargs), nargs);
 			moo_seterrnum (moo, MOO_EINVAL);
@@ -4579,7 +4579,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			break;
 
 		/* [NOTE] this is useless becuase  it returns a caller's context
-		 *        as the callee's context has not been created yet. 
+		 *        as the callee's context has not been created yet.
 		case MOO_METHOD_PREAMBLE_RETURN_CONTEXT:
 			LOG_INST0 (moo, "preamble_return_context");
 			MOO_STACK_POPS (moo, nargs);
@@ -4623,7 +4623,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_STACK_SETTOP (moo, moo->_false);
 			break;
 
-		case MOO_METHOD_PREAMBLE_RETURN_INDEX: 
+		case MOO_METHOD_PREAMBLE_RETURN_INDEX:
 			/* preamble_index field is used to store a positive integer */
 			LOG_INST1 (moo, "preamble_return_index %zd", MOO_METHOD_GET_PREAMBLE_INDEX(preamble));
 			MOO_STACK_POPS (moo, nargs);
@@ -4654,13 +4654,13 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			if (rcv == (moo_oop_oop_t)moo->active_context)
 			{
 				/* the active context object doesn't keep
-				 * the most up-to-date information in the 
+				 * the most up-to-date information in the
 				 * 'ip' and 'sp' field. commit these fields
-				 * when the object to be accessed is 
+				 * when the object to be accessed is
 				 * the active context. this manual commit
 				 * is required because this premable handling
 				 * skips activation of a new method context
-				 * that would commit these fields. 
+				 * that would commit these fields.
 				 */
 				STORE_ACTIVE_IP (moo);
 				STORE_ACTIVE_SP (moo);
@@ -4697,7 +4697,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				moo_pushvolat (moo, (moo_oop_t*)&method);
 				n = pftab[pfnum].pfbase.handler(moo, MOO_NULL, nargs); /* builtin numbered primitive. the second parameter is MOO_NULL */
 				moo_popvolat (moo);
-				if (n <= MOO_PF_HARD_FAILURE) 
+				if (n <= MOO_PF_HARD_FAILURE)
 				{
 					MOO_LOG3 (moo, MOO_LOG_DEBUG,
 						"Hard failure indicated by primitive function %p - %hs - return code %d\n",
@@ -4742,11 +4742,11 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,pfname) == moo->_symbol);
 
 			/* merge two SmallIntegers to get a full pointer from the cached data */
-			/*w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) | 
+			/*w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) |
 			    (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[1]);
 			pfbase = (moo_pfbase_t*)w;*/
 			pfbase = MOO_OOP_TO_SMPTR(method->preamble_data[1]);
-			if (pfbase) 
+			if (pfbase)
 			{
 				mod = MOO_OOP_TO_SMPTR(method->preamble_data[0]);
 				goto exec_handler; /* skip moo_querymodpf() */
@@ -4790,9 +4790,9 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				n = pfbase->handler(moo, mod, nargs);
 
 				moo_popvolat (moo);
-				if (n <= MOO_PF_HARD_FAILURE) 
+				if (n <= MOO_PF_HARD_FAILURE)
 				{
-					MOO_LOG4 (moo, MOO_LOG_DEBUG, 
+					MOO_LOG4 (moo, MOO_LOG_DEBUG,
 						"Hard failure indicated by primitive function %p - %.*js - return code %d\n",
 						pfbase->handler, MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname), n);
 					return -1; /* hard primitive failure */
@@ -4807,7 +4807,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			else
 			{
 				/* no handler found */
-				MOO_LOG2 (moo, MOO_LOG_DEBUG, 
+				MOO_LOG2 (moo, MOO_LOG_DEBUG,
 					"Soft failure for non-existent primitive function - %.*js\n",
 					MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname));
 			}
@@ -4858,7 +4858,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				}
 
 				MOO_LOG3 (moo, MOO_LOG_DEBUG, "Sending primitiveFailed - %O>>%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
-				/* 
+				/*
 				 *  | arg1     | <---- stack_base + 3
 				 *  | arg0     | <---- stack_base + 2
 				 *  | receiver | <---- stack_base + 1
@@ -4910,15 +4910,15 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 #endif
 
 	method = moo_findmethod_noseterr(moo, receiver, selector, to_super);
-	if (!method) 
+	if (!method)
 	{
 		method = moo_findmethod_noseterr(moo, receiver, moo->does_not_understand_sym, 0);
 		if (!method)
 		{
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
 			 * this check should indicate a very serious internal problem */
-			MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
-				"Fatal error - unable to find a fallback method [%O>>%.*js] for receiver [%O]\n", 
+			MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL,
+				"Fatal error - unable to find a fallback method [%O>>%.*js] for receiver [%O]\n",
 				MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_SIZE(moo->does_not_understand_sym), MOO_OBJ_GET_CHAR_SLOT(moo->does_not_understand_sym), receiver);
 
 			moo_seterrbfmt (moo, MOO_EMSGSND, "unable to find a fallback method - %O>>%.*js",
@@ -4927,7 +4927,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 		}
 		else
 		{
-			/* manipulate the stack as if 'receier doesNotUnderstand: selector' 
+			/* manipulate the stack as if 'receier doesNotUnderstand: selector'
 			 * has been called. */
 /* TODO: if i manipulate the stack this way here, the stack trace for the last call is kind of lost.
  *       how can i preserve it gracefully? */
@@ -4975,15 +4975,15 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				 *        wake_process() below. */
 				delete_from_sem_heap (moo, 0); /* moo->sem_heap_count is decremented in delete_from_sem_heap() */
 
-				/* if no process is waiting on the semaphore, 
+				/* if no process is waiting on the semaphore,
 				 * signal_semaphore() returns moo->_nil. */
 
 				if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
 				{
-					/* this is the only runnable process. 
+					/* this is the only runnable process.
 					 * switch the process to the running state.
 					 * it uses wake_process() instead of
-					 * switch_to_process() as there is no running 
+					 * switch_to_process() as there is no running
 					 * process at this moment */
 
 				#if defined(MOO_DEBUG_VM_PROCESSOR) && (MOO_DEBUG_VM_PROCESSOR >= 2)
@@ -5010,11 +5010,11 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					/* no running process but io semaphore being waited on */
 					vm_muxwait (moo, &ft);
 
-					/* exit early if a process has been woken up. 
+					/* exit early if a process has been woken up.
 					 * the break in the else part further down will get hit
 					 * eventually even if the following line doesn't exist.
 					 * having the following line causes to skip firing the
-					 * timed semaphore that would expire between now and the 
+					 * timed semaphore that would expire between now and the
 					 * moment the next inspection occurs. */
 					if (moo->processor->active != moo->nil_process) goto switch_to_next;
 				}
@@ -5034,7 +5034,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				}
 				vm_gettime (moo, &now);
 			}
-			else 
+			else
 			{
 				/* there is a running process. go on */
 				break;
@@ -5043,7 +5043,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		while (moo->sem_heap_count > 0 && !moo->abort_req);
 	}
 
-	if (moo->sem_io_wait_count > 0) 
+	if (moo->sem_io_wait_count > 0)
 	{
 		if (moo->processor->active == moo->nil_process)
 		{
@@ -5057,7 +5057,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			if (moo->processor->suspended.count == MOO_SMOOI_TO_OOP(0))
 			{
 				/* no suspended process. the program is buggy or is probably being
-				 * terminated forcibly. 
+				 * terminated forcibly.
 				 * the default signal handler may lead to this situation. */
 				moo->abort_req = 1;
 			}
@@ -5079,13 +5079,13 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 
 			/* [NOTE] the check with the multiplexer may happen too frequently
 			 *       because this is called everytime process switching is requested.
-			 *       the actual callback implementation should try to avoid invoking 
+			 *       the actual callback implementation should try to avoid invoking
 			 *       actual system calls too frequently for less overhead. */
 			vm_muxwait (moo, MOO_NULL);
 		}
 	}
 
-	if ((moo_oop_t)moo->sem_gcfin != moo->_nil) 
+	if ((moo_oop_t)moo->sem_gcfin != moo->_nil)
 	{
 		moo_oop_process_t proc;
 
@@ -5106,8 +5106,8 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		}
 		else
 		{
-			/* the gcfin semaphore signalling is not requested and there are 
-			 * no runnable processes nor no waiting semaphores. if there is 
+			/* the gcfin semaphore signalling is not requested and there are
+			 * no runnable processes nor no waiting semaphores. if there is
 			 * process waiting on the gcfin semaphore, i will just schedule
 			 * it to run by calling signal_semaphore() on moo->sem_gcfin.
 			 */
@@ -5117,14 +5117,14 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				/* there is no active process. in most cases, the only process left
 				 * should be the gc finalizer process started in the System>>startup.
 				 * if there are other suspended processes at this point, the processes
-				 * are not likely to run again. 
-				 * 
-				 * imagine the following single line program that creates a process 
+				 * are not likely to run again.
+				 *
+				 * imagine the following single line program that creates a process
 				 * but never start it.
 				 *
 				 *    method(#class) main { | p |  p := [] newProcess. }
 				 *
-				 * the gc finalizer process and the process assigned to p exist. 
+				 * the gc finalizer process and the process assigned to p exist.
 				 * when the code reaches here, the 'p' process still is alive
 				 * despite no active process nor no process waiting on timers
 				 * and semaphores. so when the entire program terminates, there
@@ -5132,14 +5132,14 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				 * to schedule.
 				 */
 
-				MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
+				MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_DEBUG,
 					"Signaled GCFIN semaphore without gcfin signal request - total %zd runnable/running %zd suspended %zd - sem_io_wait_count %zu\n",
 					MOO_OOP_TO_SMOOI(moo->processor->total_count),
 					MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
 					MOO_OOP_TO_SMOOI(moo->processor->suspended.count),
 					moo->sem_io_wait_count);
 				proc = signal_semaphore(moo, moo->sem_gcfin);
-				if ((moo_oop_t)proc != moo->_nil) 
+				if ((moo_oop_t)proc != moo->_nil)
 				{
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 					MOO_ASSERT (moo, proc == moo->processor->runnable.first);
@@ -5167,7 +5167,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 	}*/
 #endif
 
-	if (moo->processor->active == moo->nil_process) 
+	if (moo->processor->active == moo->nil_process)
 	{
 		/* no more waiting semaphore and no more process */
 		MOO_ASSERT (moo, moo->processor->runnable.count = MOO_SMOOI_TO_OOP(0));
@@ -5176,7 +5176,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		{
 			/* there exist suspended processes while no processes are runnable.
 			 * most likely, the running program contains process/semaphore related bugs */
-			MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_WARN, 
+			MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_WARN,
 				"%zd suspended process(es) found - check your program\n",
 				MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
 		}
@@ -5190,7 +5190,7 @@ switch_to_next:
 	if (moo->switch_proc)
 	{
 #endif
-		if (!moo->proc_switched) 
+		if (!moo->proc_switched)
 		{
 			switch_to_next_runnable_process (moo);
 			moo->proc_switched = 0;
@@ -5212,7 +5212,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 	 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
 	 * if a context returns into this context again,
 	 * it'll be able to return as well again.
-	 * 
+	 *
 	 * Consider a program like this:
 	 *
 	 * #class MyObject(Object)
@@ -5224,19 +5224,19 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 	 *     t1 dump.
 	 *     t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
 	 *     (t1 < 100) ifFalse: [ ^self ].
-	 *     t1 := t1 + 1. 
+	 *     t1 := t1 + 1.
 	 *     ^self xxxx.
 	 *   }
 	 *   #method(#class) main
 	 *   {
 	 *     t1 := 1.
 	 *     self xxxx.
-	 *     t2 := t2 value.  
+	 *     t2 := t2 value.
 	 *     t2 dump.
 	 *   }
 	 * }
 	 *
-	 * the 'xxxx' method invoked by 'self xxxx' has 
+	 * the 'xxxx' method invoked by 'self xxxx' has
 	 * returned even before 't2 value' is executed.
 	 * the '^' operator makes the active context to
 	 * switch to its 'origin->sender' which is the
@@ -5244,16 +5244,16 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 	 * instruction pointer at the 'return' instruction
 	 * helps execute another return when the switching
 	 * occurs.
-	 * 
+	 *
 	 * TODO: verify if this really works
 	 *
 	 */
-	moo->ip--; 
+	moo->ip--;
 #else
 	if (MOO_UNLIKELY(moo->active_context->origin == moo->processor->active->initial_context->origin))
 	{
 		/* method return from a processified block
-		 * 
+		 *
 		 * #method(#class) main
 		 * {
 		 *    [^100] newProcess resume.
@@ -5262,11 +5262,11 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 		 *    '1111' dump.
 		 *    ^300.
 		 * }
-		 * 
+		 *
 		 * ^100 doesn't terminate a main process as the block
 		 * has been processified. on the other hand, ^100
 		 * in the following program causes main to exit.
-		 * 
+		 *
 		 * #method(#class) main
 		 * {
 		 *    [^100] value.
@@ -5286,7 +5286,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 
 		terminate_process (moo, moo->processor->active);
 	}
-	else 
+	else
 	{
 		int unwind_protect;
 		moo_oop_context_t unwind_start;
@@ -5351,7 +5351,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 			}
 		}
 
-		/* the origin must always be a method context for both an active block context 
+		/* the origin must always be a method context for both an active block context
 		 * or an active method context */
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
 
@@ -5397,7 +5397,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 				 *   processified block check has been done against the context before switching */
 
 				/* the stack contains the final return value so the stack pointer must be 0. */
-				MOO_ASSERT (moo, moo->sp == 0); 
+				MOO_ASSERT (moo, moo->sp == 0);
 
 				if (moo->option.trait & MOO_TRAIT_AWAIT_PROCS)
 				{
@@ -5427,7 +5427,7 @@ static MOO_INLINE void do_return_from_block (moo_t* moo)
 	if (moo->active_context == moo->processor->active->initial_context)
 	{
 		/* the active context to return from is an initial context of
-		 * the active process. this process must have been created 
+		 * the active process. this process must have been created
 		 * over a block using the newProcess method. let's terminate
 		 * the process. */
 
@@ -5436,10 +5436,10 @@ static MOO_INLINE void do_return_from_block (moo_t* moo)
 	}
 	else
 	{
-		/* it is a normal block return as the active block context 
+		/* it is a normal block return as the active block context
 		 * is not the initial context of a process */
 
-		/* the process stack is shared. the return value 
+		/* the process stack is shared. the return value
 		 * doesn't need to get moved. */
 		SWITCH_ACTIVE_CONTEXT (moo, (moo_oop_context_t)moo->active_context->sender);
 	}
@@ -5463,13 +5463,13 @@ static MOO_INLINE int make_block (moo_t* moo)
 	/* the block context object created here is used as a base
 	 * object for block context activation. pf_block_value()
 	 * clones a block context and activates the cloned context.
-	 * this base block context is created with no stack for 
+	 * this base block context is created with no stack for
 	 * this reason */
-	block = (moo_oop_block_t)moo_instantiate(moo, moo->_block, MOO_NULL, 0); 
+	block = (moo_oop_block_t)moo_instantiate(moo, moo->_block, MOO_NULL, 0);
 	if (MOO_UNLIKELY(!block)) return -1;
 
-	/* the long forward jump instruction has the format of 
-	 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
+	/* the long forward jump instruction has the format of
+	 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK
 	 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
 	 * the instruction after the jump. */
 	block->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
@@ -5480,7 +5480,7 @@ static MOO_INLINE int make_block (moo_t* moo)
 	block->ntmprs = MOO_SMOOI_TO_OOP(b2);
 
 	/* set the home context where it's defined */
-	MOO_STORE_OOP (moo, (moo_oop_t*)&block->home, (moo_oop_t)moo->active_context); 
+	MOO_STORE_OOP (moo, (moo_oop_t*)&block->home, (moo_oop_t)moo->active_context);
 
 	/* push the new block context to the stack of the active context */
 	MOO_STACK_PUSH (moo, (moo_oop_t)block);
@@ -5494,13 +5494,13 @@ static int __execute (moo_t* moo)
 	moo_oop_t return_value;
 
 #if defined(HAVE_LABELS_AS_VALUES)
-	static void* inst_table[256] = 
+	static void* inst_table[256] =
 	{
 		/* import bytecode label addresses */
 		#include "bct-lab.h"
 	};
 
-#	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch: 
+#	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch:
 #	define END_DISPATCH_LOOP() __end_inst_dispatch:
 #	define EXIT_DISPATCH_LOOP() goto __end_inst_dispatch
 #	define NEXT_INST() goto __begin_inst_dispatch
@@ -5512,7 +5512,7 @@ static int __execute (moo_t* moo)
 #	define ON_UNKNOWN_INST() case_ ## DEFAULT:
 
 #else
-#	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch: 
+#	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch:
 #	define END_DISPATCH_LOOP() __end_inst_dispatch:
 #	define EXIT_DISPATCH_LOOP() goto __end_inst_dispatch
 #	define NEXT_INST() goto __begin_inst_dispatch
@@ -5527,7 +5527,7 @@ static int __execute (moo_t* moo)
 
 	MOO_ASSERT (moo, moo->active_context != MOO_NULL);
 
-/* TODO: initialize semaphore stuffs 
+/* TODO: initialize semaphore stuffs
  *   sem_heap
  *   sem_io.
  *   sem_list.
@@ -5649,8 +5649,8 @@ static int __execute (moo_t* moo)
 		handle_tempvar:
 
 		#if defined(MOO_USE_CTXTEMPVAR)
-			/* when CTXTEMPVAR inststructions are used, the above 
-			 * instructions are used only for temporary access 
+			/* when CTXTEMPVAR inststructions are used, the above
+			 * instructions are used only for temporary access
 			 * outside a block. i can assume that the temporary
 			 * variable index is pointing to one of temporaries
 			 * in the relevant method context */
@@ -5658,7 +5658,7 @@ static int __execute (moo_t* moo)
 			bx = b1;
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, ctx) == moo->_method_context);
 		#else
-			/* otherwise, the index may point to a temporaries declared inside a block */ 
+			/* otherwise, the index may point to a temporaries declared inside a block */
 
 			if (moo->active_context->home != moo->_nil)
 			{
@@ -5673,7 +5673,7 @@ static int __execute (moo_t* moo)
 
 				do
 				{
-					/* ntmprs contains the number of defined temporaries 
+					/* ntmprs contains the number of defined temporaries
 					 * including those defined in the home context */
 					home_ntmprs = MOO_OOP_TO_SMOOI(((moo_oop_context_t)home)->ntmprs);
 					if (b1 >= home_ntmprs) break;
@@ -5688,7 +5688,7 @@ static int __execute (moo_t* moo)
 				}
 				while (1);
 
-				/* bx is the actual index within the actual context 
+				/* bx is the actual index within the actual context
 				 * containing the temporary */
 				bx = b1 - home_ntmprs;
 			}
@@ -6050,7 +6050,7 @@ static int __execute (moo_t* moo)
 		/* -------------------------------------------------------- */
 		ON_INST(BCODE_SEND_MESSAGE_X)
 		ON_INST(BCODE_SEND_MESSAGE_TO_SUPER_X)
-			/* b1 -> number of arguments 
+			/* b1 -> number of arguments
 			 * b2 -> selector index stored in the literal frame */
 			FETCH_PARAM_CODE_TO (moo, b1);
 			FETCH_PARAM_CODE_TO (moo, b2);
@@ -6169,10 +6169,10 @@ static int __execute (moo_t* moo)
 			FETCH_PARAM_CODE_TO (moo, b1);
 			LOG_INST1 (moo, "make_dictionary %zu", b1);
 
-			/* Dictionary new: b1 
+			/* Dictionary new: b1
 			 *  doing this allows users to redefine Dictionary whatever way they like.
 			 *  if i did the followings instead, the internal of Dictionary would get
-			 *  tied to the system dictionary implementation. the system dictionary 
+			 *  tied to the system dictionary implementation. the system dictionary
 			 *  implementation is flawed in that it accepts only a variable character
 			 *  object as a key. it's better to invoke 'Dictionary new: ...'.
 			t = (moo_oop_t)moo_makedic (moo, moo->_dictionary, b1 + 10);
@@ -6269,7 +6269,7 @@ static int __execute (moo_t* moo)
 
 				default:
 					/* well, allowing these into a byte array may look a bit awkward.
-					 * mostly i take the low 1 byte of the first unit of the first element 
+					 * mostly i take the low 1 byte of the first unit of the first element
 					 * and store it at the given position.
 					 * note that a byte array literal composed by the compiler itself
 					 * treat these differently. */
@@ -6428,7 +6428,7 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	MOO_ASSERT (moo, moo->initial_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_method == MOO_NULL);
-	
+
 
 #if defined(MOO_PROFILE_VM)
 	moo->stat.inst_counter = 0;
@@ -6439,7 +6439,7 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 
 	moo_clearmethodcache (moo);
 
-#if 0 
+#if 0
 	/* unless the system is buggy, moo->proc_map_used should be 0.
 	 * the standard library terminates all processes before halting.
 	 *
@@ -6449,7 +6449,7 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	if (moo->proc_map_capa > 0 && moo->proc_map_used == 0)
 	{
 		/* rechain the process map. it must be compatible with prepare_to_alloc_pid().
-		 * by placing the low indiced slot at the beginning of the free list, 
+		 * by placing the low indiced slot at the beginning of the free list,
 		 * the special processes (main_proc, gcfin_proc, ossig_proc) are allocated
 		 * with low process IDs. */
 		moo_ooi_t i, j;
@@ -6498,9 +6498,9 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
 {
 /* TODO: .... */
-	/* call 
+	/* call
 	 * 	System initializeClasses
-	 * and invoke 
+	 * and invoke
 	 *   objname mthname
 	 */
 }

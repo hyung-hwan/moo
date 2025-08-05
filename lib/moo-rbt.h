@@ -31,37 +31,37 @@
 
 /** \file
  * This file provides a red-black tree encapsulated in the #moo_rbt_t type that
- * implements a self-balancing binary search tree.Its interface is very close 
+ * implements a self-balancing binary search tree.Its interface is very close
  * to #moo_htb_t.
  *
  * This sample code adds a series of keys and values and print them
  * in descending key order.
  * \code
  * #include <moo-rbt.h>
- * 
+ *
  * static moo_rbt_walk_t walk (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void* ctx)
  * {
  *   moo_printf (MOO_T("key = %d, value = %d\n"),
  *     *(int*)MOO_RBT_KPTR(pair), *(int*)MOO_RBT_VPTR(pair));
  *   return MOO_RBT_WALK_FORWARD;
  * }
- * 
+ *
  * int main ()
  * {
  *   moo_rbt_t* s1;
  *   int i;
- * 
+ *
  *   s1 = moo_rbt_open (MOO_MMGR_GETDFL(), 0, 1, 1); // error handling skipped
  *   moo_rbt_setstyle (s1, moo_get_rbt_style(MOO_RBT_STYLE_INLINE_COPIERS));
- * 
+ *
  *   for (i = 0; i < 20; i++)
  *   {
  *     int x = i * 20;
  *     moo_rbt_insert (s1, &i, MOO_SIZEOF(i), &x, MOO_SIZEOF(x)); // eror handling skipped
  *   }
- * 
+ *
  *   moo_rbt_rwalk (s1, walk, MOO_NULL);
- * 
+ *
  *   moo_rbt_close (s1);
  *   return 0;
  * }
@@ -71,7 +71,7 @@
 typedef struct moo_rbt_t moo_rbt_t;
 typedef struct moo_rbt_pair_t moo_rbt_pair_t;
 
-/** 
+/**
  * The moo_rbt_walk_t type defines values that the callback function can
  * return to control moo_rbt_walk() and moo_rbt_rwalk().
  */
@@ -98,7 +98,7 @@ typedef enum moo_rbt_id_t moo_rbt_id_t;
  */
 typedef void* (*moo_rbt_copier_t) (
 	moo_rbt_t* rbt  /**< red-black tree */,
-	void*      dptr /**< pointer to a key or a value */, 
+	void*      dptr /**< pointer to a key or a value */,
 	moo_oow_t  dlen /**< length of a key or a value */
 );
 
@@ -119,17 +119,17 @@ typedef void (*moo_rbt_freeer_t) (
  * key is greater than the second key, -1 otherwise.
  */
 typedef int (*moo_rbt_comper_t) (
-	const moo_rbt_t* rbt,    /**< red-black tree */ 
+	const moo_rbt_t* rbt,    /**< red-black tree */
 	const void*      kptr1,  /**< key pointer */
-	moo_oow_t        klen1,  /**< key length */ 
+	moo_oow_t        klen1,  /**< key length */
 	const void*      kptr2,  /**< key pointer */
 	moo_oow_t        klen2   /**< key length */
 );
 
 /**
- * The moo_rbt_keeper_t type defines a value keeper that is called when 
+ * The moo_rbt_keeper_t type defines a value keeper that is called when
  * a value is retained in the context that it should be destroyed because
- * it is identical to a new value. Two values are identical if their 
+ * it is identical to a new value. Two values are identical if their
  * pointers and lengths are equal.
  */
 typedef void (*moo_rbt_keeper_t) (
@@ -149,12 +149,12 @@ typedef moo_rbt_walk_t (*moo_rbt_walker_t) (
 
 /**
  * The moo_rbt_cbserter_t type defines a callback function for moo_rbt_cbsert().
- * The moo_rbt_cbserter() function calls it to allocate a new pair for the 
+ * The moo_rbt_cbserter() function calls it to allocate a new pair for the
  * key pointed to by \a kptr of the length \a klen and the callback context
  * \a ctx. The second parameter \a pair is passed the pointer to the existing
  * pair for the key or #MOO_NULL in case of no existing key. The callback
  * must return a pointer to a new or a reallocated pair. When reallocating the
- * existing pair, this callback must destroy the existing pair and return the 
+ * existing pair, this callback must destroy the existing pair and return the
  * newly reallocated pair. It must return #MOO_NULL for failure.
  */
 typedef moo_rbt_pair_t* (*moo_rbt_cbserter_t) (
@@ -173,10 +173,10 @@ enum moo_rbt_pair_color_t
 typedef enum moo_rbt_pair_color_t moo_rbt_pair_color_t;
 
 /**
- * The moo_rbt_pair_t type defines red-black tree pair. A pair is composed 
- * of a key and a value. It maintains pointers to the beginning of a key and 
- * a value plus their length. The length is scaled down with the scale factor 
- * specified in an owning tree. Use macros defined in the 
+ * The moo_rbt_pair_t type defines red-black tree pair. A pair is composed
+ * of a key and a value. It maintains pointers to the beginning of a key and
+ * a value plus their length. The length is scaled down with the scale factor
+ * specified in an owning tree. Use macros defined in the
  */
 struct moo_rbt_pair_t
 {
@@ -201,8 +201,8 @@ struct moo_rbt_pair_t
 typedef struct moo_rbt_style_t moo_rbt_style_t;
 
 /**
- * The moo_rbt_style_t type defines callback function sets for key/value 
- * pair manipulation. 
+ * The moo_rbt_style_t type defines callback function sets for key/value
+ * pair manipulation.
  */
 struct moo_rbt_style_t
 {
@@ -338,10 +338,10 @@ MOO_EXPORT const moo_rbt_style_t* moo_rbt_getstyle (
 );
 
 /**
- * The moo_rbt_setstyle() function sets internal manipulation callback 
+ * The moo_rbt_setstyle() function sets internal manipulation callback
  * functions for data construction, destruction, comparison, etc.
  * The callback structure pointed to by \a style must outlive the tree
- * pointed to by \a htb as the tree doesn't copy the contents of the 
+ * pointed to by \a htb as the tree doesn't copy the contents of the
  * structure.
  */
 MOO_EXPORT void moo_rbt_setstyle (
@@ -357,10 +357,10 @@ MOO_EXPORT moo_oow_t moo_rbt_getsize (
 );
 
 /**
- * The moo_rbt_search() function searches red-black tree to find a pair with a 
+ * The moo_rbt_search() function searches red-black tree to find a pair with a
  * matching key. It returns the pointer to the pair found. If it fails
  * to find one, it returns MOO_NULL.
- * \return pointer to the pair with a maching key, 
+ * \return pointer to the pair with a maching key,
  *         or MOO_NULL if no match is found.
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_search (
@@ -370,12 +370,12 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_search (
 );
 
 /**
- * The moo_rbt_upsert() function searches red-black tree for the pair with a 
+ * The moo_rbt_upsert() function searches red-black tree for the pair with a
  * matching key. If one is found, it updates the pair. Otherwise, it inserts
- * a new pair with the key and the value given. It returns the pointer to the 
+ * a new pair with the key and the value given. It returns the pointer to the
  * pair updated or inserted.
- * \return a pointer to the updated or inserted pair on success, 
- *         MOO_NULL on failure. 
+ * \return a pointer to the updated or inserted pair on success,
+ *         MOO_NULL on failure.
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_upsert (
 	moo_rbt_t* rbt,   /**< red-black tree */
@@ -387,9 +387,9 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_upsert (
 
 /**
  * The moo_rbt_ensert() function inserts a new pair with the key and the value
- * given. If there exists a pair with the key given, the function returns 
+ * given. If there exists a pair with the key given, the function returns
  * the pair containing the key.
- * \return pointer to a pair on success, MOO_NULL on failure. 
+ * \return pointer to a pair on success, MOO_NULL on failure.
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_ensert (
 	moo_rbt_t* rbt,   /**< red-black tree */
@@ -401,9 +401,9 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_ensert (
 
 /**
  * The moo_rbt_insert() function inserts a new pair with the key and the value
- * given. If there exists a pair with the key given, the function returns 
+ * given. If there exists a pair with the key given, the function returns
  * MOO_NULL without channging the value.
- * \return pointer to the pair created on success, MOO_NULL on failure. 
+ * \return pointer to the pair created on success, MOO_NULL on failure.
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_insert (
 	moo_rbt_t* rbt,   /**< red-black tree */
@@ -427,7 +427,7 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
 );
 
 /**
- * The moo_rbt_cbsert() function inserts a key/value pair by delegating pair 
+ * The moo_rbt_cbsert() function inserts a key/value pair by delegating pair
  * allocation to a callback function. Depending on the callback function,
  * it may behave like moo_rbt_insert(), moo_rbt_upsert(), moo_rbt_update(),
  * moo_rbt_ensert(), or totally differently. The sample code below inserts
@@ -442,7 +442,7 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  *     (int)MOO_RBT_VLEN(pair), MOO_RBT_VPTR(pair), (int)MOO_RBT_VLEN(pair));
  *   return MOO_RBT_WALK_FORWARD;
  * }
- * 
+ *
  * moo_rbt_pair_t* cbserter (
  *   moo_rbt_t* rbt, moo_rbt_pair_t* pair,
  *   void* kptr, moo_oow_t klen, void* ctx)
@@ -450,53 +450,53 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  *   moo_cstr_t* v = (moo_cstr_t*)ctx;
  *   if (pair == MOO_NULL)
  *   {
- *     // no existing key for the key 
+ *     // no existing key for the key
  *     return moo_rbt_allocpair (rbt, kptr, klen, v->ptr, v->len);
  *   }
  *   else
  *   {
- *     // a pair with the key exists. 
- *     // in this sample, i will append the new value to the old value 
+ *     // a pair with the key exists.
+ *     // in this sample, i will append the new value to the old value
  *     // separated by a comma
  *     moo_rbt_pair_t* new_pair;
  *     moo_ooch_t comma = MOO_T(',');
  *     moo_oob_t* vptr;
- * 
- *     // allocate a new pair, but without filling the actual value. 
- *     // note vptr is given MOO_NULL for that purpose 
+ *
+ *     // allocate a new pair, but without filling the actual value.
+ *     // note vptr is given MOO_NULL for that purpose
  *     new_pair = moo_rbt_allocpair (
- *       rbt, kptr, klen, MOO_NULL, pair->vlen + 1 + v->len); 
+ *       rbt, kptr, klen, MOO_NULL, pair->vlen + 1 + v->len);
  *     if (new_pair == MOO_NULL) return MOO_NULL;
- * 
- *     // fill in the value space 
+ *
+ *     // fill in the value space
  *     vptr = new_pair->vptr;
  *     moo_memcpy (vptr, pair->vptr, pair->vlen*MOO_SIZEOF(moo_ooch_t));
  *     vptr += pair->vlen*MOO_SIZEOF(moo_ooch_t);
  *     moo_memcpy (vptr, &comma, MOO_SIZEOF(moo_ooch_t));
  *     vptr += MOO_SIZEOF(moo_ooch_t);
  *     moo_memcpy (vptr, v->ptr, v->len*MOO_SIZEOF(moo_ooch_t));
- * 
- *     // this callback requires the old pair to be destroyed 
+ *
+ *     // this callback requires the old pair to be destroyed
  *     moo_rbt_freepair (rbt, pair);
- * 
- *     // return the new pair 
+ *
+ *     // return the new pair
  *     return new_pair;
  *   }
  * }
- * 
+ *
  * int main ()
  * {
  *   moo_rbt_t* s1;
  *   int i;
  *   moo_ooch_t* keys[] = { MOO_T("one"), MOO_T("two"), MOO_T("three") };
  *   moo_ooch_t* vals[] = { MOO_T("1"), MOO_T("2"), MOO_T("3"), MOO_T("4"), MOO_T("5") };
- * 
+ *
  *   s1 = moo_rbt_open (
  *     MOO_MMGR_GETDFL(), 0,
  *     MOO_SIZEOF(moo_ooch_t), MOO_SIZEOF(moo_ooch_t)
- *   ); // note error check is skipped 
+ *   ); // note error check is skipped
  *   moo_rbt_setstyle (s1, &style1);
- * 
+ *
  *   for (i = 0; i < MOO_COUNTOF(vals); i++)
  *   {
  *     moo_cstr_t ctx;
@@ -507,7 +507,7 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  *     ); // note error check is skipped
  *   }
  *   moo_rbt_walk (s1, print_map_pair, MOO_NULL);
- * 
+ *
  *   moo_rbt_close (s1);
  *   return 0;
  * }
@@ -522,7 +522,7 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_cbsert (
 );
 
 /**
- * The moo_rbt_delete() function deletes a pair with a matching key 
+ * The moo_rbt_delete() function deletes a pair with a matching key
  * \return 0 on success, -1 on failure
  */
 MOO_EXPORT int moo_rbt_delete (
@@ -539,7 +539,7 @@ MOO_EXPORT void moo_rbt_clear (
 );
 
 /**
- * The moo_rbt_walk() function traverses a red-black tree in preorder 
+ * The moo_rbt_walk() function traverses a red-black tree in preorder
  * from the leftmost child.
  */
 MOO_EXPORT void moo_rbt_walk (
@@ -549,7 +549,7 @@ MOO_EXPORT void moo_rbt_walk (
 );
 
 /**
- * The moo_rbt_walk() function traverses a red-black tree in preorder 
+ * The moo_rbt_walk() function traverses a red-black tree in preorder
  * from the rightmost child.
  */
 MOO_EXPORT void moo_rbt_rwalk (
@@ -559,11 +559,11 @@ MOO_EXPORT void moo_rbt_rwalk (
 );
 
 /**
- * The moo_rbt_allocpair() function allocates a pair for a key and a value 
+ * The moo_rbt_allocpair() function allocates a pair for a key and a value
  * given. But it does not chain the pair allocated into the red-black tree \a rbt.
- * Use this function at your own risk. 
+ * Use this function at your own risk.
  *
- * Take note of he following special behavior when the copier is 
+ * Take note of he following special behavior when the copier is
  * #MOO_RBT_COPIER_INLINE.
  * - If \a kptr is #MOO_NULL, the key space of the size \a klen is reserved but
  *   not propagated with any data.
@@ -572,7 +572,7 @@ MOO_EXPORT void moo_rbt_rwalk (
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_allocpair (
 	moo_rbt_t*  rbt,
-	void*       kptr, 
+	void*       kptr,
 	moo_oow_t   klen,
 	void*       vptr,
 	moo_oow_t   vlen
@@ -596,7 +596,7 @@ MOO_EXPORT int moo_rbt_dflcomp (
 	const void*      kptr1,
 	moo_oow_t        klen1,
 	const void*      kptr2,
-	moo_oow_t        klen2 
+	moo_oow_t        klen2
 );
 
 #if defined(__cplusplus)

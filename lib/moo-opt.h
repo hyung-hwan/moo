@@ -30,8 +30,8 @@
 #include <moo-cmn.h>
 
 /** \file
- * This file defines functions and data structures to process 
- * command-line arguments. 
+ * This file defines functions and data structures to process
+ * command-line arguments.
  */
 
 typedef struct moo_uopt_t moo_uopt_t;
@@ -54,7 +54,7 @@ struct moo_uopt_t
 	moo_uch_t*       arg; /* argument associated with an option */
 
 	/* output */
-	const moo_uch_t* lngopt; 
+	const moo_uch_t* lngopt;
 
 	/* input + output */
 	int              ind; /* index into parent argv vector */
@@ -83,7 +83,7 @@ struct moo_bopt_t
 	moo_bch_t*       arg; /* argument associated with an option */
 
 	/* output */
-	const moo_bch_t* lngopt; 
+	const moo_bch_t* lngopt;
 
 	/* input + output */
 	int              ind; /* index into parent argv vector */
@@ -98,27 +98,27 @@ extern "C" {
 
 /**
  * The moo_getopt() function processes the \a argc command-line arguments
- * pointed to by \a argv as configured in \a opt. It can process two 
- * different option styles: a single character starting with '-', and a 
- * long name starting with '--'. 
+ * pointed to by \a argv as configured in \a opt. It can process two
+ * different option styles: a single character starting with '-', and a
+ * long name starting with '--'.
  *
  * A character in \a opt.str is treated as a single character option. Should
  * it require a parameter, specify ':' after it.
  *
- * Two special returning option characters indicate special error conditions. 
+ * Two special returning option characters indicate special error conditions.
  * - \b ? indicates a bad option stored in the \a opt->opt field.
  * - \b : indicates a bad parameter for an option stored in the \a opt->opt field.
  *
  * @return an option character on success, MOO_CHAR_EOF on no more options.
  */
 MOO_EXPORT moo_uci_t moo_getuopt (
-	int                argc, /* argument count */ 
+	int                argc, /* argument count */
 	moo_uch_t* const*  argv, /* argument array */
 	moo_uopt_t*        opt   /* option configuration */
 );
 
 MOO_EXPORT moo_bci_t moo_getbopt (
-	int                argc, /* argument count */ 
+	int                argc, /* argument count */
 	moo_bch_t* const*  argv, /* argument array */
 	moo_bopt_t*        opt   /* option configuration */
 );

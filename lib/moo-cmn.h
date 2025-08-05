@@ -27,7 +27,7 @@
 #ifndef _MOO_CMN_H_
 #define _MOO_CMN_H_
 
-/* WARNING: NEVER CHANGE/DELETE THE FOLLOWING MOO_HAVE_CFG_H DEFINITION. 
+/* WARNING: NEVER CHANGE/DELETE THE FOLLOWING MOO_HAVE_CFG_H DEFINITION.
  *          IT IS USED FOR DEPLOYMENT BY MAKEFILE.AM */
 /*#define MOO_HAVE_CFG_H*/
 
@@ -52,7 +52,7 @@
 
 #if defined(EMSCRIPTEN)
 #	if defined(MOO_SIZEOF___INT128)
-#		undef MOO_SIZEOF___INT128 
+#		undef MOO_SIZEOF___INT128
 #		define MOO_SIZEOF___INT128 0
 #	endif
 #	if defined(MOO_SIZEOF_LONG) && defined(MOO_SIZEOF_INT) && (MOO_SIZEOF_LONG > MOO_SIZEOF_INT)
@@ -294,7 +294,7 @@
 	typedef moo_int64_t moo_intptr_t;
 	typedef moo_uint32_t moo_ushortptr_t;
 	typedef moo_int32_t moo_shortptr_t;
-#elif defined(MOO_HAVE_UINT128_T) && (MOO_SIZEOF_VOID_P == 16) 
+#elif defined(MOO_HAVE_UINT128_T) && (MOO_SIZEOF_VOID_P == 16)
 	typedef moo_uint128_t moo_uintptr_t;
 	typedef moo_int128_t moo_intptr_t;
 	typedef moo_uint64_t moo_ushortptr_t;
@@ -409,7 +409,7 @@ typedef unsigned char           moo_bchu_t; /* unsigned version of moo_bch_t for
 #	define MOO_SIZEOF_UCH_T 4
 
 #elif defined(__GNUC__) && defined(__CHAR16_TYPE__)
-	typedef __CHAR16_TYPE__    moo_uch_t; 
+	typedef __CHAR16_TYPE__    moo_uch_t;
 	typedef moo_uint16_t       moo_uchu_t; /* same as moo_uch_t as it is already unsigned */
 #	define MOO_SIZEOF_UCH_T 2
 #else
@@ -480,7 +480,7 @@ typedef unsigned int moo_bitmask_t;
 typedef struct moo_obj_t           moo_obj_t;
 typedef struct moo_obj_t*          moo_oop_t;
 
-/* 
+/*
  * An object pointer(OOP) is an ordinary pointer value to an object.
  * but some simple numeric values are also encoded into OOP using a simple
  * bit-shifting and masking.
@@ -488,15 +488,15 @@ typedef struct moo_obj_t*          moo_oop_t;
  * A real OOP is stored without any bit-shifting while a non-pointer value encoded
  * in an OOP is bit-shifted to the left by 2 and the 2 least-significant bits
  * are set to 1 or 2.
- * 
+ *
  * This scheme works because the object allocators aligns the object size to
  * a multiple of sizeof(moo_oop_t). This way, the 2 least-significant bits
  * of a real OOP are always 0s.
  *
- * With 2 bits, i can encode only 3 special types except object pointers. 
+ * With 2 bits, i can encode only 3 special types except object pointers.
  * Since I need more than 3 special types, I extend the tag bits up to 4 bits
  * to represent a special data type that doesn't require a range as wide
- * as a small integer. A unicode character, for instance, only requires 21 
+ * as a small integer. A unicode character, for instance, only requires 21
  * bits at most. An error doesn't need to be as diverse as a small integer.
  */
 
@@ -540,13 +540,13 @@ typedef struct moo_obj_t*          moo_oop_t;
 
 /* -------------------------------- */
 
-/* SMOOI takes up 62 bits on a 64-bit architecture and 30 bits 
+/* SMOOI takes up 62 bits on a 64-bit architecture and 30 bits
  * on a 32-bit architecture. The absolute value takes up 61 bits and 29 bits
  * respectively for the sign bit. */
 #define MOO_SMOOI_BITS (MOO_OOI_BITS - MOO_OOP_TAG_BITS_LO)
 #define MOO_SMOOI_ABS_BITS (MOO_SMOOI_BITS - 1)
 #define MOO_SMOOI_MAX ((moo_ooi_t)(~((moo_oow_t)0) >> (MOO_OOP_TAG_BITS_LO + 1)))
-/* Sacrificing 1 bit pattern for a negative SMOOI makes 
+/* Sacrificing 1 bit pattern for a negative SMOOI makes
  * implementation a lot eaisier in many aspects. */
 /*#define MOO_SMOOI_MIN (-MOO_SMOOI_MAX - 1)*/
 #define MOO_SMOOI_MIN (-MOO_SMOOI_MAX)
@@ -554,7 +554,7 @@ typedef struct moo_obj_t*          moo_oop_t;
 
 /* SMPTR is a special value which has been devised to encode an address value
  * whose low MOO_OOP_TAG_BITS_LO bits are 0. its class is SmallPointer. A pointer
- * returned by most of system functions would be aligned to the pointer size. 
+ * returned by most of system functions would be aligned to the pointer size.
  * you can use the followings macros when converting such a pointer without loss. */
 #define MOO_IN_SMPTR_RANGE(ptr) ((((moo_oow_t)ptr) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS_LO)) == 0)
 
@@ -703,7 +703,7 @@ struct moo_ntime_t
 #endif
 
 /* make a bit mask that can mask off low n bits */
-#define MOO_LBMASK(type,n) (~(~((type)0) << (n))) 
+#define MOO_LBMASK(type,n) (~(~((type)0) << (n)))
 #define MOO_LBMASK_SAFE(type,n) (((n) < MOO_BITSOF(type))? MOO_LBMASK(type,n): ~(type)0)
 
 /* make a bit mask that can mask off hig n bits */
@@ -727,7 +727,7 @@ struct moo_ntime_t
 	(value = (((type)(value)) | (((bits) & MOO_LBMASK(type,length)) << (offset))))
 
 
-/** 
+/**
  * The MOO_BITS_MAX() macros calculates the maximum value that the 'nbits'
  * bits of an unsigned integer of the given 'type' can hold.
  * \code
@@ -742,12 +742,12 @@ struct moo_ntime_t
  * ========================================================================= */
 typedef struct moo_mmgr_t moo_mmgr_t;
 
-/** 
+/**
  * allocate a memory chunk of the size \a n.
  * \return pointer to a memory chunk on success, #MOO_NULL on failure.
  */
 typedef void* (*moo_mmgr_alloc_t)   (moo_mmgr_t* mmgr, moo_oow_t n);
-/** 
+/**
  * resize a memory chunk pointed to by \a ptr to the size \a n.
  * \return pointer to a memory chunk on success, #MOO_NULL on failure.
  */
@@ -760,13 +760,13 @@ typedef void  (*moo_mmgr_free_t)    (moo_mmgr_t* mmgr, void* ptr);
 /**
  * The moo_mmgr_t type defines the memory management interface.
  * As the type is merely a structure, it is just used as a single container
- * for memory management functions with a pointer to user-defined data. 
- * The user-defined data pointer \a ctx is passed to each memory management 
- * function whenever it is called. You can allocate, reallocate, and free 
+ * for memory management functions with a pointer to user-defined data.
+ * The user-defined data pointer \a ctx is passed to each memory management
+ * function whenever it is called. You can allocate, reallocate, and free
  * a memory chunk.
  *
  * For example, a moo_xxx_open() function accepts a pointer of the moo_mmgr_t
- * type and the xxx object uses it to manage dynamic data within the object. 
+ * type and the xxx object uses it to manage dynamic data within the object.
  */
 struct moo_mmgr_t
 {
@@ -783,12 +783,12 @@ struct moo_mmgr_t
 #define MOO_MMGR_ALLOC(mmgr,size) ((mmgr)->alloc(mmgr,size))
 
 /**
- * The MOO_MMGR_REALLOC() macro resizes a memory block pointed to by \a ptr 
+ * The MOO_MMGR_REALLOC() macro resizes a memory block pointed to by \a ptr
  * to the \a size bytes using the \a mmgr memory manager.
  */
 #define MOO_MMGR_REALLOC(mmgr,ptr,size) ((mmgr)->realloc(mmgr,ptr,size))
 
-/** 
+/**
  * The MOO_MMGR_FREE() macro deallocates the memory block pointed to by \a ptr.
  */
 #define MOO_MMGR_FREE(mmgr,ptr) ((mmgr)->free(mmgr,ptr))
@@ -801,7 +801,7 @@ struct moo_mmgr_t
 typedef struct moo_cmgr_t moo_cmgr_t;
 
 typedef moo_oow_t (*moo_cmgr_bctouc_t) (
-	const moo_bch_t*   mb, 
+	const moo_bch_t*   mb,
 	moo_oow_t         size,
 	moo_uch_t*         wc
 );
@@ -813,8 +813,8 @@ typedef moo_oow_t (*moo_cmgr_uctobc_t) (
 );
 
 /**
- * The moo_cmgr_t type defines the character-level interface to 
- * multibyte/wide-character conversion. This interface doesn't 
+ * The moo_cmgr_t type defines the character-level interface to
+ * multibyte/wide-character conversion. This interface doesn't
  * provide any facility to store conversion state in a context
  * independent manner. This leads to the limitation that it can
  * handle a stateless multibyte encoding only.
@@ -845,7 +845,7 @@ typedef struct moo_t moo_t;
 #elif defined(_WIN32) || (defined(__WATCOMC__) && (__WATCOMC__ >= 1000) && !defined(__WINDOWS_386__))
 #	define MOO_IMPORT __declspec(dllimport)
 #	define MOO_EXPORT __declspec(dllexport)
-#	define MOO_PRIVATE 
+#	define MOO_PRIVATE
 #elif defined(__GNUC__) && ((__GNUC__>= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3))
 #	define MOO_IMPORT __attribute__((visibility("default")))
 #	define MOO_EXPORT __attribute__((visibility("default")))
@@ -862,12 +862,12 @@ typedef struct moo_t moo_t;
 #	define MOO_INLINE inline
 #	define MOO_HAVE_INLINE
 #elif defined(__GNUC__) && defined(__GNUC_GNU_INLINE__)
-	/* gcc disables inline when -std=c89 or -ansi is used. 
+	/* gcc disables inline when -std=c89 or -ansi is used.
 	 * so use __inline__ supported by gcc regardless of the options */
 #	define MOO_INLINE /*extern*/ __inline__
 #	define MOO_HAVE_INLINE
 #else
-#	define MOO_INLINE 
+#	define MOO_INLINE
 #	undef MOO_HAVE_INLINE
 #endif
 
@@ -936,7 +936,7 @@ typedef struct moo_t moo_t;
 #endif
 */
 
-#if defined(__has_builtin) 
+#if defined(__has_builtin)
 	#if __has_builtin(__builtin_ctz)
 		#define MOO_HAVE_BUILTIN_CTZ
 	#endif
@@ -958,41 +958,41 @@ typedef struct moo_t moo_t;
 	#endif
 
 	#if __has_builtin(__builtin_uadd_overflow)
-		#define MOO_HAVE_BUILTIN_UADD_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_UADD_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_uaddl_overflow)
-		#define MOO_HAVE_BUILTIN_UADDL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_UADDL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_uaddll_overflow)
-		#define MOO_HAVE_BUILTIN_UADDLL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_UADDLL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_umul_overflow)
-		#define MOO_HAVE_BUILTIN_UMUL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_UMUL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_umull_overflow)
-		#define MOO_HAVE_BUILTIN_UMULL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_UMULL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_umulll_overflow)
-		#define MOO_HAVE_BUILTIN_UMULLL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_UMULLL_OVERFLOW
 	#endif
 
 	#if __has_builtin(__builtin_sadd_overflow)
-		#define MOO_HAVE_BUILTIN_SADD_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_SADD_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_saddl_overflow)
-		#define MOO_HAVE_BUILTIN_SADDL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_SADDL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_saddll_overflow)
-		#define MOO_HAVE_BUILTIN_SADDLL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_SADDLL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_smul_overflow)
-		#define MOO_HAVE_BUILTIN_SMUL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_SMUL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_smull_overflow)
-		#define MOO_HAVE_BUILTIN_SMULL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_SMULL_OVERFLOW
 	#endif
 	#if __has_builtin(__builtin_smulll_overflow)
-		#define MOO_HAVE_BUILTIN_SMULLL_OVERFLOW 
+		#define MOO_HAVE_BUILTIN_SMULLL_OVERFLOW
 	#endif
 
 	#if __has_builtin(__builtin_expect)
@@ -1032,7 +1032,7 @@ typedef struct moo_t moo_t;
 	#endif
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__)
 
-	#if (__GNUC__ >= 4) 
+	#if (__GNUC__ >= 4)
 		#define MOO_HAVE_SYNC_LOCK_TEST_AND_SET
 		#define MOO_HAVE_SYNC_LOCK_RELEASE
 

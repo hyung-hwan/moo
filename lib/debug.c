@@ -126,7 +126,7 @@ int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start
 	moo_oow_t name_len, name_bytes, name_bytes_aligned, req_bytes;
 	moo_dbgi_file_t* di;
 
-	if (!moo->dbgi) 
+	if (!moo->dbgi)
 	{
 		if (start_offset) *start_offset = 0;
 		return 0; /* debug information is disabled*/
@@ -139,7 +139,7 @@ int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start
 		do
 		{
 			di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[offset];
-			if (moo_comp_oocstr((moo_ooch_t*)(di + 1), file_name) == 0) 
+			if (moo_comp_oocstr((moo_ooch_t*)(di + 1), file_name) == 0)
 			{
 				if (start_offset) *start_offset = offset;
 				return 0;
@@ -183,7 +183,7 @@ int moo_addclasstodbgi (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file
 		do
 		{
 			di = (moo_dbgi_class_t*)&((moo_uint8_t*)moo->dbgi)[offset];
-			if (moo_comp_oocstr((moo_ooch_t*)(di + 1), class_name) == 0 && di->_file == file_offset && di->_line == file_line) 
+			if (moo_comp_oocstr((moo_ooch_t*)(di + 1), class_name) == 0 && di->_file == file_offset && di->_line == file_line)
 			{
 				if (start_offset) *start_offset = offset;
 				return 0;

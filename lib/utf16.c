@@ -40,13 +40,13 @@ moo_oow_t moo_uc_to_utf16 (moo_uch_t uc, moo_bch_t* utf16, moo_oow_t size)
 {
 	moo_uint16_t* u16 = (moo_uint16_t*)utf16;
 
-	if (uc <= 0xFFFF) 
+	if (uc <= 0xFFFF)
 	{
 		u16[0] = (moo_uint16_t)uc;
 		return 2;
 	}
 #if (MOO_SIZEOF_UCH_T > 2)
-	else if (uc <= 0x10FFFF) 
+	else if (uc <= 0x10FFFF)
 	{
 		u16[0] = HIGH_SURROGATE_START | (((uc >> 16) & 0x1F) - 1) | (uc >> 10);
 		u16[1] = LOW_SURROGATE_START | (uc & 0x3FF);
@@ -63,7 +63,7 @@ moo_oow_t moo_utf16_to_uc (const moo_bch_t* utf16, moo_oow_t size, moo_uch_t* uc
 
 	if (size < 2) return 0; /* incomplete sequence */
 
-	if (u16[0] < HIGH_SURROGATE_START || u16[0] > LOW_SURROGATE_END) 
+	if (u16[0] < HIGH_SURROGATE_START || u16[0] > LOW_SURROGATE_END)
 	{
 		/* BMP - U+0000 - U+D7FF, U+E000 - U+FFFF */
 		*uc = u16[0];

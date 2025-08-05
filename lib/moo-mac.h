@@ -26,7 +26,7 @@
 /* This file is for class Mac OS */
 
 /* Mac OS on PPC and m68k uses the big endian mode */
-#define MOO_ENDIAN_BIG 
+#define MOO_ENDIAN_BIG
 
 #if defined(__MWERKS__)
 #	define MOO_SIZEOF_CHAR        1

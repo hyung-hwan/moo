@@ -43,13 +43,13 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 	else if (oldsz < 400000) newsz = oldsz + (oldsz / 16);
 	else if (oldsz < 800000) newsz = oldsz + (oldsz / 32);
 	else if (oldsz < 1600000) newsz = oldsz + (oldsz / 64);
-	else 
+	else
 	{
 		moo_oow_t inc, inc_max;
 
 		inc = oldsz / 128;
 		inc_max = MOO_OBJ_SIZE_MAX - oldsz;
-		if (inc > inc_max) 
+		if (inc > inc_max)
 		{
 			if (inc_max > 0) inc = inc_max;
 			else
@@ -62,7 +62,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 	}
 
 	moo_pushvolat (moo, (moo_oop_t*)&oldbuc);
-	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz); 
+	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz);
 	moo_popvolat (moo);
 	if (!newbuc) return MOO_NULL;
 
@@ -105,15 +105,15 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
 	/* find */
-	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil) 
+	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil)
 	{
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
-		if (MOO_OBJ_GET_CLASS(key) == MOO_OBJ_GET_CLASS(ass->key) && 
+		if (MOO_OBJ_GET_CLASS(key) == MOO_OBJ_GET_CLASS(ass->key) &&
 		    MOO_OBJ_GET_SIZE(key) == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(key))) 
+		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(key)))
 		{
 			/* the value of MOO_NULL indicates no insertion or update. */
 			if (value) MOO_STORE_OOP (moo, &ass->value, value); /* update */
@@ -136,7 +136,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	tally = MOO_OOP_TO_SMOOI(dic->tally);
 	if (tally >= MOO_SMOOI_MAX)
 	{
-		/* this built-in dictionary is not allowed to hold more than 
+		/* this built-in dictionary is not allowed to hold more than
 		 * MOO_SMOOI_MAX items for efficiency sake */
 		moo_seterrnum (moo, MOO_EDFULL);
 		return MOO_NULL;
@@ -148,7 +148,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 
 	/* no conversion to moo_oow_t is necessary for tally + 1.
 	 * the maximum value of tally is checked to be MOO_SMOOI_MAX - 1.
-	 * tally + 1 can produce at most MOO_SMOOI_MAX. above all, 
+	 * tally + 1 can produce at most MOO_SMOOI_MAX. above all,
 	 * MOO_SMOOI_MAX is way smaller than MOO_TYPE_MAX(moo_ooi_t). */
 	if (tally + 1 >= MOO_OBJ_GET_SIZE(dic->bucket))
 	{
@@ -170,11 +170,11 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		/* recalculate the index for the expanded bucket */
 		index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
-		while (MOO_OBJ_GET_OOP_VAL(dic->bucket, index) != moo->_nil) 
+		while (MOO_OBJ_GET_OOP_VAL(dic->bucket, index) != moo->_nil)
 			index = (index + 1) % MOO_OBJ_GET_SIZE(dic->bucket);
 	}
 
-	/* create a new assocation of a key and a value since 
+	/* create a new assocation of a key and a value since
 	 * the key isn't found in the root dictionary */
 	ass = (moo_oop_association_t)moo_instantiate(moo, moo->_association, MOO_NULL, 0);
 	if (!ass) goto oops;
@@ -209,14 +209,14 @@ moo_oop_association_t moo_lookupdic_noseterr (moo_t* moo, moo_oop_dic_t dic, con
 
 	index = moo_hash_oochars(name->ptr, name->len) % MOO_OBJ_GET_SIZE(dic->bucket);
 
-	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil) 
+	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil)
 	{
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equal_oochars(name->ptr, MOO_OBJ_GET_CHAR_SLOT(ass->key), name->len)) 
+		    moo_equal_oochars(name->ptr, MOO_OBJ_GET_CHAR_SLOT(ass->key), name->len))
 		{
 			return ass;
 		}
@@ -226,8 +226,8 @@ moo_oop_association_t moo_lookupdic_noseterr (moo_t* moo, moo_oop_dic_t dic, con
 
 	/* when value is MOO_NULL, perform no insertion */
 
-	/* moo_seterrXXX() is not called here. the dictionary lookup is very frequent 
-	 * and so is lookup failure. for instance, moo_findmethod() calls this over 
+	/* moo_seterrXXX() is not called here. the dictionary lookup is very frequent
+	 * and so is lookup failure. for instance, moo_findmethod() calls this over
 	 * a class chain. there might be a failure at each class level. it's waste to
 	 * set the error information whenever the failure occurs.
 	 * the caller of this function must set the error information upon failure */
@@ -293,14 +293,14 @@ int moo_deletedic (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
 	index = hv % bs;
 
 	/* find */
-	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil) 
+	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil)
 	{
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equal_oochars(name->ptr, MOO_OBJ_GET_CHAR_SLOT(ass->key), name->len)) 
+		    moo_equal_oochars(name->ptr, MOO_OBJ_GET_CHAR_SLOT(ass->key), name->len))
 		{
 			goto found;
 		}

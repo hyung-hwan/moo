@@ -640,7 +640,7 @@ MOO_EXPORT moo_oow_t moo_count_bcstr_limited (
 #define MOO_BYTE_TO_BCSTR_LOWERCASE MOO_BYTE_TO_OOCSTR_LOWERCASE
 
 moo_oow_t moo_byte_to_ucstr (
-	moo_oob_t     byte,  
+	moo_oob_t     byte,
 	moo_uch_t*    buf,
 	moo_oow_t     size,
 	int           flagged_radix,
@@ -648,7 +648,7 @@ moo_oow_t moo_byte_to_ucstr (
 );
 
 moo_oow_t moo_byte_to_bcstr (
-	moo_oob_t     byte,  
+	moo_oob_t     byte,
 	moo_bch_t*    buf,
 	moo_oow_t     size,
 	int           flagged_radix,
@@ -733,7 +733,7 @@ MOO_EXPORT moo_cmgr_t* moo_get_cmgr_by_ucstr (
 /* ------------------------------------------------------------------------- */
 
 /**
- * The moo_conv_uchars_to_utf8() function converts a unicode character string \a ucs 
+ * The moo_conv_uchars_to_utf8() function converts a unicode character string \a ucs
  * to a UTF8 string and writes it into the buffer pointed to by \a bcs, but
  * not more than \a bcslen bytes including the terminating null.
  *
@@ -782,7 +782,7 @@ MOO_EXPORT int moo_conv_uchars_to_utf8 (
  *  n = moo_conv_utf8_to_uchars (bcs, &bcslen, ucs, &ucslen);
  *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
  * \endcode
- * 
+ *
  * The resulting \a ucslen can still be greater than 0 even if the return
  * value is negative. The value indiates the number of characters converted
  * before the error has occurred.
@@ -880,19 +880,19 @@ MOO_EXPORT int moo_conv_mb8_to_ucstr (
  * TIME CALCULATION WITH OVERFLOW/UNDERFLOW DETECTION
  * ========================================================================= */
 
-/** 
+/**
  * The moo_add_ntime() function adds two time structures pointed to by \a x and \a y
  * and stores the result in the structure pointed to by \a z. If it detects overflow/
  * underflow, it stores the largest/least possible value respectively.
  * You may use the MOO_ADD_NTIME() macro if overflow/underflow check isn't needed.
  */
 MOO_EXPORT void moo_add_ntime (
-	moo_ntime_t*       z, 
+	moo_ntime_t*       z,
 	const moo_ntime_t* x,
 	const moo_ntime_t* y
 );
 
-/** 
+/**
  * The moo_sub_ntime() function subtracts the time value \a y from the time value \a x
  * and stores the result in the structure pointed to by \a z. If it detects overflow/
  * underflow, it stores the largest/least possible value respectively.
@@ -951,9 +951,9 @@ static MOO_INLINE moo_uint32_t moo_bswap32 (moo_uint32_t x)
 	);
 	return x;
 #else
-	return ((x >> 24)) | 
-	       ((x >>  8) & ((moo_uint32_t)0xff << 8)) | 
-	       ((x <<  8) & ((moo_uint32_t)0xff << 16)) | 
+	return ((x >> 24)) |
+	       ((x >>  8) & ((moo_uint32_t)0xff << 8)) |
+	       ((x <<  8) & ((moo_uint32_t)0xff << 16)) |
 	       ((x << 24));
 #endif
 }
@@ -971,13 +971,13 @@ static MOO_INLINE moo_uint64_t moo_bswap64 (moo_uint64_t x)
 	__asm__ /*volatile*/ ("rev %0, %0" : "+r"(x));
 	return x;
 #else
-	return ((x >> 56)) | 
-	       ((x >> 40) & ((moo_uint64_t)0xff << 8)) | 
-	       ((x >> 24) & ((moo_uint64_t)0xff << 16)) | 
-	       ((x >>  8) & ((moo_uint64_t)0xff << 24)) | 
-	       ((x <<  8) & ((moo_uint64_t)0xff << 32)) | 
-	       ((x << 24) & ((moo_uint64_t)0xff << 40)) | 
-	       ((x << 40) & ((moo_uint64_t)0xff << 48)) | 
+	return ((x >> 56)) |
+	       ((x >> 40) & ((moo_uint64_t)0xff << 8)) |
+	       ((x >> 24) & ((moo_uint64_t)0xff << 16)) |
+	       ((x >>  8) & ((moo_uint64_t)0xff << 24)) |
+	       ((x <<  8) & ((moo_uint64_t)0xff << 32)) |
+	       ((x << 24) & ((moo_uint64_t)0xff << 40)) |
+	       ((x << 40) & ((moo_uint64_t)0xff << 48)) |
 	       ((x << 56));
 #endif
 }
@@ -989,7 +989,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #if defined(MOO_HAVE_BUILTIN_BSWAP128)
 	return __builtin_bswap128(x);
 #else
-	return ((x >> 120)) | 
+	return ((x >> 120)) |
 	       ((x >> 104) & ((moo_uint128_t)0xff << 8)) |
 	       ((x >>  88) & ((moo_uint128_t)0xff << 16)) |
 	       ((x >>  72) & ((moo_uint128_t)0xff << 24)) |
@@ -1014,7 +1014,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #if defined(MOO_HAVE_UINT16_T)
 #	if defined(MOO_HAVE_BUILTIN_BSWAP16)
 #	define moo_bswap16(x) ((moo_uint16_t)__builtin_bswap16((moo_uint16_t)(x)))
-#	else 
+#	else
 #	define moo_bswap16(x) ((moo_uint16_t)(((moo_uint16_t)(x)) << 8) | (((moo_uint16_t)(x)) >> 8))
 #	endif
 #endif
@@ -1022,7 +1022,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #if defined(MOO_HAVE_UINT32_T)
 #	if defined(MOO_HAVE_BUILTIN_BSWAP32)
 #	define moo_bswap32(x) ((moo_uint32_t)__builtin_bswap32((moo_uint32_t)(x)))
-#	else 
+#	else
 #	define moo_bswap32(x) ((moo_uint32_t)(((((moo_uint32_t)(x)) >> 24)) | \
 	                                      ((((moo_uint32_t)(x)) >>  8) & ((moo_uint32_t)0xff << 8)) | \
 	                                      ((((moo_uint32_t)(x)) <<  8) & ((moo_uint32_t)0xff << 16)) | \
@@ -1033,7 +1033,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #if defined(MOO_HAVE_UINT64_T)
 #	if defined(MOO_HAVE_BUILTIN_BSWAP64)
 #	define moo_bswap64(x) ((moo_uint64_t)__builtin_bswap64((moo_uint64_t)(x)))
-#	else 
+#	else
 #	define moo_bswap64(x) ((moo_uint64_t)(((((moo_uint64_t)(x)) >> 56)) | \
 	                                      ((((moo_uint64_t)(x)) >> 40) & ((moo_uint64_t)0xff << 8)) | \
 	                                      ((((moo_uint64_t)(x)) >> 24) & ((moo_uint64_t)0xff << 16)) | \
@@ -1048,7 +1048,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #if defined(MOO_HAVE_UINT128_T)
 #	if defined(MOO_HAVE_BUILTIN_BSWAP128)
 #	define moo_bswap128(x) ((moo_uint128_t)__builtin_bswap128((moo_uint128_t)(x)))
-#	else 
+#	else
 #	define moo_bswap128(x) ((moo_uint128_t)(((((moo_uint128_t)(x)) >> 120)) |  \
 	                                        ((((moo_uint128_t)(x)) >> 104) & ((moo_uint128_t)0xff << 8)) | \
 	                                        ((((moo_uint128_t)(x)) >>  88) & ((moo_uint128_t)0xff << 16)) | \
@@ -1193,7 +1193,7 @@ static MOO_INLINE int moo_get_pos_of_msb_set_pow2 (moo_oow_t x)
 		: "=r"(n) /* output */
 		: "r"(x) /* input */
 	);
-	return (int)(MOO_OOW_BITS - n - 1); 
+	return (int)(MOO_OOW_BITS - n - 1);
 	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
 #else
 	int pos = 0;
@@ -1227,7 +1227,7 @@ static MOO_INLINE int moo_get_pos_of_msb_set (moo_oow_t x)
 		: "=r"(n) /* output */
 		: "r"(x) /* input */
 	);
-	return (int)(MOO_OOW_BITS - n - 1); 
+	return (int)(MOO_OOW_BITS - n - 1);
 	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
 #else
 	int pos = 0;

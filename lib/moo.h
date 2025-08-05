@@ -60,7 +60,7 @@ enum moo_errnum_t
 	MOO_EINVAL,   /**< invalid parameter or data */
 	MOO_ENOENT,   /**< data not found */
 	MOO_EEXIST,   /**< existing/duplicate data */
-	MOO_EBUSY,    /**< system busy */ 
+	MOO_EBUSY,    /**< system busy */
 	MOO_EACCES,   /**< access denied */
 	MOO_EPERM,    /**< operation not permitted */
 	MOO_ENOTDIR,  /**< not directory */
@@ -126,7 +126,7 @@ enum moo_trait_t
 	MOO_TRAIT_DEBUG_GC     = (1u << 0),
 	MOO_TRAIT_DEBUG_BIGINT = (1u << 1),
 
-	/* perform no garbage collection when the heap is full. 
+	/* perform no garbage collection when the heap is full.
 	 * you still can use moo_gc() explicitly. */
 	MOO_TRAIT_NOGC = (1u << 8),
 
@@ -174,7 +174,7 @@ typedef struct moo_obj_word_t*     moo_oop_word_t;
 #	define MOO_SIZEOF_LIW_T    MOO_SIZEOF_OOW_T
 #	define MOO_SIZEOF_LIDW_T   MOO_SIZEOF_UINTMAX_T
 #	define MOO_LIW_BITS        MOO_OOW_BITS
-#	define MOO_LIDW_BITS       (MOO_SIZEOF_UINTMAX_T * MOO_BITS_PER_BYTE) 
+#	define MOO_LIDW_BITS       (MOO_SIZEOF_UINTMAX_T * MOO_BITS_PER_BYTE)
 
 	typedef moo_oop_word_t     moo_oop_liword_t;
 #	define MOO_OBJ_TYPE_LIWORD MOO_OBJ_TYPE_WORD
@@ -246,7 +246,7 @@ enum moo_obj_type_t
 */
 
 /* [NOTE] you can have MOO_OBJ_SHORT, MOO_OBJ_INT
- * MOO_OBJ_LONG, MOO_OBJ_FLOAT, MOO_OBJ_DOUBLE, etc 
+ * MOO_OBJ_LONG, MOO_OBJ_FLOAT, MOO_OBJ_DOUBLE, etc
  * type type field being 6 bits long, you can have up to 64 different types.
 
 	MOO_OBJ_TYPE_SHORT,
@@ -267,15 +267,15 @@ enum moo_gcfin_t
 typedef enum moo_gcfin_t moo_gcfin_t;
 
 /* =========================================================================
- * Object header structure 
- * 
+ * Object header structure
+ *
  * _flags:
- *   type: the type of a payload item. 
- *         one of MOO_OBJ_TYPE_OOP, MOO_OBJ_TYPE_CHAR, 
+ *   type: the type of a payload item.
+ *         one of MOO_OBJ_TYPE_OOP, MOO_OBJ_TYPE_CHAR,
  *                MOO_OBJ_TYPE_BYTE, MOO_OBJ_TYPE_HALFWORD, MOO_OBJ_TYPE_WORD
- *   unit: the size of a payload item in bytes. 
+ *   unit: the size of a payload item in bytes.
  *   extra: 0 or 1. 1 indicates that the payload contains 1 more
- *          item than the value of the size field. used for a 
+ *          item than the value of the size field. used for a
  *          terminating null in a variable-character object. internel
  *          use only.
  *   kernel: 0, 1, or 2. indicates that the object is a kernel object.
@@ -291,27 +291,27 @@ typedef enum moo_gcfin_t moo_gcfin_t;
  *
  * _size: the number of payload items in an object.
  *        it doesn't include the header size.
- * 
+ *
  * The total number of bytes occupied by an object can be calculated
  * with this fomula:
  *    sizeof(moo_obj_t) + ALIGN((size + extra) * unit), sizeof(moo_oop_t))
- * 
- * If the type is known to be not MOO_OBJ_TYPE_CHAR, you can assume that 
+ *
+ * If the type is known to be not MOO_OBJ_TYPE_CHAR, you can assume that
  * 'extra' is 0. So you can simplify the fomula in such a context.
  *    sizeof(moo_obj_t) + ALIGN(size * unit), sizeof(moo_oop_t))
  *
  * The ALIGN() macro is used above since allocation adjusts the payload
  * size to a multiple of sizeof(moo_oop_t). it assumes that sizeof(moo_obj_t)
  * is a multiple of sizeof(moo_oop_t). See the MOO_BYTESOF() macro.
- * 
+ *
  * Due to the header structure, an object can only contain items of
- * homogeneous data types in the payload. 
+ * homogeneous data types in the payload.
  *
  * It's actually possible to split the size field into 2. For example,
  * the upper half contains the number of oops and the lower half contains
  * the number of bytes/chars. This way, a variable-byte class or a variable-char
  * class can have normal instance variables. On the contrary, the actual byte
- * size calculation and the access to the payload fields become more complex. 
+ * size calculation and the access to the payload fields become more complex.
  * Therefore, i've dropped the idea.
  * ========================================================================= */
 #define MOO_OBJ_FLAGS_TYPE_BITS       6
@@ -383,7 +383,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 
 
 /* [NOTE] this macro doesn't check the range of the actual value.
- *        make sure that the value of each bit fields given falls within the 
+ *        make sure that the value of each bit fields given falls within the
  *        possible range of the defined bits */
 #define MOO_OBJ_MAKE_FLAGS(_ty,_u,_e,_k,_p,_m,_g,_tr,_h,_uncp) ( \
 	(((moo_oow_t)(_ty))   << MOO_OBJ_FLAGS_TYPE_SHIFT) | \
@@ -527,7 +527,7 @@ struct moo_nsdic_t
 	moo_oop_t nsup; /* a class if it belongs to the class. another nsdic if it doesn't */
 };
 
-struct moo_methowner_t 
+struct moo_methowner_t
 {
 	/* a method can be owned by a class or an interface.
 	 * this structure defines common fields between a class and an interface and
@@ -539,7 +539,7 @@ struct moo_methowner_t
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
-	moo_oop_dic_t  mthdic[2];      
+	moo_oop_dic_t  mthdic[2];
 
 	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
 	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
@@ -555,7 +555,7 @@ struct moo_interface_t
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
-	moo_oop_dic_t  mthdic[2];      
+	moo_oop_dic_t  mthdic[2];
 
 	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
 	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
@@ -571,7 +571,7 @@ struct moo_class_t
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
-	moo_oop_dic_t  mthdic[2];      
+	moo_oop_dic_t  mthdic[2];
 
 	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
 	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
@@ -596,9 +596,9 @@ struct moo_class_t
 	moo_oop_t      trsize; /* trailer size for new instances */
 	moo_oop_t      trgc; /* trailer gc callback */
 
-	/* [0] - initial values for instance variables of new instances 
+	/* [0] - initial values for instance variables of new instances
 	 * [1] - initial values for class instance variables */
-	moo_oop_t      initv[2]; 
+	moo_oop_t      initv[2];
 
 	/* indexed part afterwards */
 	moo_oop_t      cvar[1];   /* class instance variables and class variables. */
@@ -662,10 +662,10 @@ struct moo_method_t
  * the code bytes are placed after the trailer size.
  *
  * code bytes -> ((moo_oob_t*)&((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m) + 1]) or
- *               ((moo_oob_t*)&((moo_oop_method_t)m)->literal_frame[MOO_OBJ_GET_SIZE(m) + 1 - MOO_METHOD_NAMED_INSTVARS]) 
+ *               ((moo_oob_t*)&((moo_oop_method_t)m)->literal_frame[MOO_OBJ_GET_SIZE(m) + 1 - MOO_METHOD_NAMED_INSTVARS])
  * size -> ((moo_oow_t)((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m)])*/
 #define MOO_METHOD_GET_CODE_BYTE(m) MOO_OBJ_GET_TRAILER_BYTE(m)
-#define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_TRAILER_SIZE(m) 
+#define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_TRAILER_SIZE(m)
 
 
 /* The preamble field is composed of:
@@ -680,11 +680,11 @@ struct moo_method_t
  *  3 - return thisProcess
  *  4 - return nil
  *  5 - return true
- *  6 - return false 
+ *  6 - return false
  *  7 - return index.
  *  8 - return -index.
  *  9 - return selfns
- * 10 - return instvar[index] 
+ * 10 - return instvar[index]
  * 11 - do primitive[index]
  * 12 - do named primitive[index]
  * 13 - exception handler
@@ -749,7 +749,7 @@ struct moo_context_t
 
 	/* SmallInteger, stack pointer. the actual stack pointer is in the active
 	 * process. For a method context, it stores the stack pointer of the active
-	 * process before it gets activated. the stack pointer of the active 
+	 * process before it gets activated. the stack pointer of the active
 	 * process is restored using this value upon returning. This field is
 	 * almost useless for a block context. */
 	moo_oop_t          sp;
@@ -759,20 +759,20 @@ struct moo_context_t
 	 * defined its 'home'. */
 	moo_oop_t          ntmprs;
 
-	/* CompiledMethod for a method context, 
+	/* CompiledMethod for a method context,
 	 * SmallInteger for a block context */
 	moo_oop_t          method_or_nargs;
 
 	/* it points to the receiver of the message for a method context.
-	 * a base block context(created but not yet activated) has nil in this 
-	 * field. if a block context is activated by 'value', it points 
+	 * a base block context(created but not yet activated) has nil in this
+	 * field. if a block context is activated by 'value', it points
 	 * to the block context object used as a base for shallow-copy. */
 	moo_oop_t          receiver_or_base;
 
 	/* it is set to nil for a method context.
-	 * for a block context, it points to the active context at the 
-	 * moment the block context was created. that is, it points to 
-	 * a method context where the base block has been defined. 
+	 * for a block context, it points to the active context at the
+	 * moment the block context was created. that is, it points to
+	 * a method context where the base block has been defined.
 	 * an activated block context copies this field from the base block context. */
 	moo_oop_t          home;
 
@@ -782,14 +782,14 @@ struct moo_context_t
 	 * created within the block context also points to the same method context.
 	 *   ctx->origin: method context
 	 *   ctx->origin->method_or_nargs: actual method containing byte codes pertaining to ctx.
-	 * 
+	 *
 	 * when a method context is created, it is set to itself. no change is
-	 * made when the method context is activated. when a base block context is 
+	 * made when the method context is activated. when a base block context is
 	 * created (when MAKE_BLOCK is executed), it is set to the
 	 * origin of the active context. when the base block context is shallow-copied
 	 * for activation (when it is sent 'value'), it is set to the origin of
 	 * the base block context. */
-	moo_oop_context_t  origin; 
+	moo_oop_context_t  origin;
 
 	/* variable indexed part - actual arguments and temporaries are placed here */
 	moo_oop_t          stack[1]; /* context stack that stores arguments and temporaries */
@@ -889,13 +889,13 @@ struct moo_semaphore_t
 
 	moo_oop_t count; /* SmallInteger */
 
-	/* nil for normal. SmallInteger if associated with 
+	/* nil for normal. SmallInteger if associated with
 	 * timer(MOO_SEMAPHORE_SUBTYPE_TIMED) or IO(MOO_SEMAPHORE_SUBTYPE_IO). */
-	moo_oop_t subtype; 
+	moo_oop_t subtype;
 
 	union
 	{
-		struct 
+		struct
 		{
 			moo_oop_t index; /* index to the heap that stores timed semaphores */
 			moo_oop_t ftime_sec; /* firing time */
@@ -932,7 +932,7 @@ struct moo_semaphore_group_t
 	struct
 	{
 		moo_oop_process_t first;
-		moo_oop_process_t last; 
+		moo_oop_process_t last;
 	} waiting; /* list of processes waiting on this semaphore group */
 	/* [END IMPORTANT] */
 
@@ -990,7 +990,7 @@ struct moo_fpdec_t
 
 /**
  * The MOO_BYTESOF() macro returns the size of the payload of
- * an object in bytes. If the pointer given encodes a numeric value, 
+ * an object in bytes. If the pointer given encodes a numeric value,
  * it returns the size of #moo_oow_t in bytes.
  */
 #define MOO_BYTESOF(moo,oop) \
@@ -1175,7 +1175,7 @@ typedef enum moo_log_mask_t moo_log_mask_t;
  * ========================================================================= */
 
 typedef void* (*moo_alloc_heap_t) (
-	moo_t*     moo, 
+	moo_t*     moo,
 	moo_oow_t* size
 );
 
@@ -1491,7 +1491,7 @@ struct moo_mod_t
 	void*             ctx;
 };
 
-struct moo_mod_data_t 
+struct moo_mod_data_t
 {
 	void*           handle;
 	moo_rbt_pair_t* pair; /* internal backreference to moo->modtab */
@@ -1599,13 +1599,13 @@ struct moo_t
 		moo_oow_t log_maxcapa;
 		moo_oow_t dfl_symtab_size;
 		moo_oow_t dfl_sysdic_size;
-		moo_oow_t dfl_procstk_size; 
+		moo_oow_t dfl_procstk_size;
 
 		void* mod_inctx;
 
 	#if defined(MOO_BUILD_DEBUG)
 		/* set automatically when trait is set */
-		moo_oow_t karatsuba_cutoff; 
+		moo_oow_t karatsuba_cutoff;
 	#endif
 	} option;
 
@@ -1636,8 +1636,8 @@ struct moo_t
 	moo_oop_t _false;
 
 	/* =============================================================
-	 * KERNEL CLASSES 
-	 *  Be sure to Keep these kernel class pointers registered in the 
+	 * KERNEL CLASSES
+	 *  Be sure to Keep these kernel class pointers registered in the
 	 *  kernel_classes table in gc.c
 	 * ============================================================= */
 	moo_oop_class_t _apex; /* Apex */
@@ -1682,7 +1682,7 @@ struct moo_t
 	moo_oop_class_t _large_pointer;
 	moo_oop_class_t _system;
 	/* =============================================================
-	 * END KERNEL CLASSES 
+	 * END KERNEL CLASSES
 	 * ============================================================= */
 
 	/* =============================================================
@@ -1691,7 +1691,7 @@ struct moo_t
 	/* 2 tag bits(lo) + 2 extended tag bits(hi). not all slots are used
 	 * because the 2 high extended bits are used only if the low tag bits
 	 * are 3 */
-	moo_oop_class_t* tagged_classes[16]; 
+	moo_oop_class_t* tagged_classes[16];
 
 	moo_oop_dic_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	moo_oop_nsdic_t sysdic; /* system dictionary. instance of Namespace */
@@ -1708,7 +1708,7 @@ struct moo_t
 	moo_oow_t sem_list_count;
 	moo_oow_t sem_list_capa;
 
-	/* semaphores sorted according to time-out. 
+	/* semaphores sorted according to time-out.
 	 * organize entries using heap as the earliest entry
 	 * needs to be checked first */
 	moo_oop_semaphore_t* sem_heap;
@@ -1809,7 +1809,7 @@ struct moo_t
 	moo_method_cache_item_t method_cache[2][MOO_METHOD_CACHE_SIZE];
 
 	moo_ooi_t last_inst_pointer;
-	struct 
+	struct
 	{
 		moo_oow_t method_cache_hits;
 		moo_oow_t method_cache_misses;
@@ -1890,7 +1890,7 @@ struct moo_t
 /* get the receiver of a message */
 #define MOO_STACK_GETRCV(moo,nargs) MOO_STACK_GET(moo, (moo)->sp - nargs)
 
-/* you can't access arguments and receiver after these macros. 
+/* you can't access arguments and receiver after these macros.
  * also you must not call this macro more than once */
 #define MOO_STACK_SETRET(moo,nargs,retv) \
 	do { \
@@ -1945,15 +1945,15 @@ typedef enum moo_ioarg_flag_t moo_ioarg_flag_t; */
 typedef struct moo_ioarg_t moo_ioarg_t;
 struct moo_ioarg_t
 {
-	/** 
+	/**
 	 * [IN] I/O object name.
 	 * It is #MOO_NULL for the main stream and points to a non-NULL string
 	 * for an included stream.
 	 */
 	const moo_ooch_t* name;
 
-	/** 
-	 * [OUT] I/O handle set by an open handler. 
+	/**
+	 * [OUT] I/O handle set by an open handler.
 	 * [IN] I/O handle referenced in read and close handler.
 	 * The source stream handler can set this field when it opens a stream.
 	 * All subsequent operations on the stream see this field as set
@@ -1962,7 +1962,7 @@ struct moo_ioarg_t
 	void* handle;
 
 	/**
-	 * [OUT] place data here 
+	 * [OUT] place data here
 	 */
 	moo_ooch_t buf[MOO_IOBUF_CAPA];
 
@@ -2139,7 +2139,7 @@ static MOO_INLINE moo_errnum_t moo_geterrnum (moo_t* moo) { return moo->errnum; 
 #endif
 
 MOO_EXPORT void moo_seterrnum (
-	moo_t*       moo, 
+	moo_t*       moo,
 	moo_errnum_t errnum
 );
 
@@ -2209,7 +2209,7 @@ MOO_EXPORT int moo_getoption (
 );
 
 /**
- * The moo_setoption() function sets the value of an option 
+ * The moo_setoption() function sets the value of an option
  * specified by \a id to the value pointed to by \a value.
  *
  * \return 0 on success, -1 on failure
@@ -2251,15 +2251,15 @@ MOO_EXPORT moo_oop_t moo_updateoopforgc (
 );
 
 /**
- * The moo_instantiate() function creates a new object instance of the class 
+ * The moo_instantiate() function creates a new object instance of the class
  * \a _class. The size of the fixed part is taken from the information
  * contained in the class defintion. The \a vlen parameter specifies the length
  * of the variable part. The \a vptr parameter points to the memory area to
  * copy into the variable part of the new object. If \a vptr is #MOO_NULL,
  * the variable part is initialized to 0 or an equivalent value depending
- * on the type. \a vptr is not used when the new instance is of the 
+ * on the type. \a vptr is not used when the new instance is of the
  * #MOO_OBJ_TYPE_OOP type.
- * 
+ *
  */
 MOO_EXPORT moo_oop_t moo_instantiate (
 	moo_t*           moo,
@@ -2269,7 +2269,7 @@ MOO_EXPORT moo_oop_t moo_instantiate (
 );
 
 MOO_EXPORT moo_oop_t moo_instantiatewithtrailer (
-	moo_t*           moo, 
+	moo_t*           moo,
 	moo_oop_class_t  _class,
 	moo_oow_t        vlen,
 	const moo_oob_t* trptr,
@@ -2308,7 +2308,7 @@ MOO_EXPORT int moo_invoke (
 
 
 /**
- * The moo_abort() function requests to stop on-going execution. 
+ * The moo_abort() function requests to stop on-going execution.
  * On-going execution doesn't get terminated immediately when this function
  * returns. Termination of execution is honored by the virtual machine.
  * If the virtual machine is in a blocking context, termination will only
@@ -2352,14 +2352,14 @@ MOO_EXPORT moo_oop_t moo_makesymbol (
 );
 
 MOO_EXPORT moo_oop_t moo_makestringwithuchars (
-	moo_t*            moo, 
-	const moo_uch_t*  ptr, 
+	moo_t*            moo,
+	const moo_uch_t*  ptr,
 	moo_oow_t         len
 );
 
 MOO_EXPORT moo_oop_t moo_makestringwithbchars (
-	moo_t*            moo, 
-	const moo_bch_t*  ptr, 
+	moo_t*            moo,
+	const moo_bch_t*  ptr,
 	moo_oow_t         len
 );
 
@@ -2610,7 +2610,7 @@ MOO_EXPORT int moo_convutobchars (
 
 
 /**
- * The moo_convbtoucstr() function converts a null-terminated byte string 
+ * The moo_convbtoucstr() function converts a null-terminated byte string
  * to a wide string.
  */
 MOO_EXPORT int moo_convbtoucstr (
@@ -2817,7 +2817,7 @@ MOO_EXPORT moo_ooi_t moo_logufmtv (
 	const moo_uch_t*  fmt,
 	va_list           ap
 );
- 
+
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_logoofmt moo_logufmt
 #	define moo_logoofmtv moo_logufmtv

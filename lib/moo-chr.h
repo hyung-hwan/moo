@@ -152,7 +152,7 @@ MOO_EXPORT int moo_is_bch_type (moo_bch_t c, moo_bch_prop_t type);
 #	if __has_builtin(__builtin_tolower)
 #		define moo_to_bch_lower __builtin_tolower
 #	endif
-#elif (__GNUC__ >= 4) 
+#elif (__GNUC__ >= 4)
 #	define moo_is_bch_upper __builtin_isupper
 #	define moo_is_bch_lower __builtin_islower
 #	define moo_is_bch_alpha __builtin_isalpha

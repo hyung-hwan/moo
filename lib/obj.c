@@ -52,7 +52,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 
 		if (MOO_UNLIKELY(moo->igniting))
 		{
-			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size); 
+			gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, MOO_SIZEOF(*gch) + size);
 			if (MOO_UNLIKELY(!gch)) return MOO_NULL;
 		}
 		else
@@ -62,7 +62,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 
 			allocsize = MOO_SIZEOF(*gch) + size;
 
-			if (moo->gci.bsz >= moo->gci.threshold) 
+			if (moo->gci.bsz >= moo->gci.threshold)
 			{
 				moo_gc (moo, 0);
 				moo->gci.threshold = moo->gci.bsz + 100000; /* TODO: change this fomula */
@@ -71,7 +71,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 
 			if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, allocsize);
 
-			gch = (moo_gchdr_t*)moo_callocheapmem_noerr(moo, moo->heap, allocsize); 
+			gch = (moo_gchdr_t*)moo_callocheapmem_noerr(moo, moo->heap, allocsize);
 			if (!gch)
 			{
 				if (MOO_UNLIKELY(moo->option.trait & MOO_TRAIT_NOGC)) goto calloc_heapmem_fail;
@@ -80,14 +80,14 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 				moo_gc (moo, 0);
 				if (moo->gci.lazy_sweep) moo_gc_ms_sweep_lazy (moo, allocsize);
 
-				gch = (moo_gchdr_t*)moo_callocheapmem_noerr(moo, moo->heap, allocsize); 
-				if (MOO_UNLIKELY(!gch)) 
+				gch = (moo_gchdr_t*)moo_callocheapmem_noerr(moo, moo->heap, allocsize);
+				if (MOO_UNLIKELY(!gch))
 				{
 				sweep_the_rest:
 					if (moo->gci.lazy_sweep)
 					{
 						moo_gc_ms_sweep_lazy (moo, MOO_TYPE_MAX(moo_oow_t)); /* sweep the rest */
-						gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, allocsize); 
+						gch = (moo_gchdr_t*)moo_callocheapmem(moo, moo->heap, allocsize);
 						if (MOO_UNLIKELY(!gch)) return MOO_NULL;
 					}
 					else
@@ -100,7 +100,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 			}
 		}
 
-		if (moo->gci.lazy_sweep && moo->gci.ls.curr == moo->gci.b) 
+		if (moo->gci.lazy_sweep && moo->gci.ls.curr == moo->gci.b)
 		{
 			/* if the lazy sweeping point is at the beginning of the allocation block,
 			 * moo->gc.ls.prev must get updated */
@@ -128,7 +128,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 		if (MOO_UNLIKELY(moo->igniting))
 		{
 			/* you must increase the size of the permspace if this allocation fails */
-			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size); 
+			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size);
 		}
 		else
 		{
@@ -137,7 +137,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 			{
 				moo_gc (moo, 1);
 				MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
-					"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
+					"GC completed - current heap ptr %p limit %p size %zd free %zd\n",
 					moo->heap->curspace.ptr, moo->heap->curspace.limit,
 					(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.base),
 					(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.ptr)
@@ -158,13 +158,13 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 
 	nbytes = size * MOO_SIZEOF(moo_oop_t);
 
-	/* this isn't really necessary since nbytes must be 
+	/* this isn't really necessary since nbytes must be
 	 * aligned already. */
-	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t)); 
+	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 
 	/* making the number of bytes to allocate a multiple of
 	 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
-	 * of the allocated space to be an even number. 
+	 * of the allocated space to be an even number.
 	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (MOO_UNLIKELY(!hdr)) return MOO_NULL;
@@ -173,7 +173,7 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
-	while (size > 0) 
+	while (size > 0)
 	{
 		size = size - 1;
 		MOO_OBJ_SET_OOP_VAL (hdr, size, moo->_nil);
@@ -190,7 +190,7 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 
 	/* +1 for the trailer size of the moo_oow_t type */
 	nbytes = (size + 1) * MOO_SIZEOF(moo_oop_t) + blen;
-	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t)); 
+	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (MOO_UNLIKELY(!hdr)) return MOO_NULL;
@@ -199,7 +199,7 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
-	for (i = 0; i < size; i++) 
+	for (i = 0; i < size; i++)
 	{
 		MOO_OBJ_SET_OOP_VAL (hdr, i, moo->_nil);
 	}
@@ -231,13 +231,13 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 	/* 'extra' indicates an extra unit to append at the end.
 	 * it's useful to store a string with a terminating null */
 	/*nbytes = extra? xbytes + len: xbytes; */
-	nbytes = extra? xbytes + unit: xbytes; 
+	nbytes = extra? xbytes + unit: xbytes;
 	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 /* TODO: check overflow in size calculation*/
 
 	/* making the number of bytes to allocate a multiple of
 	 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
-	 * of the allocated space to be an even number. 
+	 * of the allocated space to be an even number.
 	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
 	hdr = (moo_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (MOO_UNLIKELY(!hdr)) return MOO_NULL;
@@ -294,18 +294,18 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(_class->spec));
 	spec = MOO_OOP_TO_SMOOI(_class->spec);
 
-	num_fixed_fields = MOO_CLASS_SPEC_NAMED_INSTVARS(spec); 
+	num_fixed_fields = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
 	MOO_ASSERT (moo, num_fixed_fields <= MOO_MAX_NAMED_INSTVARS);
 
-	if (MOO_CLASS_SPEC_IS_INDEXED(spec)) 
+	if (MOO_CLASS_SPEC_IS_INDEXED(spec))
 	{
 		indexed_type = MOO_CLASS_SPEC_INDEXED_TYPE(spec);
 
 		/* the number of the fixed fields for a non-pointer object are supported.
-		 * the fixed fields of a pointer object holds named instance variables 
+		 * the fixed fields of a pointer object holds named instance variables
 		 * and a non-pointer object is facilitated with the fixed fields of the size
 		 * specified in the class description like #byte(5), #word(10).
-		 * 
+		 *
 		 * when it comes to spec decoding, there is no difference between a pointer
 		 * object and a non-pointer object */
 
@@ -323,7 +323,7 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 
 		if (num_flexi_fields > 0)
 		{
-			moo_seterrbfmt (moo, MOO_EPERM, "flexi-fields(%zu) disallowed for a class %O", num_flexi_fields, _class); 
+			moo_seterrbfmt (moo, MOO_EPERM, "flexi-fields(%zu) disallowed for a class %O", num_flexi_fields, _class);
 			return -1;
 		}
 	}
@@ -331,7 +331,7 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 	MOO_ASSERT (moo, num_fixed_fields + num_flexi_fields <= MOO_OBJ_SIZE_MAX);
 	*type = indexed_type;
 	*outlen = num_fixed_fields + num_flexi_fields;
-	return 0; 
+	return 0;
 }
 
 moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr, moo_oow_t vlen)
@@ -350,7 +350,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 	switch (type)
 	{
 		case MOO_OBJ_TYPE_OOP:
-			/* both the fixed part(named instance variables) and 
+			/* both the fixed part(named instance variables) and
 			 * the variable part(indexed instance variables) are allowed. */
 			oop = moo_allocoopobj(moo, alloclen);
 			if (oop)
@@ -362,9 +362,9 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 
 					/* [NOTE] i don't deep-copy initial values.
 					 *   if you change the contents of compound values like arrays,
-					 *   it affects subsequent instantiation of the class. 
+					 *   it affects subsequent instantiation of the class.
 					 *   it's important that the compiler should mark compound initial
-					 *   values read-only. */   
+					 *   values read-only. */
 					while (i > 0)
 					{
 						--i;
@@ -384,8 +384,8 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 				MOO_MEMCPY (&hdr->slot[named_instvar], vptr, vlen * MOO_SIZEOF(moo_oop_t));
 			}
 
-			For the above code to work, it should protect the elements of 
-			the vptr array with moo_pushvolat(). So it might be better 
+			For the above code to work, it should protect the elements of
+			the vptr array with moo_pushvolat(). So it might be better
 			to disallow a non-NULL vptr when indexed_type is OOP. See
 			the assertion above this comment block.
 			*/
@@ -413,7 +413,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 			break;
 	}
 
-	if (oop) 
+	if (oop)
 	{
 		moo_ooi_t spec;
 		MOO_OBJ_SET_CLASS (oop, (moo_oop_t)_class);
@@ -451,9 +451,9 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 
 					/* [NOTE] i don't deep-copy initial values.
 					 *   if you change the contents of compound values like arrays,
-					 *   it affects subsequent instantiation of the class. 
+					 *   it affects subsequent instantiation of the class.
 					 *   it's important that the compiler should mark compound initial
-					 *   values read-only. */   
+					 *   values read-only. */
 					while (i > 0)
 					{
 						--i;
@@ -481,7 +481,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 		MOO_OBJ_SET_CLASS (oop, _class);
 		spec = MOO_OOP_TO_SMOOI(_class->spec);
 		if (MOO_CLASS_SPEC_IS_IMMUTABLE(spec)) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
-		/* the object with trailer is to to uncopyable in moo_allocoopobjwithtrailer() so no need to check/set it again here 
+		/* the object with trailer is to to uncopyable in moo_allocoopobjwithtrailer() so no need to check/set it again here
 		if (MOO_CLASS_SPEC_IS_UNCOPYABLE(spec)) MOO_OBJ_SET_FLAGS_UNCOPYABLE (oop, 1);
  		*/
 	}
@@ -503,7 +503,7 @@ moo_oop_t moo_oowtoptr (moo_t* moo, moo_oow_t num)
 
 int moo_ptrtooow (moo_t* moo, moo_oop_t ptr, moo_oow_t* num)
 {
-	if (MOO_OOP_IS_SMPTR(ptr)) 
+	if (MOO_OOP_IS_SMPTR(ptr))
 	{
 		*num = (moo_oow_t)MOO_OOP_TO_SMPTR(ptr);
 		return 0;

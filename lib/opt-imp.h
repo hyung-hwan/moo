@@ -27,7 +27,7 @@
 
 /* this file is supposed to be included by opt.c multiple times */
 
-/* 
+/*
  * moo_getopt is based on BSD getopt.
  * --------------------------------------------------------------------------
  *
@@ -71,18 +71,18 @@ xci_t xgetopt (int argc, xch_t* const* argv, xopt_t* opt)
 	opt->arg = MOO_NULL;
 	opt->lngopt = MOO_NULL;
 
-	if (opt->cur == MOO_NULL) 
+	if (opt->cur == MOO_NULL)
 	{
 		opt->cur = XEMSG;
 		opt->ind = 1;
 	}
 
-	if (*opt->cur == '\0') 
+	if (*opt->cur == '\0')
 	{
 		/* update scanning pointer */
-		if (opt->ind >= argc || *(opt->cur = argv[opt->ind]) != '-') 
+		if (opt->ind >= argc || *(opt->cur = argv[opt->ind]) != '-')
 		{
-			/* All arguments have been processed or the current 
+			/* All arguments have been processed or the current
 			 * argument doesn't start with a dash */
 			opt->cur = XEMSG;
 			return XCI_EOF;
@@ -123,7 +123,7 @@ xci_t xgetopt (int argc, xch_t* const* argv, xopt_t* opt)
 
 		while (*end != '\0' && *end != '=') end++;
 
-		for (o = opt->lng; o->str; o++) 
+		for (o = opt->lng; o->str; o++)
 		{
 			const xch_t* str = o->str;
 
@@ -147,10 +147,10 @@ xci_t xgetopt (int argc, xch_t* const* argv, xopt_t* opt)
 			}
 			else if (opt->arg == MOO_NULL)
 			{
-				/* check if it has a remaining argument 
+				/* check if it has a remaining argument
 				 * available */
-				if (argc <= ++opt->ind) return BADARG; 
-				/* If so, the next available argument is 
+				if (argc <= ++opt->ind) return BADARG;
+				/* If so, the next available argument is
 				 * taken to be an option argument */
 				opt->arg = argv[opt->ind];
 			}
@@ -160,12 +160,12 @@ xci_t xgetopt (int argc, xch_t* const* argv, xopt_t* opt)
 		}
 
 		/*if (*end == MOO_T('=')) *end = MOO_T('\0');*/
-		opt->lngopt = opt->cur; 
+		opt->lngopt = opt->cur;
 		return BADCH;
 	}
 
 	if ((opt->opt = *opt->cur++) == ':' ||
-	    (oli = xfindcharincstr(opt->str, opt->opt)) == MOO_NULL) 
+	    (oli = xfindcharincstr(opt->str, opt->opt)) == MOO_NULL)
 	{
 		/*
 		 * if the user didn't specify '-' as an option,
@@ -176,21 +176,21 @@ xci_t xgetopt (int argc, xch_t* const* argv, xopt_t* opt)
 		return BADCH;
 	}
 
-	if (*++oli != ':') 
+	if (*++oli != ':')
 	{
 		/* don't need argument */
 		if (*opt->cur == '\0') opt->ind++;
 	}
-	else 
+	else
 	{
 		/* need an argument */
 
-		if (*opt->cur != '\0') 
+		if (*opt->cur != '\0')
 		{
 			/* no white space */
 			opt->arg = opt->cur;
 		}
-		else if (argc <= ++opt->ind) 
+		else if (argc <= ++opt->ind)
 		{
 			/* no arg */
 			opt->cur = XEMSG;
