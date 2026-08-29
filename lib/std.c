@@ -4329,7 +4329,7 @@ static MOO_INLINE void chain (moo_t* moo)
 	xtn->next = g_moo;
 
 	if (g_moo) GET_XTN(g_moo)->prev = moo;
-	else g_moo = moo;
+	g_moo = moo;
 	/* TODO: make this atomic */
 }
 
@@ -4343,7 +4343,7 @@ static MOO_INLINE void unchain (moo_t* moo)
 	if (xtn->next) GET_XTN(xtn->next)->prev = xtn->prev;
 	/* TODO: make this atomic */
 	xtn->prev = MOO_NULL;
-	xtn->prev = MOO_NULL;
+	xtn->next = MOO_NULL;
 }
 
 static void fini_moo (moo_t* moo)
