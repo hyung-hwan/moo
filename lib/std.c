@@ -2388,10 +2388,11 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 			#if defined(USE_DEVPOLL)
 				revents = xtn->ev.buf[n].revents;
 			#elif defined(USE_KQUEUE)
-				if (xtn->ev.buf[n].filter == EVFILT_READ) mask = MOO_SEMAPHORE_IO_MASK_INPUT;
-				else if (xtn->ev.buf[n].filter == EVFILT_WRITE) mask = MOO_SEMAPHORE_IO_MASK_OUTPUT;
-				else mask = 0;
-				goto call_muxwcb_kqueue;
+				revents = 0;
+				if (xtn->ev.buf[n].filter == EVFILT_READ) revents |= XPOLLIN;
+				else if (xtn->ev.buf[n].filter == EVFILT_WRITE) revents |= XPOLLOUT;
+				if (xtn->ev.buf[n].flags & EV_EOF) revents |= XPOLLHUP;
+				if (xtn->ev.buf[n].flags & EV_ERROR) revents |= XPOLLERR;
 			#elif defined(USE_EPOLL)
 				revents = xtn->ev.buf[n].events;
 			#elif defined(USE_POLL)
@@ -2409,7 +2410,6 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 			#if defined(USE_DEVPOLL)
 				muxwcb (moo, xtn->ev.buf[n].fd, mask);
 			#elif defined(USE_KQUEUE)
-			call_muxwcb_kqueue:
 				muxwcb (moo, xtn->ev.buf[n].ident, mask);
 			#elif defined(USE_EPOLL)
 				muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
@@ -2561,10 +2561,12 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#if defined(USE_DEVPOLL)
 		revents = xtn->ev.buf[n].revents;
 	#elif defined(USE_KQUEUE)
-		if (xtn->ev.buf[n].filter == EVFILT_READ) mask = MOO_SEMAPHORE_IO_MASK_INPUT;
-		else if (xtn->ev.buf[n].filter == EVFILT_WRITE) mask = MOO_SEMAPHORE_IO_MASK_OUTPUT;
-		else mask = 0;
-		goto call_muxwcb_kqueue;
+		revents = 0;
+		if (xtn->ev.buf[n].filter == EVFILT_READ) revents |= XPOLLIN;
+		else if (xtn->ev.buf[n].filter == EVFILT_WRITE) revents |= XPOLLOUT;
+		if (xtn->ev.buf[n].flags & EV_EOF) revents |= XPOLLHUP;
+		if (xtn->ev.buf[n].flags & EV_ERROR) revents |= XPOLLERR;
+
 	#elif defined(USE_EPOLL)
 		revents = xtn->ev.buf[n].events;
 	#elif defined(USE_POLL)
@@ -2584,7 +2586,6 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#if defined(USE_DEVPOLL)
 		muxwcb (moo, xtn->ev.buf[n].fd, mask);
 	#elif defined(USE_KQUEUE)
-	call_muxwcb_kqueue:
 		muxwcb (moo, xtn->ev.buf[n].ident, mask);
 	#elif defined(USE_EPOLL)
 		muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
