@@ -1471,13 +1471,20 @@ moo_oop_t moo_mulnums (
 	moo_oop_t    y
 );
 
-moo_oop_t moo_mltnums (
+moo_oop_t moo_tmulnums (
 	moo_t*       moo,
 	moo_oop_t    x,
 	moo_oop_t    y
 );
 
 moo_oop_t moo_divnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y,
+	int          modulo
+);
+
+moo_oop_t moo_tdivnums (
 	moo_t*       moo,
 	moo_oop_t    x,
 	moo_oop_t    y,

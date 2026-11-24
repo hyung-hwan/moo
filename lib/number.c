@@ -76,9 +76,9 @@ moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 		return MOO_NULL;
 	}
 
-	moo_pushvolat (moo, &value);
+	moo_pushvolat(moo, &value);
 	fpdec = (moo_oop_fpdec_t)moo_instantiate(moo, moo->_fixed_point_decimal, MOO_NULL, 0);
-	moo_popvolat (moo);
+	moo_popvolat(moo);
 	if (!fpdec) return MOO_NULL;
 
 	MOO_STORE_OOP (moo, &fpdec->value, value);
@@ -305,8 +305,8 @@ moo_oop_t moo_addnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_oop_t v;
 		moo_ooi_t scale;
 
-		moo_pushvolat (moo, &x);
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &x);
+		moo_pushvolat(moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
 		if (scale <= -1)
@@ -334,8 +334,8 @@ moo_oop_t moo_subnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_oop_t v;
 		moo_ooi_t scale;
 
-		moo_pushvolat (moo, &x);
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &x);
+		moo_pushvolat(moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
 		if (scale <= -1)
@@ -407,6 +407,7 @@ moo_oop_t moo_mulnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return mul_nums(moo, x, y, 0);
 }
 
+#if 0
 moo_oop_t moo_mltnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
 	/* (mlt 1.00 12.123) =>  12.12 */
@@ -447,23 +448,110 @@ moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo)
 
 	nv = xv;
 
-	moo_pushvolat (moo, &yv);
+	moo_pushvolat(moo, &yv);
 	for (i = 0; i < ys; i++)
 	{
 		nv = moo_mulints(moo, nv, MOO_SMOOI_TO_OOP(10));
 		if (!nv)
 		{
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			return MOO_NULL;
 		}
 	}
 
 	nv = moo_divints(moo, nv, yv, modulo, MOO_NULL);
-	moo_popvolat (moo);
+	moo_popvolat(moo);
 	if (!nv) return MOO_NULL;
 
 	return moo_makefpdec(moo, nv, xs);
 }
+#else
+moo_oop_t moo_tmulnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
+{
+	/* ~* 1.00 12.123 =>  12.12, use the precision of the first operand */
+	return mul_nums(moo, x, y, 1);
+}
+
+static moo_oop_t div_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, int trunc, int modulo)
+{
+	moo_ooi_t xs, ys, ns, i;
+	moo_oop_t nv;
+	moo_oop_t xv, yv;
+
+	xs = 0;
+	xv = x;
+	if (MOO_OOP_IS_FPDEC(moo, xv))
+	{
+		xs = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)xv)->scale);
+		xv = ((moo_oop_fpdec_t)xv)->value;
+	}
+	else if (!moo_isint(moo, xv))
+	{
+		moo_seterrbfmt(moo, MOO_EINVAL, "parameter not numeric - %O", xv);
+		return MOO_NULL;
+	}
+
+	ys = 0;
+	yv = y;
+	if (MOO_OOP_IS_FPDEC(moo, y))
+	{
+		ys = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)yv)->scale);
+		yv = ((moo_oop_fpdec_t)yv)->value;
+	}
+	else if (!moo_isint(moo, yv))
+	{
+		moo_seterrbfmt(moo, MOO_EINVAL, "parameter not numeric - %O", yv);
+		return MOO_NULL;
+	}
+
+	/* unlike a sum or a product, a quotient has no scale that falls out of
+	 * the operands - 1/3 does not terminate - so the scale of the result is
+	 * a choice. '/' takes the wider of the two, as '*' does, and '~/' keeps
+	 * the scale of the dividend.
+	 *
+	 * x / y is (xv / 10^xs) / (yv / 10^ys), which is xv * 10^ys / (yv * 10^xs).
+	 * to hold that at scale ns, the dividend is scaled by 10^(ys + ns - xs)
+	 * before the division. ns is never less than xs, so the exponent is never
+	 * negative. */
+	ns = (trunc || xs > ys)? xs: ys;
+
+	nv = xv;
+
+	moo_pushvolat(moo, &yv);
+	for (i = ys + ns - xs; i > 0; i--)
+	{
+		nv = moo_mulints(moo, nv, MOO_SMOOI_TO_OOP(10));
+		if (!nv)
+		{
+			moo_popvolat(moo);
+			return MOO_NULL;
+		}
+	}
+
+	/* no remainder is asked for, so 'modulo' only picks which way the quotient
+	 * rounds - 0 truncates towards zero, 1 floors towards negative infinity.
+	 * the remainder that would pair with this quotient sits at scale 'ns' and
+	 * is a rounding residue, not a modulus; a fixed-point 'mdiv'/'mod' needs a
+	 * separate path over equalize_scale(), where the quotient is an integer. */
+	nv = moo_divints(moo, nv, yv, modulo, MOO_NULL);
+	moo_popvolat(moo);
+	if (!nv) return MOO_NULL;
+
+	return moo_makefpdec(moo, nv, ns);
+}
+
+moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo)
+{
+	/* / 10 4.00 => 2.50, use the wider precision of the either operands */
+	return div_nums(moo, x, y, 0, modulo);
+}
+
+moo_oop_t moo_tdivnums (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo)
+{
+	/* ~/ 10 4.00 => 2, use the precision of the first operand */
+	return div_nums(moo, x, y, 1, modulo);
+}
+#endif
 
 static moo_oop_t comp_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, moo_oop_t (*comper) (moo_t*, moo_oop_t, moo_oop_t))
 {
@@ -477,8 +565,8 @@ static moo_oop_t comp_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, moo_oop_t (*co
 		moo_oop_t v;
 		moo_ooi_t scale;
 
-		moo_pushvolat (moo, &x);
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &x);
+		moo_pushvolat(moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
 		if (scale <= -1)
@@ -557,18 +645,27 @@ moo_oop_t moo_sqrtnum (moo_t* moo, moo_oop_t x)
 		scale = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)x)->scale);
 
 		v = ((moo_oop_fpdec_t)x)->value;
+
+		/* reject a negative here rather than letting moo_sqrtint() do it. by the
+		 * time the value gets there it has been scaled up by 10^scale, and the
+		 * message would name that internal integer instead of the number the
+		 * caller passed - (sqrt -2.25) reporting '-22500'. */
+		if (MOO_OOP_IS_SMOOI(v)? (MOO_OOP_TO_SMOOI(v) < 0): MOO_POINTER_IS_NBIGINT(moo, v))
+		{
+			moo_seterrbfmt(moo, MOO_EINVAL, "negative number - %O", x);
+			return MOO_NULL;
+		}
+
 		for (i = 0; i < scale ; i++)
 		{
+			/* v is replaced by the result on every turn, so it needs no
+			 * protection across the call. */
 			v = moo_mulints(moo, v, MOO_SMOOI_TO_OOP(10));
-			if (!v)
-			{
-				moo_popvolat (moo);
-				return MOO_NULL;
-			}
+			if (MOO_UNLIKELY(!v)) return MOO_NULL;
 		}
 
 		v = moo_sqrtint(moo, v);
-		if (!v) return MOO_NULL;
+		if (MOO_UNLIKELY(!v)) return MOO_NULL;
 
 		return moo_makefpdec(moo, v, scale);
 	}
@@ -589,7 +686,7 @@ moo_oop_t moo_absnum (moo_t* moo, moo_oop_t x)
 		v = ((moo_oop_fpdec_t)x)->value;
 
 		v = moo_absint(moo, v);
-		if (!v) return MOO_NULL;
+		if (MOO_UNLIKELY(!v)) return MOO_NULL;
 
 		return moo_makefpdec(moo, v, scale);
 	}

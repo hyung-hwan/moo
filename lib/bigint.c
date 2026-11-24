@@ -194,8 +194,8 @@ static MOO_INLINE int smooi_mul_overflow (moo_t* moo, moo_ooi_t a, moo_ooi_t b, 
 #if (MOO_SIZEOF_UINTMAX_T > MOO_SIZEOF_OOI_T)
 	moo_intmax_t k;
 
-	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(a));
-	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(b));
+	MOO_ASSERT(moo, MOO_IN_SMOOI_RANGE(a));
+	MOO_ASSERT(moo, MOO_IN_SMOOI_RANGE(b));
 
 	k = (moo_intmax_t)a * (moo_intmax_t)b;
 	*c = (moo_ooi_t)k;
@@ -205,8 +205,8 @@ static MOO_INLINE int smooi_mul_overflow (moo_t* moo, moo_ooi_t a, moo_ooi_t b, 
 
 	moo_ooi_t ua, ub;
 
-	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(a));
-	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(b));
+	MOO_ASSERT(moo, MOO_IN_SMOOI_RANGE(a));
+	MOO_ASSERT(moo, MOO_IN_SMOOI_RANGE(b));
 
 	*c = a * b;
 
@@ -270,7 +270,7 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 			moo_oow_t sz;
 
 			sz = MOO_OBJ_GET_SIZE(oop);
-			MOO_ASSERT (moo, sz >= 1);
+			MOO_ASSERT(moo, sz >= 1);
 
 			return MOO_OBJ_GET_LIWORD_VAL(oop, sz - 1) == 0? 0: 1;
 		}
@@ -281,11 +281,11 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 
 static MOO_INLINE int bigint_to_oow_noseterr (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 {
-	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
-	MOO_ASSERT (moo, MOO_POINTER_IS_PBIGINT(moo, num) || MOO_POINTER_IS_NBIGINT(moo, num));
+	MOO_ASSERT(moo, MOO_OOP_IS_POINTER(num));
+	MOO_ASSERT(moo, MOO_POINTER_IS_PBIGINT(moo, num) || MOO_POINTER_IS_NBIGINT(moo, num));
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
-	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 1);
+	MOO_ASSERT(moo, MOO_OBJ_GET_SIZE(num) >= 1);
 	if (MOO_OBJ_GET_SIZE(num) == 1)
 	{
 		*w = MOO_OBJ_GET_WORD_VAL(num, 0);
@@ -298,7 +298,7 @@ static MOO_INLINE int bigint_to_oow_noseterr (moo_t* moo, moo_oop_t num, moo_oow
 	 * you must not call this function with an unnormalized
 	 * large integer. */
 
-	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 2);
+	MOO_ASSERT(moo, MOO_OBJ_GET_SIZE(num) >= 2);
 	if (MOO_OBJ_GET_SIZE(num) == 2)
 	{
 		*w = MAKE_WORD(MOO_OBJ_GET_HALFWORD_VAL(num, 0), MOO_OBJ_GET_HALFWORD_VAL(num, 1));
@@ -341,7 +341,7 @@ static MOO_INLINE int integer_to_oow_noseterr (moo_t* moo, moo_oop_t x, moo_oow_
 		}
 	}
 
-	MOO_ASSERT (moo, moo_isbigint(moo, x));
+	MOO_ASSERT(moo, moo_isbigint(moo, x));
 	return bigint_to_oow_noseterr(moo, x, w);
 }
 
@@ -416,7 +416,7 @@ int moo_inttoooi_noseterr (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 		n = bigint_to_oow_noseterr(moo, x, &w);
 		if (n < 0)
 		{
-			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
+			MOO_STATIC_ASSERT(MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
 			if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1) return 0; /* too small */
 			*i = (w <= (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t))? -(moo_ooi_t)w: MOO_TYPE_MIN(moo_ooi_t); /* negate back */
 		}
@@ -448,7 +448,7 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 		n = bigint_to_oow_noseterr(moo, x, &w);
 		if (n < 0)
 		{
-			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
+			MOO_STATIC_ASSERT(MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
 			if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1)
 			{
 				moo_seterrnum (moo, MOO_ERANGE);
@@ -484,11 +484,11 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 #elif (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T * 2) || (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T * 4)
 static MOO_INLINE int bigint_to_uintmax_noseterr (moo_t* moo, moo_oop_t num, moo_uintmax_t* w)
 {
-	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
-	MOO_ASSERT (moo, MOO_POINTER_IS_PBIGINT(moo, num) || MOO_POINTER_IS_NBIGINT(moo, num));
+	MOO_ASSERT(moo, MOO_OOP_IS_POINTER(num));
+	MOO_ASSERT(moo, MOO_POINTER_IS_PBIGINT(moo, num) || MOO_POINTER_IS_NBIGINT(moo, num));
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
-	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 1);
+	MOO_ASSERT(moo, MOO_OBJ_GET_SIZE(num) >= 1);
 
 	switch (MOO_OBJ_GET_SIZE(num))
 	{
@@ -521,7 +521,7 @@ static MOO_INLINE int bigint_to_uintmax_noseterr (moo_t* moo, moo_oop_t num, moo
 	}
 
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
-	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 2);
+	MOO_ASSERT(moo, MOO_OBJ_GET_SIZE(num) >= 2);
 	switch (MOO_OBJ_GET_SIZE(num))
 	{
 		case 2:
@@ -640,7 +640,7 @@ int moo_inttointmax_noseterr (moo_t* moo, moo_oop_t x, moo_intmax_t* i)
 		if (n < 0)
 		{
 			/* negative number negated to a positve number */
-			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
+			MOO_STATIC_ASSERT(MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
 			if (w > (moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t) + 1) return 0; /* not convertable - too small */
 			*i = (w <= (moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t))? -(moo_intmax_t)w: MOO_TYPE_MIN(moo_intmax_t); /* negate back */
 		}
@@ -673,7 +673,7 @@ int moo_inttointmax (moo_t* moo, moo_oop_t x, moo_intmax_t* i)
 		if (n < 0)
 		{
 			/* negative number negated to a positve number */
-			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
+			MOO_STATIC_ASSERT(MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
 			if (w > (moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t) + 1)
 			{
 				moo_seterrnum (moo, MOO_ERANGE);
@@ -708,7 +708,7 @@ int moo_inttointmax (moo_t* moo, moo_oop_t x, moo_intmax_t* i)
 static MOO_INLINE moo_oop_t make_bigint_with_oow (moo_t* moo, moo_oow_t w)
 {
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
-	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
+	MOO_STATIC_ASSERT(MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
 	return moo_instantiate(moo, moo->_large_positive_integer, &w, 1);
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
 	moo_liw_t hw[2];
@@ -725,7 +725,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	moo_oow_t w;
 
-	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
+	MOO_STATIC_ASSERT(MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
 		w = i;
@@ -741,7 +741,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 	moo_liw_t hw[2];
 	moo_oow_t w;
 
-	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oohw_t) == MOO_SIZEOF(moo_liw_t));
+	MOO_STATIC_ASSERT(MOO_SIZEOF(moo_oohw_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
 		w = i;
@@ -767,8 +767,8 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 	moo_oow_t w;
 	moo_oop_t z;
 
-	MOO_ASSERT (moo, extra <= MOO_OBJ_SIZE_MAX - 1);
-	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
+	MOO_ASSERT(moo, extra <= MOO_OBJ_SIZE_MAX - 1);
+	MOO_STATIC_ASSERT(MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
 		w = i;
@@ -790,7 +790,7 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 	moo_oow_t w;
 	moo_oop_t z;
 
-	MOO_ASSERT (moo, extra <= MOO_OBJ_SIZE_MAX - 2);
+	MOO_ASSERT(moo, extra <= MOO_OBJ_SIZE_MAX - 2);
 	if (i >= 0)
 	{
 		w = i;
@@ -862,7 +862,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_uintmax (moo_t* moo, moo_uintmax_t 
 
 moo_oop_t moo_oowtoint (moo_t* moo, moo_oow_t w)
 {
-	MOO_ASSERT (moo, MOO_TYPE_IS_UNSIGNED(moo_oow_t));
+	MOO_ASSERT(moo, MOO_TYPE_IS_UNSIGNED(moo_oow_t));
 	/*if (MOO_IN_SMOOI_RANGE(w))*/
 	if (w <= MOO_SMOOI_MAX)
 	{
@@ -922,7 +922,7 @@ static MOO_INLINE moo_oop_t expand_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t 
 	moo_oow_t i;
 	moo_oow_t count;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
+	MOO_ASSERT(moo, MOO_OOP_IS_POINTER(oop));
 	count = MOO_OBJ_GET_SIZE(oop);
 
 	if (inc > MOO_OBJ_SIZE_MAX - count)
@@ -931,9 +931,9 @@ static MOO_INLINE moo_oop_t expand_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t 
 		return MOO_NULL;
 	}
 
-	moo_pushvolat (moo, &oop);
+	moo_pushvolat(moo, &oop);
 	z = moo_instantiate(moo, MOO_OBJ_GET_CLASS(oop), MOO_NULL, count + inc);
-	moo_popvolat (moo);
+	moo_popvolat(moo);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 	for (i = 0; i < count; i++)
@@ -949,12 +949,12 @@ static MOO_INLINE moo_oop_t _clone_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t 
 	moo_oop_t z;
 	moo_oow_t i;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
+	MOO_ASSERT(moo, MOO_OOP_IS_POINTER(oop));
 	if (count <= 0) count = MOO_OBJ_GET_SIZE(oop);
 
-	moo_pushvolat (moo, &oop);
+	moo_pushvolat(moo, &oop);
 	z = moo_instantiate(moo, _class, MOO_NULL, count);
-	moo_popvolat (moo);
+	moo_popvolat(moo);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 	for (i = 0; i < count; i++)
@@ -973,14 +973,14 @@ static MOO_INLINE moo_oop_t clone_bigint_negated (moo_t* moo, moo_oop_t oop, moo
 {
 	moo_oop_class_t _class;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
+	MOO_ASSERT(moo, MOO_OOP_IS_POINTER(oop));
 	if (MOO_POINTER_IS_PBIGINT(moo, oop))
 	{
 		_class = moo->_large_negative_integer;
 	}
 	else
 	{
-		MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, oop));
+		MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, oop));
 		_class = moo->_large_positive_integer;
 	}
 
@@ -1022,7 +1022,7 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 
 	if (MOO_OOP_IS_SMOOI(oop)) return oop;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
+	MOO_ASSERT(moo, MOO_OOP_IS_POINTER(oop));
 	count = count_effective_digits(oop);
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
@@ -1037,8 +1037,8 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 		}
 		else
 		{
-			MOO_ASSERT (moo, -MOO_SMOOI_MAX  == MOO_SMOOI_MIN);
-			MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, oop));
+			MOO_ASSERT(moo, -MOO_SMOOI_MAX  == MOO_SMOOI_MIN);
+			MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, oop));
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(-(moo_ooi_t)w);
 		}
 	}
@@ -1052,7 +1052,7 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 		}
 		else
 		{
-			MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, oop));
+			MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, oop));
 			return MOO_SMOOI_TO_OOP(-(moo_ooi_t)MOO_OBJ_GET_LIWORD_VAL(oop, 0));
 		}
 	}
@@ -1067,8 +1067,8 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 		}
 		else
 		{
-			MOO_ASSERT (moo, -MOO_SMOOI_MAX  == MOO_SMOOI_MIN);
-			MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, oop));
+			MOO_ASSERT(moo, -MOO_SMOOI_MAX  == MOO_SMOOI_MIN);
+			MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, oop));
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(-(moo_ooi_t)w);
 		}
 	}
@@ -1100,7 +1100,7 @@ static MOO_INLINE int is_less_unsigned_array (const moo_liw_t* x, moo_oow_t xs, 
 
 static MOO_INLINE int is_less_unsigned (moo_oop_t x, moo_oop_t y)
 {
-	return is_less_unsigned_array (
+	return is_less_unsigned_array(
 		MOO_OBJ_GET_LIWORD_SLOT(x), MOO_OBJ_GET_SIZE(x),
 		MOO_OBJ_GET_LIWORD_SLOT(y), MOO_OBJ_GET_SIZE(y));
 }
@@ -1205,7 +1205,7 @@ static void complement2_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_
 	 * this function is not designed to handle such a case.
 	 * in fact, 0 is a small integer and it must not stand a change
 	 * to be given to this function */
-	MOO_ASSERT (moo, carry == 0);
+	MOO_ASSERT(moo, carry == 0);
 }
 
 static MOO_INLINE moo_oow_t add_unsigned_array (const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* z)
@@ -1308,12 +1308,12 @@ static MOO_INLINE moo_oow_t subtract_unsigned_array (moo_t* moo, const moo_liw_t
 
 	if (x == y)
 	{
-		MOO_ASSERT (moo, xs == ys);
+		MOO_ASSERT(moo, xs == ys);
 		z[0] = 0;
 		return 1;
 	}
 
-	MOO_ASSERT (moo, !is_less_unsigned_array(x, xs, y, ys));
+	MOO_ASSERT(moo, !is_less_unsigned_array(x, xs, y, ys));
 
 	for (i = 0; i < ys; i++)
 	{
@@ -1346,12 +1346,12 @@ static MOO_INLINE moo_oow_t subtract_unsigned_array (moo_t* moo, const moo_liw_t
 
 	if (x == y)
 	{
-		MOO_ASSERT (moo, xs == ys);
+		MOO_ASSERT(moo, xs == ys);
 		z[0] = 0;
 		return 1;
 	}
 
-	MOO_ASSERT (moo, !is_less_unsigned_array(x, xs, y, ys));
+	MOO_ASSERT(moo, !is_less_unsigned_array(x, xs, y, ys));
 
 	borrowed_word = (moo_lidw_t)1 << MOO_LIW_BITS;
 	for (i = 0; i < ys; i++)
@@ -1383,7 +1383,7 @@ static MOO_INLINE moo_oow_t subtract_unsigned_array (moo_t* moo, const moo_liw_t
 		}
 	}
 
-	MOO_ASSERT (moo, borrow == 0);
+	MOO_ASSERT(moo, borrow == 0);
 
 	while (i > 1 && z[i - 1] == 0) i--;
 	return i; /* the number of effective digits in the result */
@@ -1559,9 +1559,9 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	moo_lidw_t nshifts;
 	moo_lidw_t ndigits_xh, ndigits_xl;
 	moo_lidw_t ndigits_yh, ndigits_yl;
-	moo_liw_t* tmp[2] = { MOO_NULL, MOO_NULL};
+	moo_liw_t* tmp[3] = { MOO_NULL, MOO_NULL, MOO_NULL };
 	moo_liw_t* zsp;
-	moo_oow_t tmplen[2];
+	moo_oow_t tmplen[3];
 	moo_oow_t xlen, zcapa;
 
 	zcapa = xs + ys; /* the caller ensures this capacity for z at the minimum*/
@@ -1605,8 +1605,8 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	ndigits_yl = nshifts; /* ndigits of lower part of y */
 	ndigits_yh = ys - nshifts; /* ndigits of uppoer part of y */
 
-	MOO_ASSERT (moo, ndigits_xl >= ndigits_xh);
-	MOO_ASSERT (moo, ndigits_yl >= ndigits_yh);
+	MOO_ASSERT(moo, ndigits_xl >= ndigits_xh);
+	MOO_ASSERT(moo, ndigits_yl >= ndigits_yh);
 
 	/* make a temporary buffer for (b0 + b1) and (a1 * b1) */
 	tmplen[0] = ndigits_xh + ndigits_yh;
@@ -1629,16 +1629,26 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	/*MOO_DEBUG6 (moo, "karatsuba t %p u %p ndigits_xl %d ndigits_xh %d ndigits_yl %d ndigits_yh %d\n", tmp[0], tmp[1], (int)ndigits_xl, (int)ndigits_xh, (int)ndigits_yl, (int)ndigits_yh);*/
 	/*MOO_DEBUG5 (moo, "zcapa %d, tmplen[0] %d tmplen[1] %d nshifts %d total %d\n", (int)zcapa, (int)tmplen[0], (int)tmplen[1], (int)nshifts, (int)(tmplen[0] + tmplen[1] + nshifts));*/
 
-	/* place (a0 + a1) * (b0 + b1) at the shifted position */
-	zsp = z + nshifts;
+	/* tmp[2] = (a0 + a1) * (b0 + b1).
+	 *
+	 * this product gets a buffer of its own. it takes up to
+	 * tmplen[0] + tmplen[1] words, and the shift puts it at
+	 * nshifts + tmplen[0] + tmplen[1] - up to two words beyond the
+	 * xs + ys words the caller has given for 'z', because each of the
+	 * two sums may carry into a word of its own. only after the two
+	 * subtractions below does it come back down to a0b1 + a1b0, which
+	 * is small enough for the room that is there. */
+	tmplen[2] = tmplen[0] + tmplen[1];
+	tmp[2] = (moo_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[2]);
+	if (MOO_UNLIKELY(!tmp[2])) goto oops;
 	if (CANNOT_KARATSUBA(moo, tmplen[0], tmplen[1]))
 	{
-		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], zsp);
-		xlen = count_effective(zsp, tmplen[0] + tmplen[1]);
+		multiply_unsigned_array(tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
+		xlen = count_effective(tmp[2], tmplen[2]);
 	}
 	else
 	{
-		xlen = multiply_unsigned_array_karatsuba(moo, tmp[0], tmplen[0], tmp[1], tmplen[1], zsp);
+		xlen = multiply_unsigned_array_karatsuba(moo, tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
 		if (xlen == 0) goto oops;
 	}
 
@@ -1647,7 +1657,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	MOO_MEMSET (tmp[0], 0, sizeof(moo_liw_t) * tmplen[0]);
 	if (CANNOT_KARATSUBA(moo, ndigits_xl, ndigits_yl))
 	{
-		multiply_unsigned_array (x, ndigits_xl, y, ndigits_yl, tmp[0]);
+		multiply_unsigned_array(x, ndigits_xl, y, ndigits_yl, tmp[0]);
 		tmplen[0] = count_effective(tmp[0], tmplen[0]);
 	}
 	else
@@ -1661,7 +1671,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	MOO_MEMSET (tmp[1], 0, sizeof(moo_liw_t) * tmplen[1]);
 	if (CANNOT_KARATSUBA(moo, ndigits_xh, ndigits_yh))
 	{
-		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
+		multiply_unsigned_array(x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
 		tmplen[1] = count_effective(tmp[1], tmplen[1]);
 	}
 	else
@@ -1671,10 +1681,17 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	}
 
 	/* (a0+a1)*(b0+b1) -(a0*b0) */
-	xlen = subtract_unsigned_array(moo, zsp, xlen, tmp[0], tmplen[0], zsp);
+	xlen = subtract_unsigned_array(moo, tmp[2], xlen, tmp[0], tmplen[0], tmp[2]);
 
 	/* (a0+a1)*(b0+b1) - (a0*b0) - (a1*b1) */
-	xlen = subtract_unsigned_array(moo, zsp, xlen, tmp[1], tmplen[1], zsp);
+	xlen = subtract_unsigned_array(moo, tmp[2], xlen, tmp[1], tmplen[1], tmp[2]);
+
+	/* what is left is a0b1 + a1b0. add it to 'z' at the shifted position
+	 * for "* B^n". it needs no more than xs + 1 words and the room from
+	 * nshifts on is xs + ys - nshifts, which is at least that. */
+	zsp = z + nshifts;
+	add_unsigned_array(zsp, zcapa - nshifts, tmp[2], xlen, zsp);
+
 	/* a1b1 is in tmp[1]. add (a1b1 * B^2n) to the high part of 'z' */
 	zsp = z + (nshifts * 2); /* emulate shifting for "* B^2n". */
 	xlen = zcapa - (nshifts * 2);
@@ -1683,11 +1700,13 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	/* z = z + a0b0. a0b0 is in tmp[0] */
 	xlen = add_unsigned_array(z, zcapa, tmp[0], tmplen[0], z);
 
+	moo_freemem (moo, tmp[2]);
 	moo_freemem (moo, tmp[1]);
 	moo_freemem (moo, tmp[0]);
-	return count_effective(z, xlen);
+	return count_effective(z, zcapa);
 
 oops:
+	if (tmp[2]) moo_freemem (moo, tmp[2]);
 	if (tmp[1]) moo_freemem (moo, tmp[1]);
 	if (tmp[0]) moo_freemem (moo, tmp[0]);
 	return 0;
@@ -1731,7 +1750,7 @@ oops:
 		}
 
 		z[i] = carry;
-		return;
+		return count_effective(z, xs + 1);
 	}
 
 	/* calculate value of nshifts, that is 2^(MOO_LIW_BITS*nshifts) */
@@ -1742,8 +1761,8 @@ oops:
 	ndigits_yl = nshifts; /* ndigits of lower part of y */
 	ndigits_yh = ys - nshifts; /* ndigits of uppoer part of y */
 
-	MOO_ASSERT (moo, ndigits_xl >= ndigits_xh);
-	MOO_ASSERT (moo, ndigits_yl >= ndigits_yh);
+	MOO_ASSERT(moo, ndigits_xl >= ndigits_xh);
+	MOO_ASSERT(moo, ndigits_yl >= ndigits_yh);
 
 	/* make a temporary buffer for (b0 + b1) and (a1 * b1) */
 	tmplen[0] = ndigits_yl + ndigits_yh + 1;
@@ -1758,18 +1777,18 @@ oops:
 	if (!tmp[0]) goto oops;
 
 	/* tmp[0] = a0 + a1 */
-	tmplen[0] = add_unsigned_array (x, ndigits_xl, x + nshifts, ndigits_xh, tmp[0]);
+	tmplen[0] = add_unsigned_array(x, ndigits_xl, x + nshifts, ndigits_xh, tmp[0]);
 
 	/* tmp[1] = b0 + b1 */
-	tmplen[1] = add_unsigned_array (y, ndigits_yl, y + nshifts, ndigits_yh, tmp[1]);
+	tmplen[1] = add_unsigned_array(y, ndigits_yl, y + nshifts, ndigits_yh, tmp[1]);
 
 	/* tmp[2] = (a0 + a1) * (b0 + b1) */
 	tmplen[2] = tmplen[0] + tmplen[1];
-	tmp[2] = moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[2]);
+	tmp[2] = (moo_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[2]);
 	if (!tmp[2]) goto oops;
 	if (CANNOT_KARATSUBA(moo, tmplen[0], tmplen[1]))
 	{
-		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
+		multiply_unsigned_array(tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
 		xlen = count_effective(tmp[2], tmplen[2]);
 	}
 	else
@@ -1783,7 +1802,7 @@ oops:
 	MOO_MEMSET (tmp[0], 0, sizeof(moo_liw_t) * tmplen[0]);
 	if (CANNOT_KARATSUBA(moo, ndigits_xl, ndigits_yl))
 	{
-		multiply_unsigned_array (x, ndigits_xl, y, ndigits_yl, tmp[0]);
+		multiply_unsigned_array(x, ndigits_xl, y, ndigits_yl, tmp[0]);
 		tmplen[0] = count_effective(tmp[0], tmplen[0]);
 	}
 	else
@@ -1797,7 +1816,7 @@ oops:
 	MOO_MEMSET (tmp[1], 0, sizeof(moo_liw_t) * tmplen[1]);
 	if (CANNOT_KARATSUBA(moo, ndigits_xh, ndigits_yh))
 	{
-		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
+		multiply_unsigned_array(x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
 		tmplen[1] = count_effective(tmp[1], tmplen[1]);
 	}
 	else
@@ -1816,7 +1835,7 @@ oops:
 	/* a1b1 is in tmp[1]. add (a1b1 * B^2n) to the high part of 'z' */
 	zsp = z + (nshifts * 2); /* emulate shifting for "* B^2n". */
 	xlen = zcapa - (nshifts * 2);
-	xlen = add_unsigned_array (zsp, xlen, tmp[1], tmplen[1], zsp);
+	xlen = add_unsigned_array(zsp, xlen, tmp[1], tmplen[1], zsp);
 
 	/* z = z + a0b0. a0b0 is in tmp[0] */
 	xlen = add_unsigned_array(z, zcapa, tmp[0], tmplen[0], z);
@@ -1853,6 +1872,18 @@ static MOO_INLINE void lshift_unsigned_array (moo_liw_t* x, moo_oow_t xs, moo_oo
 
 	/* get how many remaining bits to shift */
 	bit_shifts = bits % MOO_LIW_BITS;
+	if (bit_shifts == 0)
+	{
+		/* a whole number of words with no leftover bits.
+		 * the normal loop far below would shift a word by
+		 * (MOO_LIW_BITS - bit_shifts). if bit_shifts is 0,
+		 * the sift size is the full word width and it's
+		 * undefined in C. let this loop copy words without
+		 * shifting within a word instead */
+		for (di = xs, si = xs - word_shifts; si > 0; ) x[--di] = x[--si];
+		MOO_MEMSET(x, 0, word_shifts * MOO_SIZEOF(moo_liw_t));
+		return;
+	}
 	bit_shifts_right = MOO_LIW_BITS - bit_shifts;
 
 	/* shift words and bits */
@@ -1888,6 +1919,14 @@ static MOO_INLINE void rshift_unsigned_array (moo_liw_t* x, moo_oow_t xs, moo_oo
 
 	/* get how many remaining bits to shift */
 	bit_shifts = bits % MOO_LIW_BITS;
+	if (bit_shifts == 0)
+	{
+		/* a whole number of words - see the same case in
+		 * lshift_unsigned_array() for why the loop below cannot do it. */
+		for (di = 0, si = word_shifts; si < xs; di++, si++) x[di] = x[si];
+		MOO_MEMSET(&x[xs - word_shifts], 0, word_shifts * MOO_SIZEOF(moo_liw_t));
+		return;
+	}
 	bit_shifts_left = MOO_LIW_BITS - bit_shifts;
 
 /* TODO: verify this function */
@@ -1929,7 +1968,7 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 
 	moo_oow_t rs, rrs, i , j;
 
-	MOO_ASSERT (moo, xs >= ys);
+	MOO_ASSERT(moo, xs >= ys);
 
 	/* the caller must ensure:
 	 *   - q and r are all zeros. can skip memset() with zero.
@@ -1949,14 +1988,14 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 			/* the value of the remainder 'r' may get bigger than the
 			 * divisor 'y' temporarily until subtraction is performed
 			 * below. so ys + 1(kept in rrs) is needed for shifting here. */
-			lshift_unsigned_array (r, rrs, 1);
-			MOO_SETBITS (moo_liw_t, r[0], 0, 1, MOO_GETBITS(moo_liw_t, x[i], j, 1));
+			lshift_unsigned_array(r, rrs, 1);
+			MOO_SETBITS(moo_liw_t, r[0], 0, 1, MOO_GETBITS(moo_liw_t, x[i], j, 1));
 
 			rs = count_effective(r, rrs);
 			if (!is_less_unsigned_array(r, rs, y, ys))
 			{
-				subtract_unsigned_array (moo, r, rs, y, ys, r);
-				MOO_SETBITS (moo_liw_t, q[i], j, 1, 1);
+				subtract_unsigned_array(moo, r, rs, y, ys, r);
+				MOO_SETBITS(moo_liw_t, q[i], j, 1, 1);
 			}
 		}
 	}
@@ -1986,7 +2025,7 @@ static MOO_INLINE moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_
 		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 		b = (moo_liw_t)dw;
 
-		MOO_ASSERT (moo, c == 0);
+		MOO_ASSERT(moo, c == 0);
 	}
 	return b;
 }
@@ -1999,7 +2038,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	/* the caller must ensure:
 	 *  - q can hold 'xs + 1' words and r can hold 'ys' words.
 	 *  - q and r are set to all zeros. */
-	MOO_ASSERT (moo, xs >= ys);
+	MOO_ASSERT(moo, xs >= ys);
 
 	if (ys == 1)
 	{
@@ -2040,7 +2079,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 			carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
 			r[i] = (moo_liw_t)dw;
 		}
-		MOO_ASSERT (moo, carry == 0);
+		MOO_ASSERT(moo, carry == 0);
 
 		/* q = q * d */
 		for (carry = 0, i = 0; i < xs; i++)
@@ -2099,7 +2138,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 				q[j] = (moo_liw_t)dw;
 			}
 
-			MOO_ASSERT (moo, carry == 1);
+			MOO_ASSERT(moo, carry == 1);
 			q[i] = quo - 1;
 		}
 		else
@@ -2141,7 +2180,7 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	/* the caller must ensure:
 	 *  - q can hold 'xs + 1' words and r can hold 'ys' words.
 	 *  - q and r are set to all zeros. */
-	MOO_ASSERT (moo, xs >= ys);
+	MOO_ASSERT(moo, xs >= ys);
 
 	if (ys == 1)
 	{
@@ -2186,7 +2225,7 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 
 	y1 = y[ys - 1];
 	/*s = MOO_LIW_BITS - ((y1 == 0)? -1: moo_get_pos_of_msb_set(y1)) - 1;*/
-	MOO_ASSERT (moo, y1 > 0); /* the highest word can't be non-zero in the context where this function is called */
+	MOO_ASSERT(moo, y1 > 0); /* the highest word can't be non-zero in the context where this function is called */
 	s = MOO_LIW_BITS - moo_get_pos_of_msb_set(y1) - 1;
 	for (i = ys; i > 1; )
 	{
@@ -2231,7 +2270,7 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 			ci = (dw >> MOO_LIW_BITS) - (di >> MOO_LIW_BITS);
 			qq[i] = (moo_liw_t)di;
 		}
-		MOO_ASSERT (moo, i == j);
+		MOO_ASSERT(moo, i == j);
 		di = qq[i] - ci;
 		qq[i] = di;
 
@@ -2245,8 +2284,8 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 				qq[i] = (moo_liw_t)di;
 			}
 
-			MOO_ASSERT (moo, i == j);
-			/*MOO_ASSERT (moo, ci == 1);*/
+			MOO_ASSERT(moo, i == j);
+			/*MOO_ASSERT(moo, ci == 1);*/
 			qq[i] += ci;
 
 		#if defined(SHARED_QQ)
@@ -2298,13 +2337,13 @@ static moo_oop_t add_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	zs++;
 
-	moo_pushvolat (moo, &x);
-	moo_pushvolat (moo, &y);
+	moo_pushvolat(moo, &x);
+	moo_pushvolat(moo, &y);
 	z = moo_instantiate(moo, MOO_OBJ_GET_CLASS(x), MOO_NULL, zs);
-	moo_popvolats (moo, 2);
+	moo_popvolats(moo, 2);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
-	add_unsigned_array (
+	add_unsigned_array(
 		MOO_OBJ_GET_LIWORD_SLOT(x), as,
 		MOO_OBJ_GET_LIWORD_SLOT(y), bs,
 		MOO_OBJ_GET_LIWORD_SLOT(z)
@@ -2317,15 +2356,15 @@ static moo_oop_t subtract_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 {
 	moo_oop_t z;
 
-	MOO_ASSERT (moo, !is_less_unsigned(x, y));
+	MOO_ASSERT(moo, !is_less_unsigned(x, y));
 
-	moo_pushvolat (moo, &x);
-	moo_pushvolat (moo, &y);
+	moo_pushvolat(moo, &x);
+	moo_pushvolat(moo, &y);
 	z = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x));
-	moo_popvolats (moo, 2);
+	moo_popvolats(moo, 2);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
-	subtract_unsigned_array (moo,
+	subtract_unsigned_array(moo,
 		MOO_OBJ_GET_LIWORD_SLOT(x), MOO_OBJ_GET_SIZE(x),
 		MOO_OBJ_GET_LIWORD_SLOT(y), MOO_OBJ_GET_SIZE(y),
 		MOO_OBJ_GET_LIWORD_SLOT(z));
@@ -2346,17 +2385,17 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 		return MOO_NULL;
 	}
 
-	moo_pushvolat (moo, &x);
-	moo_pushvolat (moo, &y);
+	moo_pushvolat(moo, &x);
+	moo_pushvolat(moo, &y);
 	z = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, xs + ys);
-	moo_popvolats (moo, 2);
+	moo_popvolats(moo, 2);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 #if defined(MOO_ENABLE_KARATSUBA)
 	if (CANNOT_KARATSUBA(moo, xs, ys))
 	{
 #endif
-		multiply_unsigned_array (
+		multiply_unsigned_array(
 			MOO_OBJ_GET_LIWORD_SLOT(x), MOO_OBJ_GET_SIZE(x),
 			MOO_OBJ_GET_LIWORD_SLOT(y), MOO_OBJ_GET_SIZE(y),
 			MOO_OBJ_GET_LIWORD_SLOT(z));
@@ -2383,9 +2422,9 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 		rr = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 		if (!rr) return MOO_NULL;
 
-		moo_pushvolat (moo, &rr);
+		moo_pushvolat(moo, &rr);
 		qq = make_bigint_with_ooi(moo, 0); /* TODO: inefficient. no need to create a bigint object for zero. */
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 
 		if (qq) *r = rr;
 		return qq;
@@ -2395,18 +2434,18 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 		rr = make_bigint_with_ooi(moo, 0); /* TODO: inefficient. no need to create a bigint object for zero. */
 		if (!rr) return MOO_NULL;
 
-		moo_pushvolat (moo, &rr);
+		moo_pushvolat(moo, &rr);
 		qq = make_bigint_with_ooi(moo, 1); /* TODO: inefficient. no need to create a bigint object for zero. */
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 
 		if (qq) *r = rr;
 		return qq;
 	}
 
 	/* the caller must ensure that x >= y */
-	MOO_ASSERT (moo, !is_less_unsigned(x, y));
-	moo_pushvolat (moo, &x);
-	moo_pushvolat (moo, &y);
+	MOO_ASSERT(moo, !is_less_unsigned(x, y));
+	moo_pushvolat(moo, &x);
+	moo_pushvolat(moo, &y);
 
 #define USE_DIVIDE_UNSIGNED_ARRAY2
 /*#define USE_DIVIDE_UNSIGNED_ARRAY3*/
@@ -2420,11 +2459,11 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 #endif
 	if (!qq)
 	{
-		moo_popvolats (moo, 2);
+		moo_popvolats(moo, 2);
 		return MOO_NULL;
 	}
 
-	moo_pushvolat (moo, &qq);
+	moo_pushvolat(moo, &qq);
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY3)
 	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y));
 #elif defined(USE_DIVIDE_UNSIGNED_ARRAY2)
@@ -2432,15 +2471,15 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 #else
 	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y) + 1);
 #endif
-	moo_popvolats (moo, 3);
+	moo_popvolats(moo, 3);
 	if (!rr) return MOO_NULL;
 
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY3)
-	divide_unsigned_array3 (moo,
+	divide_unsigned_array3(moo,
 #elif defined(USE_DIVIDE_UNSIGNED_ARRAY2)
-	divide_unsigned_array2 (moo,
+	divide_unsigned_array2(moo,
 #else
-	divide_unsigned_array (moo,
+	divide_unsigned_array(moo,
 #endif
 		MOO_OBJ_GET_LIWORD_SLOT(x), MOO_OBJ_GET_SIZE(x),
 		MOO_OBJ_GET_LIWORD_SLOT(y), MOO_OBJ_GET_SIZE(y),
@@ -2463,8 +2502,8 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		/* no integer overflow/underflow must occur as the possible integer
 		 * range is narrowed by the tag bits used */
-		MOO_ASSERT (moo, MOO_SMOOI_MAX + MOO_SMOOI_MAX < MOO_TYPE_MAX(moo_ooi_t));
-		MOO_ASSERT (moo, MOO_SMOOI_MIN + MOO_SMOOI_MIN > MOO_TYPE_MIN(moo_ooi_t));
+		MOO_ASSERT(moo, MOO_SMOOI_MAX + MOO_SMOOI_MAX < MOO_TYPE_MAX(moo_ooi_t));
+		MOO_ASSERT(moo, MOO_SMOOI_MIN + MOO_SMOOI_MIN > MOO_TYPE_MIN(moo_ooi_t));
 
 		i = MOO_OOP_TO_SMOOI(x) + MOO_OOP_TO_SMOOI(y);
 		if (MOO_IN_SMOOI_RANGE(i)) return MOO_SMOOI_TO_OOP(i);
@@ -2482,9 +2521,9 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			v = MOO_OOP_TO_SMOOI(x);
 			if (v == 0) return clone_bigint(moo, y, MOO_OBJ_GET_SIZE(y));
 
-			moo_pushvolat (moo, &y);
+			moo_pushvolat(moo, &y);
 			x = make_bigint_with_ooi(moo, v);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (MOO_UNLIKELY(!x)) return MOO_NULL;
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
@@ -2494,9 +2533,9 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			v = MOO_OOP_TO_SMOOI(y);
 			if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 
-			moo_pushvolat (moo, &x);
+			moo_pushvolat(moo, &x);
 			y = make_bigint_with_ooi(moo, v);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (!y) return MOO_NULL;
 		}
 		else
@@ -2566,8 +2605,8 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		/* no integer overflow/underflow must occur as the possible integer
 		 * range is narrowed by the tag bits used */
-		MOO_ASSERT (moo, MOO_SMOOI_MAX - MOO_SMOOI_MIN < MOO_TYPE_MAX(moo_ooi_t));
-		MOO_ASSERT (moo, MOO_SMOOI_MIN - MOO_SMOOI_MAX > MOO_TYPE_MIN(moo_ooi_t));
+		MOO_ASSERT(moo, MOO_SMOOI_MAX - MOO_SMOOI_MIN < MOO_TYPE_MAX(moo_ooi_t));
+		MOO_ASSERT(moo, MOO_SMOOI_MIN - MOO_SMOOI_MAX > MOO_TYPE_MIN(moo_ooi_t));
 
 		i = MOO_OOP_TO_SMOOI(x) - MOO_OOP_TO_SMOOI(y);
 		if (MOO_IN_SMOOI_RANGE(i)) return MOO_SMOOI_TO_OOP(i);
@@ -2590,9 +2629,9 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				return clone_bigint_negated(moo, y, MOO_OBJ_GET_SIZE(y));
 			}
 
-			moo_pushvolat (moo, &y);
+			moo_pushvolat(moo, &y);
 			x = make_bigint_with_ooi(moo, v);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (MOO_UNLIKELY(!x)) return MOO_NULL;
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
@@ -2602,9 +2641,9 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			v = MOO_OOP_TO_SMOOI(y);
 			if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 
-			moo_pushvolat (moo, &x);
+			moo_pushvolat(moo, &x);
 			y = make_bigint_with_ooi(moo, v);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (MOO_UNLIKELY(!y)) return MOO_NULL;
 		}
 		else
@@ -2673,9 +2712,9 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			x = make_bigint_with_ooi (moo, xv);
 			if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
-			moo_pushvolat (moo, &x); /* protect x made above */
+			moo_pushvolat(moo, &x); /* protect x made above */
 			y = make_bigint_with_ooi(moo, yv);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (MOO_UNLIKELY(!y)) return MOO_NULL;
 
 			goto full_multiply;
@@ -2707,9 +2746,9 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 					return clone_bigint_negated(moo, y, MOO_OBJ_GET_SIZE(y));
 			}
 
-			moo_pushvolat (moo, &y);
+			moo_pushvolat(moo, &y);
 			x = make_bigint_with_ooi(moo, v);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (MOO_UNLIKELY(!x)) return MOO_NULL;
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
@@ -2727,9 +2766,9 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 					return clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
 			}
 
-			moo_pushvolat (moo, &x);
+			moo_pushvolat(moo, &x);
 			y = make_bigint_with_ooi (moo, v);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (!y) return MOO_NULL;
 		}
 		else
@@ -2795,7 +2834,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 		 */
 
 		q = xv / yv;
-		MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(q));
+		MOO_ASSERT(moo, MOO_IN_SMOOI_RANGE(q));
 
 		ri = xv - yv * q; /* xv % yv; */
 		if (ri)
@@ -2820,7 +2859,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					 * change the sign of r to the divisor's sign */
 					ri += yv;
 					--q;
-					MOO_ASSERT (moo, ri && !IS_SIGN_DIFF(yv, ri));
+					MOO_ASSERT(moo, ri && !IS_SIGN_DIFF(yv, ri));
 				}
 			}
 			else
@@ -2844,14 +2883,14 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					 * architecture. */
 					ri -= yv;
 					++q;
-					MOO_ASSERT (moo, xv && !IS_SIGN_DIFF(xv, ri));
+					MOO_ASSERT(moo, xv && !IS_SIGN_DIFF(xv, ri));
 				}
 			}
 		}
 
 		if (rem)
 		{
-			MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ri));
+			MOO_ASSERT(moo, MOO_IN_SMOOI_RANGE(ri));
 			*rem = MOO_SMOOI_TO_OOP(ri);
 		}
 
@@ -2883,9 +2922,9 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 			}
 
 			/* carry on to the full bigint division */
-			moo_pushvolat (moo, &y);
+			moo_pushvolat(moo, &y);
 			x = make_bigint_with_ooi(moo, xv);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (MOO_UNLIKELY(!x)) return MOO_NULL;
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
@@ -2946,25 +2985,31 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					}
 					/*if (zw[zs - 1] == 0) zs--;*/
 
-					MOO_ASSERT (moo, carry <= MOO_SMOOI_MAX);
+					MOO_ASSERT(moo, carry <= MOO_SMOOI_MAX);
 					ri = carry;
 					if (x_neg_sign) ri = -ri;
 
-					z = normalize_bigint(moo, z);
-					if (MOO_UNLIKELY(!z)) return MOO_NULL;
-
-					if (x_neg_sign != y_neg_sign)
+					if (x_neg_sign == y_neg_sign)
+					{
+						z = normalize_bigint(moo, z);
+						if (MOO_UNLIKELY(!z)) return MOO_NULL;
+					}
+					else
 					{
 						MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
+
+						z = normalize_bigint(moo, z);
+						if (MOO_UNLIKELY(!z)) return MOO_NULL;
+
 						if (ri && modulo)
 						{
 							z = moo_subints(moo, z, MOO_SMOOI_TO_OOP(1));
 							if (MOO_UNLIKELY(!z)) return MOO_NULL;
 							if (rem)
 							{
-								moo_pushvolat (moo, &z);
+								moo_pushvolat(moo, &z);
 								r = moo_addints(moo, MOO_SMOOI_TO_OOP(ri), MOO_SMOOI_TO_OOP(yv));
-								moo_popvolat (moo);
+								moo_popvolat(moo);
 								if (!r) return MOO_NULL;
 								*rem = r;
 							}
@@ -2978,9 +3023,9 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 			}
 
 			/* carry on to the full bigint division */
-			moo_pushvolat (moo, &x);
+			moo_pushvolat(moo, &x);
 			y = make_bigint_with_ooi(moo, yv);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (!y) return MOO_NULL;
 		}
 		else
@@ -2993,10 +3038,10 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 	x_neg_sign = (MOO_POINTER_IS_NBIGINT(moo, x));
 	y_neg_sign = (MOO_POINTER_IS_NBIGINT(moo, y));
 
-	moo_pushvolat (moo, &x);
-	moo_pushvolat (moo, &y);
+	moo_pushvolat(moo, &x);
+	moo_pushvolat(moo, &y);
 	z = divide_unsigned_integers(moo, x, y, &r);
-	moo_popvolats (moo, 2);
+	moo_popvolats(moo, 2);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 	if (x_neg_sign)
@@ -3011,30 +3056,30 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 	{
 		MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
 
-		moo_pushvolat (moo, &z);
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &z);
+		moo_pushvolat(moo, &y);
 		r = normalize_bigint(moo, r);
-		moo_popvolats (moo, 2);
+		moo_popvolats(moo, 2);
 		if (!r) return MOO_NULL;
 
 		if (r != MOO_SMOOI_TO_OOP(0) && modulo)
 		{
 			if (rem)
 			{
-				moo_pushvolat (moo, &z);
-				moo_pushvolat (moo, &y);
+				moo_pushvolat(moo, &z);
+				moo_pushvolat(moo, &y);
 				r = moo_addints(moo, r, y);
-				moo_popvolats (moo, 2);
+				moo_popvolats(moo, 2);
 				if (!r) return MOO_NULL;
 
-				moo_pushvolat (moo, &r);
+				moo_pushvolat(moo, &r);
 				z = normalize_bigint(moo, z);
-				moo_popvolat (moo);
+				moo_popvolat(moo);
 				if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
-				moo_pushvolat (moo, &r);
+				moo_pushvolat(moo, &r);
 				z = moo_subints(moo, z, MOO_SMOOI_TO_OOP(1));
-				moo_popvolat (moo);
+				moo_popvolat(moo);
 				if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 				*rem = r;
@@ -3052,15 +3097,15 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 	}
 	else
 	{
-		moo_pushvolat (moo, &z);
+		moo_pushvolat(moo, &z);
 		r = normalize_bigint(moo, r);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (!r) return MOO_NULL;
 	}
 
-	moo_pushvolat (moo, &r);
+	moo_pushvolat(moo, &r);
 	z = normalize_bigint(moo, z);
-	moo_popvolat (moo);
+	moo_popvolat(moo);
 
 	if (z && rem) *rem = r;
 
@@ -3179,7 +3224,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	#if defined(MOO_LIMIT_OBJ_SIZE)
 		if (MOO_POINTER_IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
-		MOO_ASSERT (moo, MOO_OBJ_SIZE_BITS_MAX <= MOO_TYPE_MAX(moo_oow_t));
+		MOO_ASSERT(moo, MOO_OBJ_SIZE_BITS_MAX <= MOO_TYPE_MAX(moo_oow_t));
 		if (MOO_POINTER_IS_PBIGINT(moo, x))
 		{
 			return MOO_SMOOI_TO_OOP(0);
@@ -3194,7 +3239,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		if (MOO_POINTER_IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
 		sign = bigint_to_oow_noseterr(moo, y, &w);
-		MOO_ASSERT (moo, sign >= 0);
+		MOO_ASSERT(moo, sign >= 0);
 		if (sign >= 1)
 		{
 			wp = w / MOO_LIW_BITS;
@@ -3204,15 +3249,15 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		{
 			moo_oop_t quo, rem;
 
-			MOO_ASSERT (moo, sign == 0);
+			MOO_ASSERT(moo, sign == 0);
 
-			moo_pushvolat (moo, &x);
+			moo_pushvolat(moo, &x);
 			quo = moo_divints(moo, y, MOO_SMOOI_TO_OOP(MOO_LIW_BITS), 0, &rem);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (!quo) return MOO_NULL;
 
 			sign = integer_to_oow_noseterr(moo, quo, &wp);
-			MOO_ASSERT (moo, sign >= 0);
+			MOO_ASSERT(moo, sign >= 0);
 			if (sign == 0)
 			{
 				/* too large. set it to xs so that it gets out of
@@ -3220,9 +3265,9 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				wp = xs;
 			}
 
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(rem));
+			MOO_ASSERT(moo, MOO_OOP_IS_SMOOI(rem));
 			bp = MOO_OOP_TO_SMOOI(rem);
-			MOO_ASSERT (moo, bp >= 0 && bp < MOO_LIW_BITS);
+			MOO_ASSERT(moo, bp >= 0 && bp < MOO_LIW_BITS);
 		}
 
 		if (MOO_POINTER_IS_PBIGINT(moo, x))
@@ -3277,9 +3322,9 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		v = MOO_OOP_TO_SMOOI(x);
 		if (v == 0) return MOO_SMOOI_TO_OOP(0);
 
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &y);
 		x = make_bigint_with_ooi(moo, v);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
 		goto bigint_and_bigint;
@@ -3293,10 +3338,10 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		v = MOO_OOP_TO_SMOOI(y);
 		if (v == 0) return MOO_SMOOI_TO_OOP(0);
 
-		moo_pushvolat (moo, &x);
+		moo_pushvolat(moo, &x);
 		y = make_bigint_with_ooi (moo, v);
-		moo_popvolat (moo);
-		if (MOO_UNLIKELY(!x)) return MOO_NULL;
+		moo_popvolat(moo);
+		if (MOO_UNLIKELY(!y)) return MOO_NULL;
 
 		goto bigint_and_bigint;
 	}
@@ -3347,10 +3392,10 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			zs = ys;
 		}
 
-		moo_pushvolat (moo, &x);
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &x);
+		moo_pushvolat(moo, &y);
 		z = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, zalloc);
-		moo_popvolats (moo, 2);
+		moo_popvolats(moo, 2);
 		if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 		if (negx && negy)
@@ -3372,7 +3417,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] & (moo_liw_t)w[1]);
 			}
-			MOO_ASSERT (moo, carry[1] == 0);
+			MOO_ASSERT(moo, carry[1] == 0);
 
 			/* 2's complement on the remaining part of x. the lacking part
 			 * in y is treated as if they are all 1s. */
@@ -3382,7 +3427,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry[0] = w[0] >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0]);
 			}
-			MOO_ASSERT (moo, carry[0] == 0);
+			MOO_ASSERT(moo, carry[0] == 0);
 
 			/* 2's complement on the final result */
 			MOO_OBJ_SET_LIWORD_VAL (z, zs, ~(moo_liw_t)0);
@@ -3393,7 +3438,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry[0] = w[0] >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0]);
 			}
-			MOO_ASSERT (moo, carry[0] == 0);
+			MOO_ASSERT(moo, carry[0] == 0);
 
 			MOO_OBJ_SET_CLASS (z, moo->_large_negative_integer);
 		}
@@ -3427,7 +3472,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) & (moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 
 			/* handle the longer part in x than y
 			 *
@@ -3490,9 +3535,9 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		v = MOO_OOP_TO_SMOOI(x);
 		if (v == 0) return clone_bigint(moo, y, MOO_OBJ_GET_SIZE(y));
 
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &y);
 		x = make_bigint_with_ooi(moo, v);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
 		goto bigint_and_bigint;
@@ -3506,10 +3551,10 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		v = MOO_OOP_TO_SMOOI(y);
 		if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 
-		moo_pushvolat (moo, &x);
+		moo_pushvolat(moo, &x);
 		y = make_bigint_with_ooi(moo, v);
-		moo_popvolat (moo);
-		if (MOO_UNLIKELY(!x)) return MOO_NULL;
+		moo_popvolat(moo);
+		if (MOO_UNLIKELY(!y)) return MOO_NULL;
 
 		goto bigint_and_bigint;
 	}
@@ -3567,10 +3612,10 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			return MOO_NULL;
 		}
 
-		moo_pushvolat (moo, &x);
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &x);
+		moo_pushvolat(moo, &y);
 		z = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, zalloc);
-		moo_popvolats (moo, 2);
+		moo_popvolats(moo, 2);
 		if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 		if (negx && negy)
@@ -3592,7 +3637,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] | (moo_liw_t)w[1]);
 			}
-			MOO_ASSERT (moo, carry[1] == 0);
+			MOO_ASSERT(moo, carry[1] == 0);
 
 			/* do nothing about the extra part in x and the lacking part
 			 * in y for the reason shown in [NOTE] in the 'else if' block
@@ -3608,7 +3653,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry[0] = w[0] >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0]);
 			}
-			MOO_ASSERT (moo, carry[0] == 0);
+			MOO_ASSERT(moo, carry[0] == 0);
 
 			MOO_OBJ_SET_CLASS (z, moo->_large_negative_integer);
 		}
@@ -3632,7 +3677,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
 
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 			goto adjust_to_negative;
 		}
 		else if (negy)
@@ -3648,7 +3693,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) | (moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 
 			/* [NOTE]
 			 *  in theory, the lacking part in ys is all 1s when y is
@@ -3708,9 +3753,9 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		v = MOO_OOP_TO_SMOOI(x);
 		if (v == 0) return clone_bigint(moo, y, MOO_OBJ_GET_SIZE(y));
 
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &y);
 		x = make_bigint_with_ooi (moo, v);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
 		goto bigint_and_bigint;
@@ -3724,10 +3769,10 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		v = MOO_OOP_TO_SMOOI(y);
 		if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 
-		moo_pushvolat (moo, &x);
+		moo_pushvolat(moo, &x);
 		y = make_bigint_with_ooi (moo, v);
-		moo_popvolat (moo);
-		if (MOO_UNLIKELY(!x)) return MOO_NULL;
+		moo_popvolat(moo);
+		if (MOO_UNLIKELY(!y)) return MOO_NULL;
 
 		goto bigint_and_bigint;
 	}
@@ -3785,10 +3830,10 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			return MOO_NULL;
 		}
 
-		moo_pushvolat (moo, &x);
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &x);
+		moo_pushvolat(moo, &y);
 		z = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, zalloc);
-		moo_popvolats (moo, 2);
+		moo_popvolats(moo, 2);
 		if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 		if (negx && negy)
@@ -3810,7 +3855,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] ^ (moo_liw_t)w[1]);
 			}
-			MOO_ASSERT (moo, carry[1] == 0);
+			MOO_ASSERT(moo, carry[1] == 0);
 
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
@@ -3819,7 +3864,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry[0] = w[0] >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] ^ (~(moo_liw_t)0));
 			}
-			MOO_ASSERT (moo, carry[0] == 0);
+			MOO_ASSERT(moo, carry[0] == 0);
 		}
 		else if (negx)
 		{
@@ -3841,7 +3886,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 
 		adjust_to_negative:
 			/* 2's complement on the final result */
@@ -3853,7 +3898,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 
 			MOO_OBJ_SET_CLASS (z, moo->_large_negative_integer);
 		}
@@ -3870,7 +3915,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) ^ (moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
@@ -3944,9 +3989,9 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 			return MOO_NULL;
 		}
 
-		moo_pushvolat (moo, &x);
+		moo_pushvolat(moo, &x);
 		z = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, zalloc);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 		if (negx)
@@ -3960,7 +4005,7 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, ~(moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 		}
 		else
 		{
@@ -3980,7 +4025,7 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, carry == 0);
+			MOO_ASSERT(moo, carry == 0);
 		#else
 			carry = 1;
 			for (i = 0; i < xs; i++)
@@ -3989,9 +4034,9 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 				carry = w >> MOO_LIW_BITS;
 				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
-			MOO_ASSERT (moo, i == zs);
+			MOO_ASSERT(moo, i == zs);
 			MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)carry);
-			MOO_ASSERT (moo, (carry >> MOO_LIW_BITS) == 0);
+			MOO_ASSERT(moo, (carry >> MOO_LIW_BITS) == 0);
 		#endif
 
 			MOO_OBJ_SET_CLASS (z, moo->_large_negative_integer);
@@ -4012,13 +4057,13 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint (moo_t* moo, moo_oop_t x, moo
 	moo_lidw_t carry;
 	moo_oow_t i, xs;
 
-	MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, x));
+	MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, x));
 	xs = MOO_OBJ_GET_SIZE(x);
 
-	moo_pushvolat (moo, &x);
+	moo_pushvolat(moo, &x);
 	/* +1 for the second inversion below */
 	z = moo_instantiate(moo, moo->_large_negative_integer, MOO_NULL, xs + 1);
-	moo_popvolat (moo);
+	moo_popvolat(moo);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 	/* the following lines roughly for 'z = moo_bitinv (moo, x)' */
@@ -4029,10 +4074,10 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint (moo_t* moo, moo_oop_t x, moo
 		carry = w >> MOO_LIW_BITS;
 		MOO_OBJ_SET_LIWORD_VAL (z, i, ~(moo_liw_t)w);
 	}
-	MOO_ASSERT (moo, carry == 0);
+	MOO_ASSERT(moo, carry == 0);
 
 	/* shift to the right */
-	rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), xs, shift);
+	rshift_unsigned_array(MOO_OBJ_GET_LIWORD_SLOT(z), xs, shift);
 
 	/* the following lines roughly for 'z = moo_bitinv (moo, z)' */
 #if 0
@@ -4049,7 +4094,7 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint (moo_t* moo, moo_oop_t x, moo
 		carry = w >> MOO_LIW_BITS;
 		MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 	}
-	MOO_ASSERT (moo, carry == 0);
+	MOO_ASSERT(moo, carry == 0);
 #elses
 	carry = 1;
 	for (i = 0; i < xs; i++)
@@ -4059,7 +4104,7 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint (moo_t* moo, moo_oop_t x, moo
 		MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 	}
 	MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)carry);
-	MOO_ASSERT (moo, (carry >> MOO_LIW_BITS) == 0);
+	MOO_ASSERT(moo, (carry >> MOO_LIW_BITS) == 0);
 #endif
 
 	return z; /* z is not normalized */
@@ -4075,8 +4120,8 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 	moo_oow_t shift;
 	int sign;
 
-	MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, x));
-	MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, y));
+	MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, x));
+	MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, y));
 
 	/* for convenience in subtraction below.
 	 * it could be MOO_TYPE_MAX(moo_oow_t)
@@ -4085,15 +4130,15 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 	shift = MOO_SMOOI_MAX;
 	do
 	{
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &y);
 		z = rshift_negative_bigint(moo, x, shift);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 		/* y is a negative number. use moo_addints() until it becomes 0 */
-		moo_pushvolat (moo, &z);
+		moo_pushvolat(moo, &z);
 		y = moo_addints(moo, y, MOO_SMOOI_TO_OOP(shift));
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (!y) return MOO_NULL;
 
 		sign = integer_to_oow_noseterr(moo, y, &shift);
@@ -4105,12 +4150,12 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 				/* no more shift */
 				return normalize_bigint(moo, z);
 			}
-			MOO_ASSERT (moo, sign <= -1);
+			MOO_ASSERT(moo, sign <= -1);
 		}
 
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &y);
 		x = normalize_bigint(moo, z);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
 		if (MOO_OOP_IS_SMOOI(x))
@@ -4119,7 +4164,7 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 			moo_ooi_t v;
 
 			v = MOO_OOP_TO_SMOOI(x);
-			MOO_ASSERT (moo, v < 0);
+			MOO_ASSERT(moo, v < 0);
 
 			/* normal right shift of a small negative integer */
 			if (shift >= MOO_OOI_BITS - 1)
@@ -4142,7 +4187,7 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 	while (1);
 
 	/* this part must not be reached */
-	MOO_ASSERT (moo, !"internal error - must not happen");
+	MOO_ASSERT(moo, !"internal error - must not happen");
 	moo_seterrnum (moo, MOO_EINTERN);
 	return MOO_NULL;
 }
@@ -4153,14 +4198,14 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 	moo_oow_t zs, shift;
 	int sign;
 
-	MOO_ASSERT (moo, MOO_POINTER_IS_PBIGINT(moo, x));
-	MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, y));
+	MOO_ASSERT(moo, MOO_POINTER_IS_PBIGINT(moo, x));
+	MOO_ASSERT(moo, MOO_POINTER_IS_NBIGINT(moo, y));
 
 	zs = MOO_OBJ_GET_SIZE(x);
 
-	moo_pushvolat (moo, &y);
+	moo_pushvolat(moo, &y);
 	z = clone_bigint(moo, x, zs);
-	moo_popvolat (moo);
+	moo_popvolat(moo);
 	if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
 	/* for convenience in subtraction below.
@@ -4170,7 +4215,7 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 	shift = MOO_SMOOI_MAX;
 	do
 	{
-		rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), zs, shift);
+		rshift_unsigned_array(MOO_OBJ_GET_LIWORD_SLOT(z), zs, shift);
 		if (count_effective(MOO_OBJ_GET_LIWORD_SLOT(z), zs) == 1 &&
 		    MOO_OBJ_GET_LIWORD_VAL(z, 0) == 0)
 		{
@@ -4179,9 +4224,9 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 		}
 
 		/* y is a negative number. use moo_addints() until it becomes 0 */
-		moo_pushvolat (moo, &z);
+		moo_pushvolat(moo, &z);
 		y = moo_addints(moo, y, MOO_SMOOI_TO_OOP(shift));
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (!y) return MOO_NULL;
 
 		sign = integer_to_oow_noseterr(moo, y, &shift);
@@ -4189,7 +4234,7 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 		else
 		{
 			if (shift == 0) break;
-			MOO_ASSERT (moo, sign <= -1);
+			MOO_ASSERT(moo, sign <= -1);
 		}
 	}
 	while (1);
@@ -4203,7 +4248,7 @@ static MOO_INLINE moo_oop_t lshift_bigint_and_normalize (moo_t* moo, moo_oop_t x
 	moo_oow_t wshift, shift;
 	int sign;
 
-	MOO_ASSERT (moo, MOO_POINTER_IS_PBIGINT(moo, y));
+	MOO_ASSERT(moo, MOO_POINTER_IS_PBIGINT(moo, y));
 
 	/* this loop is very inefficient as shifting is repeated
 	 * with lshift_unsigned_array(). however, this part of the
@@ -4220,21 +4265,21 @@ static MOO_INLINE moo_oop_t lshift_bigint_and_normalize (moo_t* moo, moo_oop_t x
 		wshift = shift / MOO_LIW_BITS;
 		if (shift > wshift * MOO_LIW_BITS) wshift++;
 
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &y);
 		z = expand_bigint(moo, x, wshift);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
-		lshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
+		lshift_unsigned_array(MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
 
-		moo_pushvolat (moo, &y);
+		moo_pushvolat(moo, &y);
 		x = normalize_bigint(moo, z);
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
-		moo_pushvolat (moo, &x);
+		moo_pushvolat(moo, &x);
 		y = moo_subints(moo, y, MOO_SMOOI_TO_OOP(shift));
-		moo_popvolat (moo);
+		moo_popvolat(moo);
 		if (!y) return MOO_NULL;
 
 		sign = integer_to_oow_noseterr(moo, y, &shift);
@@ -4243,16 +4288,16 @@ static MOO_INLINE moo_oop_t lshift_bigint_and_normalize (moo_t* moo, moo_oop_t x
 		{
 			if (shift == 0)
 			{
-				MOO_ASSERT (moo, is_normalized_integer (moo, x));
+				MOO_ASSERT(moo, is_normalized_integer (moo, x));
 				return x;
 			}
-			MOO_ASSERT (moo, sign >= 1);
+			MOO_ASSERT(moo, sign >= 1);
 		}
 	}
 	while (1);
 
 	/* this part must not be reached */
-	MOO_ASSERT (moo, !"internal error - must not happen");
+	MOO_ASSERT(moo, !"internal error - must not happen");
 	moo_seterrnum (moo, MOO_EINTERN);
 	return MOO_NULL;
 }
@@ -4288,7 +4333,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			z = make_bloated_bigint_with_ooi(moo, v1, wshift);
 			if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
-			lshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), v2);
+			lshift_unsigned_array(MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), v2);
 			return normalize_bigint(moo, z);
 		}
 		else
@@ -4356,9 +4401,9 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				return (v < 0)? MOO_SMOOI_TO_OOP(-1): MOO_SMOOI_TO_OOP(0);
 			}
 
-			moo_pushvolat (moo, &y);
+			moo_pushvolat(moo, &y);
 			x = make_bigint_with_ooi(moo, v);
-			moo_popvolat (moo);
+			moo_popvolat(moo);
 			if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
 			goto bigint_and_bigint;
@@ -4409,7 +4454,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 					/* the maximum number of bit shifts are guaranteed to be
 					 * small enough to fit into the moo_oow_t type. so i can
 					 * easily assume that all bits are shifted out */
-					MOO_ASSERT (moo, MOO_OBJ_SIZE_BITS_MAX <= MOO_TYPE_MAX(moo_oow_t));
+					MOO_ASSERT(moo, MOO_OBJ_SIZE_BITS_MAX <= MOO_TYPE_MAX(moo_oow_t));
 					return (negx)? MOO_SMOOI_TO_OOP(-1): MOO_SMOOI_TO_OOP(0);
 				#else
 					if (negx)
@@ -4426,7 +4471,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 					 * small enough to fit into the moo_oow_t type. so i can
 					 * simply return a failure here becuase it's surely too
 					 * large after shifting */
-					MOO_ASSERT (moo, MOO_TYPE_MAX(moo_oow_t) >= MOO_OBJ_SIZE_BITS_MAX);
+					MOO_ASSERT(moo, MOO_TYPE_MAX(moo_oow_t) >= MOO_OBJ_SIZE_BITS_MAX);
 					moo_seterrnum (moo, MOO_EOOMEM); /* is it a soft failure or a hard failure? is this error code proper? */
 					return MOO_NULL;
 				#else
@@ -4446,14 +4491,14 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				z = expand_bigint(moo, x, wshift);
 				if (MOO_UNLIKELY(!z)) return MOO_NULL;
 
-				lshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
+				lshift_unsigned_array(MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
 			}
 			else
 			{
 				/* right shift */
 			bigint_and_negative_oow:
 
-				MOO_ASSERT (moo, sign <= -1);
+				MOO_ASSERT(moo, sign <= -1);
 
 				if (negx)
 				{
@@ -4464,7 +4509,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				{
 					z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 					if (MOO_UNLIKELY(!z)) return MOO_NULL;
-					rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
+					rshift_unsigned_array(MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
 				}
 			}
 
@@ -4505,7 +4550,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 		radix = -radix;
 	}
 
-	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
+	MOO_ASSERT(moo, radix >= 2 && radix <= 36);
 
 	ptr = str;
 	end = str + len;
@@ -4585,7 +4630,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 			ptr--;
 		}
 
-		MOO_ASSERT (moo, w <= MOO_TYPE_MAX(moo_liw_t));
+		MOO_ASSERT(moo, w <= MOO_TYPE_MAX(moo_liw_t));
 		if (hwlen == 0 || w > 0) hwp[hwlen++] = w;
 	}
 	else
@@ -4611,7 +4656,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 			hwp = hw;
 		}
 
-		MOO_ASSERT (moo, ptr < end);
+		MOO_ASSERT(moo, ptr < end);
 		do
 		{
 			r1 = 0;
@@ -4657,32 +4702,47 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 		while (ptr < end);
 	}
 
-	MOO_ASSERT (moo, hwlen >= 1);
+	MOO_ASSERT(moo, hwlen >= 1);
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	if (hwlen == 1)
 	{
 		w = hwp[0];
-		MOO_ASSERT (moo, -MOO_SMOOI_MAX == MOO_SMOOI_MIN);
-		if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP((moo_ooi_t)w * sign);
+		MOO_ASSERT(moo, -MOO_SMOOI_MAX == MOO_SMOOI_MIN);
+		if (w <= MOO_SMOOI_MAX)
+		{
+			res = MOO_SMOOI_TO_OOP((moo_ooi_t)w * sign);
+			goto done;
+		}
 	}
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
 	if (hwlen == 1)
 	{
-		MOO_ASSERT (moo, hwp[0] <= MOO_SMOOI_MAX);
-		return MOO_SMOOI_TO_OOP((moo_ooi_t)hwp[0] * sign);
+		MOO_ASSERT(moo, hwp[0] <= MOO_SMOOI_MAX);
+		res = MOO_SMOOI_TO_OOP((moo_ooi_t)hwp[0] * sign);
+		goto done;
 	}
 	else if (hwlen == 2)
 	{
 		w = MAKE_WORD(hwp[0], hwp[1]);
-		MOO_ASSERT (moo, -MOO_SMOOI_MAX == MOO_SMOOI_MIN);
-		if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP((moo_ooi_t)w * sign);
+		MOO_ASSERT(moo, -MOO_SMOOI_MAX == MOO_SMOOI_MIN);
+		if (w <= MOO_SMOOI_MAX)
+		{
+			res = MOO_SMOOI_TO_OOP((moo_ooi_t)w * sign);
+			goto done;
+		}
 	}
 #else
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
 
 	res = moo_instantiate(moo, (sign < 0? moo->_large_negative_integer: moo->_large_positive_integer), hwp, hwlen);
+
+done:
+	/* 'outlen' is worked out from the whole token - sign and leading zeros
+	 * included - while 'hwlen' counts the significant words only. a value
+	 * small enough to come back as a small integer may therefore still have
+	 * been given a heap buffer, so every exit from here has to release it. */
 	if (hwp && hw != hwp) moo_freemem (moo, hwp);
 
 	return res;
@@ -4701,7 +4761,7 @@ static moo_oow_t oow_to_text (moo_t* moo, moo_oow_t w, int flagged_radix, moo_oo
 
 	radix = flagged_radix & MOO_INTTOSTR_RADIXMASK;
 	_digitc =  _digitc_array[!!(flagged_radix & MOO_INTTOSTR_LOWERCASE)];
-	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
+	MOO_ASSERT(moo, radix >= 2 && radix <= 36);
 
 	ptr = buf;
 	do
@@ -4895,11 +4955,11 @@ moo_oop_t moo_sqrtint (moo_t* moo, moo_oop_t x)
 	m = moo->_nil;
 	m2 = moo->_nil;
 
-	moo_pushvolat (moo, &x);
-	moo_pushvolat (moo, &a);
-	moo_pushvolat (moo, &b);
-	moo_pushvolat (moo, &m);
-	moo_pushvolat (moo, &m2);
+	moo_pushvolat(moo, &x);
+	moo_pushvolat(moo, &a);
+	moo_pushvolat(moo, &b);
+	moo_pushvolat(moo, &m);
+	moo_pushvolat(moo, &m2);
 
 	a = moo_ltints(moo, x, MOO_SMOOI_TO_OOP(0));
 	if (MOO_UNLIKELY(!a)) goto oops;
@@ -4922,7 +4982,7 @@ moo_oop_t moo_sqrtint (moo_t* moo, moo_oop_t x)
 	while (1)
 	{
 		t = moo_geints(moo, b, a);
-		if (MOO_UNLIKELY(!t)) return MOO_NULL;
+		if (MOO_UNLIKELY(!t)) goto oops;
 		if (t == moo->_false) break;
 
 		m = moo_addints(moo, a, b);
@@ -4932,7 +4992,7 @@ moo_oop_t moo_sqrtint (moo_t* moo, moo_oop_t x)
 		m2 = moo_mulints(moo, m, m);
 		if (MOO_UNLIKELY(!m2)) goto oops;
 		t = moo_gtints(moo, m2, x);
-		if (MOO_UNLIKELY(!t)) return MOO_NULL;
+		if (MOO_UNLIKELY(!t)) goto oops;
 		if (t == moo->_true)
 		{
 			b = moo_subints(moo, m, MOO_SMOOI_TO_OOP(1));
@@ -4945,7 +5005,7 @@ moo_oop_t moo_sqrtint (moo_t* moo, moo_oop_t x)
 		}
 	}
 
-	moo_popvolats (moo, 5);
+	moo_popvolats(moo, 5);
 	x = moo_subints(moo, a, MOO_SMOOI_TO_OOP(1));
 	if (MOO_UNLIKELY(!x)) return MOO_NULL;
 
@@ -4953,7 +5013,7 @@ moo_oop_t moo_sqrtint (moo_t* moo, moo_oop_t x)
 	return x;
 
 oops:
-	moo_popvolats (moo, 5);
+	moo_popvolats(moo, 5);
 	return MOO_NULL;
 }
 
@@ -4995,7 +5055,7 @@ static MOO_INLINE moo_liw_t get_last_digit (moo_t* moo, moo_liw_t* x, moo_oow_t*
 	moo_oow_t i;
 	moo_lidw_t dw;
 
-	MOO_ASSERT (moo, oxs > 0);
+	MOO_ASSERT(moo, oxs > 0);
 
 	for (i = oxs; i > 0; )
 	{
@@ -5023,7 +5083,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 
 	radix = flagged_radix & MOO_INTTOSTR_RADIXMASK;
 	_digitc =  _digitc_array[!!(flagged_radix & MOO_INTTOSTR_LOWERCASE)];
-	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
+	MOO_ASSERT(moo, radix >= 2 && radix <= 36);
 
 	if (!moo_isint(moo,num)) goto oops_einval;
 	v = integer_to_oow_noseterr(moo, num, &w);
@@ -5069,6 +5129,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 	reqcapa = as * MOO_LIW_BITS + 1;
 	if (moo->inttostr.xbuf.capa < reqcapa)
 	{
+		/* this buffer hold the number of digit characters */
 		xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
 		if (MOO_UNLIKELY(!xbuf)) return MOO_NULL;
 		moo->inttostr.xbuf.capa = reqcapa;
@@ -5081,7 +5142,8 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 
 	if (moo->inttostr.t.capa < as)
 	{
-		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa * MOO_SIZEOF(*t));
+		/* this buffer holds a copy of the words of 'num', so it is 'as' words long */
+		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, as * MOO_SIZEOF(*t));
 		if (MOO_UNLIKELY(!t)) return MOO_NULL;
 		moo->inttostr.t.capa = as;
 		moo->inttostr.t.ptr = t;

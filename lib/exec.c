@@ -3413,7 +3413,7 @@ static moo_pfrc_t pf_number_mlt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_mltnums(moo, rcv, arg);
+	res = moo_tmulnums(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
